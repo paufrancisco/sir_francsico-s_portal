@@ -6,7 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class Section extends Model
 {
-    protected $fillable = ['name', 'schedule'];
+    protected $fillable = ['name', 'schedule', 'grades_computed_at'];
+
+    protected $casts = [
+        'grades_computed_at' => 'datetime',
+    ];
 
     public function students()
     {

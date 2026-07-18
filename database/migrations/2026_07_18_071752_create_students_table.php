@@ -13,8 +13,7 @@ return new class extends Migration
             $table->string('student_number')->unique();
             $table->string('full_name');
             $table->foreignId('section_id')->nullable()->constrained()->nullOnDelete();
-            $table->string('password'); // shared login password (hashed)
-            $table->string('grades_password')->nullable(); // password para sa locked grades/quiz section
+            $table->string('password'); // iisang password, ginagamit sa view grades AT pagtatanong
             $table->timestamp('password_changed_at')->nullable();
             $table->timestamps();
         });

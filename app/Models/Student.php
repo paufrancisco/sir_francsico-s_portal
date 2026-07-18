@@ -2,23 +2,21 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class Student extends Authenticatable
 {
     protected $fillable = [
         'student_number', 'full_name', 'section_id',
-        'password', 'grades_password', 'password_changed_at',
+        'password', 'password_changed_at',
     ];
 
-    protected $hidden = ['password', 'grades_password'];
+    protected $hidden = ['password'];
 
     protected function casts(): array
     {
         return [
-            'password' => 'hashed',
-            'grades_password' => 'hashed',
+            'password' => 'encrypted',
             'password_changed_at' => 'datetime',
         ];
     }

@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('student_id')->constrained()->cascadeOnDelete();
             $table->foreignId('section_id')->constrained()->cascadeOnDelete();
             $table->string('subject')->nullable();
-            $table->enum('category', ['quiz', 'exam', 'project', 'activity', 'prelim', 'midterm', 'final'])->default('quiz');
+            $table->enum('category', ['long_quiz', 'tp', 'exam'])->default('long_quiz');
             $table->string('title')->nullable(); // e.g. "Quiz 1", "TP Project"
             $table->decimal('score', 6, 2);
             $table->decimal('max_score', 6, 2);

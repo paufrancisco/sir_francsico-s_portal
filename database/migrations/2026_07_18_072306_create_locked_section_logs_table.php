@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('locked_section_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('student_id')->constrained()->cascadeOnDelete();
-            $table->enum('section_type', ['grades', 'quiz']);
+            $table->enum('section_type', ['grades', 'question']);
             $table->boolean('success')->default(true); // false kung mali yung na-type na password
             $table->timestamp('viewed_at')->useCurrent();
         });

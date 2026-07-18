@@ -7,6 +7,7 @@ use App\Models\CalendarEvent;
 use App\Models\Section;
 use App\Models\Student;
 use App\Models\Topic;
+use Illuminate\Http\Request; 
 use Inertia\Inertia;
 
 class StudentDashboardController extends Controller
@@ -62,6 +63,56 @@ class StudentDashboardController extends Controller
             'calendarEventsBySection' => $calendarEventsBySection,
             'top10BySection' => $top10BySection,
             'lastCalendarUpdate' => $allEvents->max('updated_at'),
+        ]);
+    }
+    public function verifyGrades(Request $request)
+    {
+        $request->validate([
+            'student_number' => 'required|string',
+            'password' => 'required|string',
+        ]);
+
+        $student = Student::where('student_number', $request->student_number)->first();
+
+        if (! $student || $student->password !== $request->password) {
+            return response()->json(['message' => 'Mali ang student number o password.'], 422);
+        }
+
+        $weights = ['long_quiz' => 0.20, 'tp' => 0.30, 'exam' => 0.50];
+        $grades = $student->grades;
+
+        $categoryOrder = ['long_quiz' => 0, 'tp' => 1, 'exam' => 2];
+
+        $items = $grades
+            ->unique(fn ($g) => $g->category . '|' . $g->title)
+            ->sortBy(fn ($g) => $categoryOrder[$g->category] ?? 99)
+            ->values()
+            ->map(fn ($g) => ['category' => $g->category, 'title' => $g->title]);
+
+        $scores = $items->mapWithKeys(function ($item) use ($grades) {
+            $g = $grades->first(fn ($gr) => $gr->category === $item['category'] && $gr->title === $item['title']);
+            return [
+                $item['category'] . '|' . $item['title'] => $g
+                    ? ['score' => $g->score, 'max_score' => $g->max_score]
+                    : null,
+            ];
+        });
+
+        $weighted = 0;
+        foreach ($weights as $category => $weight) {
+            $catGrades = $grades->where('category', $category);
+            if ($catGrades->isEmpty()) {
+                continue;
+            }
+            $avgPercent = $catGrades->avg(fn ($g) => $g->max_score > 0 ? ($g->score / $g->max_score) * 100 : 0);
+            $weighted += $avgPercent * $weight;
+        }
+
+        return response()->json([
+            'name' => $student->full_name,
+            'items' => $items,
+            'scores' => $scores,
+            'total_percentage' => round($weighted, 2),
         ]);
     }
 }

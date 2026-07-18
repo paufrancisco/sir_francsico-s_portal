@@ -14,6 +14,11 @@ return [
     |
     */
 
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+    ],
+    'admin_notify_email' => env('ADMIN_NOTIFY_EMAIL'),
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

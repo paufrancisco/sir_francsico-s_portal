@@ -1,4 +1,16 @@
-## STAGE 1: Build Vue/Vite assets
+## STAGE 1: Install PHP dependencies (produces vendor/, needed by Ziggy in the frontend build)
+FROM composer:2 AS composer_builder
+
+WORKDIR /app
+
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --optimize-autoloader --no-scripts --no-interaction --ignore-platform-reqs
+
+COPY . .
+RUN composer dump-autoload --optimize
+
+
+## STAGE 2: Build Vue/Vite assets (needs vendor/tightenco/ziggy from stage 1)
 FROM node:20-alpine AS node_builder
 
 WORKDIR /app
@@ -6,11 +18,13 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-COPY . .
+# Bring in the full app including vendor/ from the composer stage
+COPY --from=composer_builder /app ./
+
 RUN npm run build
 
 
-## STAGE 2: PHP + Laravel
+## STAGE 3: Final PHP + Nginx runtime image
 FROM php:8.2-fpm-alpine AS app
 
 # Install system deps + PHP extensions Laravel usually needs
@@ -32,23 +46,13 @@ RUN apk add --no-cache \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_pgsql pgsql mbstring zip exif pcntl gd bcmath xml dom simplexml soap
 
-# Install Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-
 WORKDIR /var/www/html
 
-# Copy composer files first for better layer caching
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --optimize-autoloader --no-scripts --no-interaction
+# Copy the full app (with vendor/) from the composer stage
+COPY --from=composer_builder /app ./
 
-# Copy the rest of the app
-COPY . .
-
-# Copy built frontend assets from stage 1
+# Copy built frontend assets from the node stage
 COPY --from=node_builder /app/public/build ./public/build
-
-# Finish composer setup (runs artisan package discovery etc.)
-RUN composer dump-autoload --optimize
 
 # Permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache

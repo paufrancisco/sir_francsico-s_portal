@@ -21,7 +21,7 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
     Route::post('sections/{section}/students/reveal', [SectionController::class, 'revealStudents'])->name('sections.students.reveal');
 
     Route::get('grades/import', [GradeImportController::class, 'create'])->name('grades.import');
-    Route::post('grades/import', [GradeImportController::class, 'store'])->name('grades.import.store');
+    Route::post('sections/{section}/grades/import', [GradeImportController::class, 'store'])->name('sections.grades.import.store');
 
     Route::resource('announcements', AnnouncementController::class)->except(['show']);
 
@@ -32,7 +32,7 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
 Route::get('/', [StudentDashboardController::class, 'index']);
 
 Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
+    return redirect('/paulo');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {

@@ -12,7 +12,15 @@
                     <div class="text-lg font-semibold text-[#003399]">Sir Francisco</div>
                     <div class="text-xs text-slate-400">Class portal</div>
                 </div>
-                <div class="text-xs text-slate-400 tabular-nums">{{ liveClock }}</div>
+                <div class="flex items-center gap-4">
+                    <div class="text-xs text-slate-400 tabular-nums">{{ liveClock }}</div>
+                    <Link
+                        href="/login"
+                        class="bg-[#003399] text-white text-xs font-medium px-4 py-2 rounded-lg hover:opacity-90 transition"
+                    >
+                        Login
+                    </Link>
+                </div>
             </div>
         </header>
 
@@ -20,25 +28,25 @@
 
             <div class="lg:col-span-2 space-y-4">
 
-                <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+                <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-1 w-fit flex-wrap">
                     <button
-                        v-for="tab in sectionTabs"
-                        :key="tab"
-                        @click="activeSection = tab; currentIndex = 0"
+                        v-for="s in sections"
+                        :key="s.id"
+                        @click="activeSectionId = s.id; currentIndex = 0"
                         class="text-xs font-medium px-4 py-1.5 rounded-md transition"
-                        :class="activeSection === tab ? 'bg-white text-[#003399] shadow-sm' : 'text-slate-500'"
+                        :class="activeSectionId === s.id ? 'bg-white text-[#003399] shadow-sm' : 'text-slate-500'"
                     >
-                        {{ tab }}
+                        {{ s.subject ? `${s.subject} - ${s.name}` : s.name }}
                     </button>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition">
-                        <div class="text-sm font-semibold text-slate-700 mb-3">Announcements — {{ activeSection }}</div>
+                        <div class="text-sm font-semibold text-slate-700 mb-3">Announcements — {{ activeSectionLabel }}</div>
                         <p v-if="filteredAnnouncements.length === 0" class="text-xs text-slate-400">
                             Wala pang announcement.
                         </p>
-                        <div v-for="a in filteredAnnouncements" :key="a.id ?? a.title" class="text-sm text-slate-600 py-1.5 border-b border-slate-50 last:border-0">
+                        <div v-for="a in filteredAnnouncements" :key="a.id" class="text-sm text-slate-600 py-1.5 border-b border-slate-50 last:border-0">
                             {{ a.title }}
                         </div>
                     </div>
@@ -90,14 +98,14 @@
                 </div>
 
                 <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition">
-                    <div class="text-sm font-semibold text-slate-700 mb-3">This week's topics — {{ activeSection }}</div>
+                    <div class="text-sm font-semibold text-slate-700 mb-3">This week's topics — {{ activeSectionLabel }}</div>
                     <p v-if="filteredTopics.length === 0" class="text-xs text-slate-400">
                         Wala pang naka-post na topic ngayong linggo.
                     </p>
-                    <div v-for="t in filteredTopics" :key="t.title" class="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
+                    <div v-for="t in filteredTopics" :key="t.id" class="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
                         <div>
                             <div class="text-sm text-slate-700">{{ t.title }}</div>
-                            <div class="text-xs text-slate-400">{{ t.date }}</div>
+                            <div class="text-xs text-slate-400">{{ formatEventDate(t.date_covered) }}</div>
                         </div>
                         <span
                             class="text-[11px] font-medium px-2 py-0.5 rounded-full"
@@ -114,48 +122,54 @@
                 @mouseenter="paused = true"
                 @mouseleave="paused = false"
             >
-                <div class="text-xs font-semibold text-slate-500 mb-3">Top 10 — {{ activeSection }}</div>
+                <div class="text-xs font-semibold text-slate-500 mb-3">Top 10 — {{ activeSectionLabel }}</div>
 
-                <div
-                    class="border border-slate-200 rounded-xl p-5 text-center cursor-pointer hover:shadow-lg transition overflow-hidden"
-                    @click="showFullList = true"
-                >
-                    <Transition :name="slideDirection" mode="out-in">
-                        <div :key="currentIndex">
-                            <div
-                                class="w-full aspect-square rounded-lg flex items-center justify-center text-5xl font-semibold"
-                                :style="{ background: '#FFCC00', color: '#412402' }"
-                            >
-                                {{ initials(currentStudent.name) }}
+                <p v-if="filteredStudents.length === 0" class="text-xs text-slate-400 text-center py-6">
+                    Wala pang grades na na-record para sa section na ito.
+                </p>
+
+                <template v-else>
+                    <div
+                        class="border border-slate-200 rounded-xl p-5 text-center cursor-pointer hover:shadow-lg transition overflow-hidden"
+                        @click="showFullList = true"
+                    >
+                        <Transition :name="slideDirection" mode="out-in">
+                            <div :key="currentIndex">
+                                <div
+                                    class="w-full aspect-square rounded-lg flex items-center justify-center text-5xl font-semibold"
+                                    :style="{ background: '#FFCC00', color: '#412402' }"
+                                >
+                                    {{ initials(currentStudent.name) }}
+                                </div>
+                                <div class="text-xs font-medium text-[#003399] mt-4">top {{ currentIndex + 1 }}</div>
+                                <div class="text-base font-semibold text-slate-800 mt-1">{{ currentStudent.name }}</div>
+                                <div class="text-sm text-slate-400 mt-0.5">{{ currentStudent.grade }} average</div>
                             </div>
-                            <div class="text-xs font-medium text-[#003399] mt-4">top {{ currentIndex + 1 }}</div>
-                            <div class="text-base font-semibold text-slate-800 mt-1">{{ currentStudent.name }}</div>
-                            <div class="text-sm text-slate-400 mt-0.5">{{ currentStudent.grade }} average</div>
+                        </Transition>
+
+                        <div class="flex items-center justify-center gap-1.5 mt-4">
+                            <button
+                                v-for="(s, i) in filteredStudents"
+                                :key="s.name"
+                                @click.stop="goTo(i)"
+                                class="rounded-full transition"
+                                :class="i === currentIndex ? 'w-2.5 h-2.5 bg-[#FFCC00]' : 'w-2 h-2 bg-slate-200'"
+                            ></button>
                         </div>
-                    </Transition>
-
-                    <div class="flex items-center justify-center gap-1.5 mt-4">
-                        <button
-                            v-for="(s, i) in filteredStudents"
-                            :key="s.name"
-                            @click.stop="goTo(i)"
-                            class="rounded-full transition"
-                            :class="i === currentIndex ? 'w-2.5 h-2.5 bg-[#FFCC00]' : 'w-2 h-2 bg-slate-200'"
-                        ></button>
                     </div>
-                </div>
 
-                <button @click="showFullList = !showFullList" class="w-full text-xs text-[#003399] font-medium mt-4 hover:underline">
-                    {{ showFullList ? 'Hide full list' : 'View full list' }}
-                </button>
+                    <button @click="showFullList = !showFullList" class="w-full text-xs text-[#003399] font-medium mt-4 hover:underline">
+                        {{ showFullList ? 'Hide full list' : 'View full list' }}
+                    </button>
 
-                <div v-if="showFullList" class="mt-2 divide-y divide-slate-100 border-t border-slate-100">
-                    <div v-for="(s, i) in filteredStudents" :key="s.name" class="flex items-center gap-2 py-2">
-                        <span class="text-xs text-slate-400 w-4">{{ i + 1 }}</span>
-                        <div class="text-sm text-slate-700 flex-1 truncate">{{ s.name }}</div>
-                        <div class="text-xs font-semibold text-[#003399]">{{ s.grade }}</div>
+                    <div v-if="showFullList" class="mt-2 divide-y divide-slate-100 border-t border-slate-100">
+                        <div v-for="(s, i) in filteredStudents" :key="s.name" class="flex items-center gap-2 py-2">
+                            <span class="text-xs text-slate-400 w-4">{{ i + 1 }}</span>
+                            <div class="text-sm text-slate-700 flex-1 truncate">{{ s.name }}</div>
+                            <div class="text-xs font-semibold text-[#003399]">{{ s.grade }}</div>
+                        </div>
                     </div>
-                </div>
+                </template>
             </div>
         </main>
 
@@ -189,11 +203,16 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { Link } from '@inertiajs/vue3';
 
 const props = defineProps({
-    calendarEvents: Array,
-    announcements: Array,
-    lastCalendarUpdate: String,
+    sections: { type: Array, default: () => [] },
+    announcementsBySection: { type: Object, default: () => ({}) },
+    topicsBySection: { type: Object, default: () => ({}) },
+    globalCalendarEvents: { type: Array, default: () => [] },
+    calendarEventsBySection: { type: Object, default: () => ({}) },
+    top10BySection: { type: Object, default: () => ({}) },
+    lastCalendarUpdate: { type: String, default: null },
 });
 
 const showFullList = ref(false);
@@ -202,46 +221,25 @@ const paused = ref(false);
 const currentIndex = ref(0);
 const slideDirection = ref('slide-next');
 
-const sectionTabs = ['Section 1', 'Section 2'];
-const activeSection = ref('Section 1');
+const activeSectionId = ref(props.sections[0]?.id ?? null);
 
-const allStudents = [
-    { name: 'Dela Cruz, Juan', section: 'Section 1', grade: 98 },
-    { name: 'Reyes, Ana', section: 'Section 1', grade: 96 },
-    { name: 'Cruz, Karen', section: 'Section 1', grade: 94 },
-    { name: 'Torres, Paolo', section: 'Section 1', grade: 92 },
-    { name: 'Flores, Miguel', section: 'Section 1', grade: 90 },
-    { name: 'Santos, Mark', section: 'Section 2', grade: 95 },
-    { name: 'Garcia, Liza', section: 'Section 2', grade: 93 },
-    { name: 'Ramos, Bea', section: 'Section 2', grade: 91 },
-    { name: 'Aquino, Nica', section: 'Section 2', grade: 89 },
-    { name: 'Bautista, Ryan', section: 'Section 2', grade: 88 },
-];
+const activeSectionLabel = computed(() => {
+    const s = props.sections.find((sec) => sec.id === activeSectionId.value);
+    if (!s) return '';
+    return s.subject ? `${s.subject} - ${s.name}` : s.name;
+});
 
-const allTopics = [
-    { title: 'Normalization (3NF)', date: 'Jul 15', status: 'done', section: 'Section 1' },
-    { title: 'ER Diagrams', date: 'Jul 17', status: 'ongoing', section: 'Section 1' },
-    { title: 'SQL Joins', date: 'Jul 22', status: 'upcoming', section: 'Section 1' },
-    { title: 'Intro to Networking', date: 'Jul 16', status: 'done', section: 'Section 2' },
-    { title: 'Subnetting', date: 'Jul 21', status: 'ongoing', section: 'Section 2' },
-];
-
-const filteredStudents = computed(() =>
-    allStudents.filter((s) => s.section === activeSection.value)
-);
-
-const filteredTopics = computed(() =>
-    allTopics.filter((t) => t.section === activeSection.value)
-);
-
-// TODO: kapag na-wire na natin sa totoong backend, dapat naka-tag din ang bawat
-// announcement sa section_id niya, tapos i-filter dito. Sa ngayon lahat pa lang
-// (walang section_id sa data), kaya lahat pa rin lumalabas kahit anong section.
-const filteredAnnouncements = computed(() => props.announcements ?? []);
+const filteredAnnouncements = computed(() => props.announcementsBySection[activeSectionId.value] ?? []);
+const filteredTopics = computed(() => props.topicsBySection[activeSectionId.value] ?? []);
+const calendarEvents = computed(() => [
+    ...(props.globalCalendarEvents ?? []),
+    ...(props.calendarEventsBySection[activeSectionId.value] ?? []),
+]);
+const filteredStudents = computed(() => props.top10BySection[activeSectionId.value] ?? []);
 
 const currentStudent = computed(() => filteredStudents.value[currentIndex.value] ?? filteredStudents.value[0]);
 
-watch(activeSection, () => { currentIndex.value = 0; });
+watch(activeSectionId, () => { currentIndex.value = 0; });
 
 const goTo = (i) => {
     slideDirection.value = i > currentIndex.value ? 'slide-next' : 'slide-prev';
@@ -253,7 +251,7 @@ let clockTimer;
 
 onMounted(() => {
     autoTimer = setInterval(() => {
-        if (paused.value) return;
+        if (paused.value || filteredStudents.value.length === 0) return;
         slideDirection.value = 'slide-next';
         currentIndex.value = (currentIndex.value + 1) % filteredStudents.value.length;
     }, 2200);
@@ -285,6 +283,7 @@ const formattedUpdate = computed(() => {
 });
 
 const formatEventDate = (dateStr) => {
+    if (!dateStr) return '';
     const d = new Date(dateStr);
     return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
 };

@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\Admin\AdminChatController;
 use App\Http\Controllers\Admin\AdminFaqController;
+use App\Http\Controllers\GradeCorrectionController;
 
 Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
@@ -39,6 +40,10 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
     Route::post('faqs', [AdminFaqController::class, 'store'])->name('faqs.store');
     Route::put('faqs/{faq}', [AdminFaqController::class, 'update'])->name('faqs.update');
     Route::delete('faqs/{faq}', [AdminFaqController::class, 'destroy'])->name('faqs.destroy');
+
+    // Admin-facing (dapat naka-loob sa auth middleware group mo, katulad ng /paulo/* routes mo)
+    Route::get('/paulo/grade-corrections', [GradeCorrectionController::class, 'index'])->name('grade-corrections.index');
+    Route::patch('/paulo/grade-corrections/{gradeCorrection}/resolve', [GradeCorrectionController::class, 'resolve'])->name('grade-corrections.resolve');
 });
 
 Route::post('/portal/chat/verify', [ChatController::class, 'verify'])->middleware('throttle:6,1');
@@ -60,5 +65,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+// Student-facing (public, verified via student_number+password sa request body)
+Route::post('/portal/grades/correction', [GradeCorrectionController::class, 'store']);
+
+
 
 require __DIR__.'/auth.php';

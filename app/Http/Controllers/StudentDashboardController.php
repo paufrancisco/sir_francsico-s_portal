@@ -79,6 +79,8 @@ class StudentDashboardController extends Controller
         }
 
         $weights = ['long_quiz' => 0.20, 'tp' => 0.30, 'exam' => 0.50];
+        $categoryLabels = ['long_quiz' => 'Quizzes', 'tp' => 'Task Performance', 'exam' => 'Exams'];
+
         $grades = $student->grades;
 
         $categoryOrder = ['long_quiz' => 0, 'tp' => 1, 'exam' => 2];
@@ -99,19 +101,41 @@ class StudentDashboardController extends Controller
         });
 
         $weighted = 0;
+        $breakdown = [];
+
         foreach ($weights as $category => $weight) {
             $catGrades = $grades->where('category', $category);
+            $weightPercent = $weight * 100;
+
             if ($catGrades->isEmpty()) {
+                $breakdown[] = [
+                    'category' => $category,
+                    'label' => $categoryLabels[$category],
+                    'weight_percent' => $weightPercent,
+                    'avg_percent' => null,
+                    'contribution' => 0,
+                ];
                 continue;
             }
+
             $avgPercent = $catGrades->avg(fn ($g) => $g->max_score > 0 ? ($g->score / $g->max_score) * 100 : 0);
-            $weighted += $avgPercent * $weight;
+            $contribution = $avgPercent * $weight;
+            $weighted += $contribution;
+
+            $breakdown[] = [
+                'category' => $category,
+                'label' => $categoryLabels[$category],
+                'weight_percent' => $weightPercent,
+                'avg_percent' => round($avgPercent, 2),
+                'contribution' => round($contribution, 2),
+            ];
         }
 
         return response()->json([
             'name' => $student->full_name,
             'items' => $items,
             'scores' => $scores,
+            'breakdown' => $breakdown,
             'total_percentage' => round($weighted, 2),
         ]);
     }

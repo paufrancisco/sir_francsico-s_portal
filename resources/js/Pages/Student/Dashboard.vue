@@ -308,9 +308,74 @@
                             </div>
                         </div>
 
+                        <div v-if="gradesResult.breakdown" class="mt-3 pt-3 border-t border-slate-100 space-y-1.5">
+                            <div
+                                v-for="cat in gradesResult.breakdown"
+                                :key="cat.category"
+                                class="flex items-center justify-between text-xs"
+                            >
+                                <span class="text-slate-500">{{ cat.label }} ({{ cat.weight_percent }}%)</span>
+                                <span class="font-medium text-slate-600">
+                                    <template v-if="cat.avg_percent !== null">
+                                        {{ cat.avg_percent }}% → {{ cat.contribution }} pts
+                                    </template>
+                                    <span v-else class="text-slate-300">walang grade</span>
+                                </span>
+                            </div>
+                        </div>
+
                         <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
                             <span class="text-sm font-semibold text-slate-700">Total</span>
                             <span class="text-sm font-bold text-[#003399]">{{ gradesResult.total_percentage }}%</span>
+                        </div>
+
+                        <!-- Confirm / Recheck actions -->
+                        <div v-if="!correctionSubmitted" class="mt-4 pt-3 border-t border-slate-100">
+                            <div v-if="!showRecheckForm" class="flex gap-2">
+                                <button
+                                    @click="submitCorrection('confirmed')"
+                                    :disabled="correctionLoading"
+                                    class="flex-1 bg-[#003399] text-white text-xs font-medium py-2 rounded-lg disabled:opacity-50"
+                                >
+                                    Tama ang grades ko
+                                </button>
+                                <button
+                                    @click="showRecheckForm = true"
+                                    class="flex-1 border border-slate-300 text-slate-600 text-xs font-medium py-2 rounded-lg"
+                                >
+                                    May mali, i-recheck
+                                </button>
+                            </div>
+
+                            <div v-else class="space-y-2">
+                                <textarea
+                                    v-model="recheckNotes"
+                                    rows="3"
+                                    placeholder="Ano ang mali sa grades mo? (hal. 'Mali yung score ko sa Quiz 2, dapat 18/20 hindi 15/20')"
+                                    class="w-full text-xs border border-slate-200 rounded-lg px-3 py-2"
+                                ></textarea>
+                                <div class="flex gap-2">
+                                    <button
+                                        @click="submitCorrection('recheck')"
+                                        :disabled="correctionLoading || !recheckNotes.trim()"
+                                        class="flex-1 bg-[#003399] text-white text-xs font-medium py-2 rounded-lg disabled:opacity-50"
+                                    >
+                                        {{ correctionLoading ? 'Nagpo-process...' : 'I-submit ang recheck' }}
+                                    </button>
+                                    <button
+                                        @click="showRecheckForm = false"
+                                        class="text-xs text-slate-400 px-3"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+
+                            <p v-if="correctionError" class="text-xs text-red-500 mt-2">{{ correctionError }}</p>
+                        </div>
+
+                        <div v-else class="mt-4 pt-3 border-t border-slate-100 text-center">
+                            <p class="text-xs text-[#003399] font-medium">{{ correctionSuccessMessage }}</p>
                         </div>
                     </template>
                 </div>
@@ -434,17 +499,49 @@ const gradesError = ref('');
 const gradesLoading = ref(false);
 const gradesResult = ref(null);
 
+// ---- Grade correction state ----
+const showRecheckForm = ref(false);
+const recheckNotes = ref('');
+const correctionLoading = ref(false);
+const correctionError = ref('');
+const correctionSubmitted = ref(false);
+const correctionSuccessMessage = ref('');
+
+const submitCorrection = async (type) => {
+    correctionLoading.value = true;
+    correctionError.value = '';
+    try {
+        const { data } = await axios.post('/portal/grades/correction', {
+            student_number: gradesForm.value.student_number,
+            password: gradesForm.value.password,
+            type,
+            notes: type === 'recheck' ? recheckNotes.value : null,
+        });
+        correctionSuccessMessage.value = data.message;
+        correctionSubmitted.value = true;
+    } catch (err) {
+        correctionError.value = err.response?.data?.message ?? 'May error, subukan ulit.';
+    } finally {
+        correctionLoading.value = false;
+    }
+};
+
 const openGradesModal = () => {
     gradesModalOpen.value = true;
 };
+
 
 const closeGradesModal = () => {
     gradesModalOpen.value = false;
     gradesResult.value = null;
     gradesForm.value = { student_number: '', password: '' };
     gradesError.value = '';
+    showRecheckForm.value = false;
+    recheckNotes.value = '';
+    correctionError.value = '';
+    correctionSubmitted.value = false;
+    correctionSuccessMessage.value = '';
 };
-
 const submitGradesLogin = async () => {
     gradesLoading.value = true;
     gradesError.value = '';

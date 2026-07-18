@@ -53,6 +53,7 @@ class GradeCorrectionController extends Controller
             ->get()
             ->map(fn ($c) => [
                 'id' => $c->id,
+                'student_id' => $c->student_id,
                 'student_name' => $c->student->full_name,
                 'student_number' => $c->student->student_number,
                 'section' => $c->section?->name,

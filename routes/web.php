@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\AdminChatController;
 use App\Http\Controllers\Admin\AdminFaqController;
 use App\Http\Controllers\GradeCorrectionController;
 use App\Http\Controllers\Admin\GradeController;
+use App\Models\Section;
 
 Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
@@ -48,6 +49,18 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
 
     Route::get('students/{student}/grades', [GradeController::class, 'forStudent'])->name('students.grades');
     Route::patch('grades/{grade}', [GradeController::class, 'update'])->name('grades.update');
+
+    Route::delete('sections/{section}/students/{student}/grades', [GradeController::class, 'destroyForStudent'])
+    ->name('sections.students.grades.destroy');
+
+    Route::patch('sections/{section}/students/{student}', [SectionController::class, 'updateStudent'])->name('sections.students.update');
+    Route::delete('sections/{section}/students/{student}', [SectionController::class, 'destroyStudent'])->name('sections.students.destroy');
+    Route::delete('sections/{section}/students', [SectionController::class, 'destroyStudents'])->name('sections.students.destroyMany');
+
+    Route::delete('sections/{section}/grades', [GradeController::class, 'destroyForStudents'])->name('sections.grades.destroyMany');
+
+    Route::get('sections/{section}/students/{student}/grades', [GradeController::class, 'forStudentInSection'])->name('sections.students.grades.show');
+    Route::post('grades', [GradeController::class, 'store'])->name('grades.store');
 });
 
 Route::post('/portal/chat/verify', [ChatController::class, 'verify'])->middleware('throttle:6,1');

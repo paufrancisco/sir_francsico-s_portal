@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use App\Models\Grade;
+use App\Models\Student;
 
 class SectionController extends Controller
 {
@@ -152,5 +153,40 @@ class SectionController extends Controller
             'full_name' => $s->full_name,
             'password' => $withPassword ? $s->password : null,
         ]);
+    }
+
+    public function updateStudent(Request $request, Section $section, Student $student)
+    {
+        $validated = $request->validate([
+            'student_number' => 'required|string|max:255|unique:students,student_number,' . $student->id,
+            'full_name' => 'required|string|max:255',
+            'password' => 'nullable|string|min:4',
+        ]);
+
+        if (empty($validated['password'])) {
+            unset($validated['password']);
+        }
+
+        $student->update($validated);
+
+        return back()->with('success', 'Na-update ang estudyante.');
+    }
+
+    public function destroyStudent(Section $section, Student $student)
+    {
+        $student->delete();
+
+        return back()->with('success', 'Natanggal ang estudyante.');
+    }
+
+    public function destroyStudents(Request $request, Section $section)
+    {
+        $validated = $request->validate(['student_ids' => 'required|array']);
+
+        Student::whereIn('id', $validated['student_ids'])
+            ->where('section_id', $section->id)
+            ->delete();
+
+        return back()->with('success', count($validated['student_ids']) . ' estudyante ang natanggal.');
     }
 }

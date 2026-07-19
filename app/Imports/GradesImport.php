@@ -9,6 +9,12 @@ use Maatwebsite\Excel\Concerns\ToCollection;
 
 class GradesImport implements ToCollection
 {
+    public array $skipped = [];
+    public array $duplicates = [];
+    public int $importedCount = 0;
+
+    protected array $seenStudentNumbers = [];
+
     public function __construct(protected int $sectionId)
     {
     }
@@ -48,13 +54,26 @@ class GradesImport implements ToCollection
                 continue;
             }
 
+            if (isset($this->seenStudentNumbers[$studentNumber])) {
+                if (! in_array($studentNumber, $this->duplicates, true)) {
+                    $this->duplicates[] = $studentNumber;
+                }
+            } else {
+                $this->seenStudentNumbers[$studentNumber] = true;
+            }
+
             $student = Student::where('section_id', $this->sectionId)
                 ->where('student_number', $studentNumber)
                 ->first();
 
             if (! $student) {
+                if (! in_array($studentNumber, $this->skipped, true)) {
+                    $this->skipped[] = $studentNumber;
+                }
                 continue;
             }
+
+            $this->importedCount++;
 
             foreach ($columnDefs as $idx => $def) {
                 $score = $row[$idx] ?? null;

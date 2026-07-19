@@ -156,6 +156,32 @@
                     Header format: <code>Long Quiz: Quiz 1 (50)</code>, <code>TP: Project 1 (100)</code>, <code>Exam: Midterm (100)</code> — Column A = Student Number.
                 </p>
 
+                <!-- Period tabs -->
+                <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+                        <button
+                            v-for="p in periods"
+                            :key="p.value"
+                            @click="switchPeriod(p.value)"
+                            :disabled="periodLoading"
+                            class="text-xs font-medium px-4 py-1.5 rounded-md transition disabled:cursor-not-allowed"
+                            :class="currentPeriod === p.value ? 'bg-white text-[#003399] shadow-sm' : 'text-slate-500'"
+                        >
+                            {{ p.label }}
+                        </button>
+                    </div>
+                    <svg
+                        v-if="periodLoading"
+                        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" class="animate-spin text-[#003399]"
+                    >
+                        <path d="M21 12a9 9 0 1 1-6.219-8.56" stroke-linecap="round"/>
+                    </svg>
+                </div>
+
+                <p class="text-[11px] text-slate-500">
+                    Ia-import bilang <span class="font-semibold text-[#003399]">{{ periods.find(p => p.value === currentPeriod)?.label }}</span> — piliin muna ang tamang tab sa itaas bago mag-click ng "Import grades".
+                </p>
+
                 <!-- Search + missing-grade filter -->
                 <div class="flex items-center gap-2">
                     <div class="relative flex-1">
@@ -436,7 +462,30 @@ const props = defineProps({
     revealed: Boolean,
     gradeItems: { type: Array, default: () => [] },
     gradesBreakdown: { type: Array, default: () => [] },
+    currentPeriod: { type: String, default: 'prelim' },
 });
+
+// ---- Period tabs (Prelim / Midterm / Pre-Final / Finals) ----
+const periods = [
+    { value: 'prelim', label: 'Prelim' },
+    { value: 'midterm', label: 'Midterm' },
+    { value: 'prefinal', label: 'Pre-Final' },
+    { value: 'finals', label: 'Finals' },
+];
+
+const periodLoading = ref(false);
+
+const switchPeriod = (period) => {
+    if (period === props.currentPeriod || periodLoading.value) return;
+
+    periodLoading.value = true;
+    router.get(`/paulo/sections/${props.section.id}`, { period }, {
+        preserveScroll: true,
+        preserveState: true,
+        only: ['gradeItems', 'gradesBreakdown', 'currentPeriod'],
+        onFinish: () => { periodLoading.value = false; },
+    });
+};
 
 const activeTab = ref('masterlist');
 const showModal = ref(false);
@@ -444,7 +493,10 @@ const uploading = ref(false);
 const form = useForm({ password: '' });
 
 const submitReveal = () => {
-    form.post(`/paulo/sections/${props.section.id}/students/reveal`, {
+    form.transform((data) => ({
+        ...data,
+        period: props.currentPeriod,
+    })).post(`/paulo/sections/${props.section.id}/students/reveal`, {
         onSuccess: () => { showModal.value = false; form.reset(); },
     });
 };
@@ -454,7 +506,7 @@ const uploadGrades = (e) => {
     if (!file) return;
 
     uploading.value = true;
-    router.post(`/paulo/sections/${props.section.id}/grades/import`, { file }, {
+    router.post(`/paulo/sections/${props.section.id}/grades/import`, { file, period: props.currentPeriod }, {
         forceFormData: true,
         onFinish: () => { uploading.value = false; e.target.value = ''; },
     });
@@ -681,7 +733,9 @@ const openEditGrades = async (row) => {
     editGrades.value = [];
 
     try {
-        const res = await axios.get(`/paulo/sections/${props.section.id}/students/${row.id}/grades`);
+        const res = await axios.get(`/paulo/sections/${props.section.id}/students/${row.id}/grades`, {
+            params: { period: props.currentPeriod },
+        });
         editGrades.value = res.data.grades.map((g) => ({
             ...g,
             editValue: g.score ?? '',
@@ -707,6 +761,7 @@ const saveEditGrade = async (grade) => {
                 student_id: grade.student_id,
                 section_id: grade.section_id,
                 category: grade.category,
+                period: grade.period ?? props.currentPeriod,
                 title: grade.title,
                 score: grade.editValue,
                 max_score: grade.max_score,

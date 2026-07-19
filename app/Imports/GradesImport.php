@@ -15,7 +15,7 @@ class GradesImport implements ToCollection
 
     protected array $seenStudentNumbers = [];
 
-    public function __construct(protected int $sectionId)
+    public function __construct(protected int $sectionId, protected string $period)
     {
     }
 
@@ -86,6 +86,7 @@ class GradesImport implements ToCollection
                         'student_id' => $student->id,
                         'section_id' => $this->sectionId,
                         'category' => $def['category'],
+                        'period' => $this->period,
                         'title' => $def['title'],
                     ],
                     [

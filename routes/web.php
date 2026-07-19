@@ -13,6 +13,9 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\Admin\AdminChatController;
 use App\Http\Controllers\Admin\AdminFaqController;
+use App\Http\Controllers\GradeCorrectionController;
+use App\Http\Controllers\Admin\GradeController;
+use App\Models\Section;
 
 Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
@@ -39,6 +42,29 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
     Route::post('faqs', [AdminFaqController::class, 'store'])->name('faqs.store');
     Route::put('faqs/{faq}', [AdminFaqController::class, 'update'])->name('faqs.update');
     Route::delete('faqs/{faq}', [AdminFaqController::class, 'destroy'])->name('faqs.destroy');
+
+    // Admin-facing (naka-loob na sa auth middleware group at prefix('paulo') sa itaas)
+    Route::get('grade-corrections', [GradeCorrectionController::class, 'index'])->name('grade-corrections.index');
+    Route::patch('grade-corrections/{gradeCorrection}/resolve', [GradeCorrectionController::class, 'resolve'])->name('grade-corrections.resolve');
+
+    Route::get('students/{student}/grades', [GradeController::class, 'forStudent'])->name('students.grades');
+    Route::patch('grades/{grade}', [GradeController::class, 'update'])->name('grades.update');
+
+    Route::delete('sections/{section}/students/{student}/grades', [GradeController::class, 'destroyForStudent'])
+    ->name('sections.students.grades.destroy');
+
+    Route::patch('sections/{section}/students/{student}', [SectionController::class, 'updateStudent'])->name('sections.students.update');
+    Route::delete('sections/{section}/students/{student}', [SectionController::class, 'destroyStudent'])->name('sections.students.destroy');
+    Route::delete('sections/{section}/students', [SectionController::class, 'destroyStudents'])->name('sections.students.destroyMany');
+
+    Route::post('sections/{section}/students/{student}/photo', [SectionController::class, 'updatePhoto'])->name('sections.students.photo.update');
+    Route::delete('sections/{section}/students/{student}/photo', [SectionController::class, 'deletePhoto'])->name('sections.students.photo.destroy');
+    Route::post('sections/{section}/students/photos/import', [SectionController::class, 'importPhotos'])->name('sections.students.photos.import');
+
+    Route::delete('sections/{section}/grades', [GradeController::class, 'destroyForStudents'])->name('sections.grades.destroyMany');
+
+    Route::get('sections/{section}/students/{student}/grades', [GradeController::class, 'forStudentInSection'])->name('sections.students.grades.show');
+    Route::post('grades', [GradeController::class, 'store'])->name('grades.store');
 });
 
 Route::post('/portal/chat/verify', [ChatController::class, 'verify'])->middleware('throttle:6,1');
@@ -60,5 +86,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+// Student-facing (public, verified via student_number+password sa request body)
+Route::post('/portal/grades/correction', [GradeCorrectionController::class, 'store']);
+
+
 
 require __DIR__.'/auth.php';

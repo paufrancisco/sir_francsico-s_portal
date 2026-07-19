@@ -3,12 +3,22 @@
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Facades\Storage;
 
 class Student extends Authenticatable
 {
+    protected $appends = ['photo_url'];
+
+    public function getPhotoUrlAttribute()
+    {
+        return $this->photo_path
+            ? Storage::disk('supabase')->url($this->photo_path)
+            : null;
+    }
+
     protected $fillable = [
         'student_number', 'full_name', 'section_id',
-        'password', 'password_changed_at',
+        'password', 'password_changed_at', 'photo_path',
     ];
 
     protected $hidden = ['password'];
@@ -50,4 +60,5 @@ class Student extends Authenticatable
     {
         return $this->hasMany(LockedSectionLog::class);
     }
+    
 }

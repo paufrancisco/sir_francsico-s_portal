@@ -2,6 +2,18 @@
     <div class="p-6">
         <h1 class="text-lg font-semibold text-slate-800 mb-4">Grade Correction Requests</h1>
 
+        <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-1 w-fit mb-4">
+            <button
+                v-for="tab in tabs"
+                :key="tab.value"
+                @click="activeTab = tab.value"
+                class="text-xs font-medium px-4 py-1.5 rounded-md transition"
+                :class="activeTab === tab.value ? 'bg-white text-[#003399] shadow-sm' : 'text-slate-500'"
+            >
+                {{ tab.label }} <span class="text-slate-400">({{ counts[tab.value] }})</span>
+            </button>
+        </div>
+
         <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-slate-500 text-xs">
@@ -16,7 +28,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                    <tr v-for="c in corrections" :key="c.id">
+                    <tr v-for="c in filteredCorrections" :key="c.id">
                         <td class="px-4 py-3">
                             <div class="font-medium text-slate-700">{{ c.student_name }}</div>
                             <div class="text-xs text-slate-400">{{ c.student_number }}</div>
@@ -67,9 +79,9 @@
                             </div>
                         </td>
                     </tr>
-                    <tr v-if="corrections.length === 0">
+                    <tr v-if="filteredCorrections.length === 0">
                         <td colspan="7" class="text-center text-slate-400 text-sm py-8">
-                            Wala pang grade correction requests.
+                            Wala pang grade correction requests dito.
                         </td>
                     </tr>
                 </tbody>
@@ -144,7 +156,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import axios from 'axios';
 
 defineOptions({ layout: AdminLayout });
@@ -152,6 +164,21 @@ defineOptions({ layout: AdminLayout });
 const props = defineProps({
     corrections: { type: Array, default: () => [] },
 });
+
+const tabs = [
+    { value: 'pending', label: 'Pending' },
+    { value: 'resolved', label: 'Resolved' },
+];
+const activeTab = ref('pending');
+
+const counts = computed(() => ({
+    pending: props.corrections.filter((c) => c.status === 'pending').length,
+    resolved: props.corrections.filter((c) => c.status === 'resolved').length,
+}));
+
+const filteredCorrections = computed(() =>
+    props.corrections.filter((c) => c.status === activeTab.value)
+);
 
 const resolve = (id) => {
     router.patch(`/paulo/grade-corrections/${id}/resolve`, {}, { preserveScroll: true });

@@ -24,27 +24,10 @@ class GradeImportController extends Controller
             'period' => 'required|in:prelim,midterm,prefinal,finals',
         ]);
 
-        // Burahin muna lahat ng existing grades ng section para dito lang sa period na ito
-        // para full replace ang bawat import, hindi merge.
-        Grade::where('section_id', $section->id)
-            ->where('period', $request->period)
-            ->delete();
-
-        $import = new GradesImport($section->id, $request->period);
-        Excel::import($import, $request->file('file'));
+        Excel::import(new GradesImport($section->id, $request->input('period')), $request->file('file'));
 
         $section->update(['grades_computed_at' => now()]);
 
-        $message = "{$import->importedCount} estudyante ang na-import ang grades para sa " . ucfirst($request->period) . ".";
-
-        if (! empty($import->skipped)) {
-            $message .= " May " . count($import->skipped) . " na hindi na-match sa Masterlist: " . implode(', ', $import->skipped) . ".";
-        }
-
-        if (! empty($import->duplicates)) {
-            $message .= " Babala: paulit-ulit sa file (huling row lang ang na-save): " . implode(', ', $import->duplicates) . ".";
-        }
-
-        return back()->with('success', $message);
+        return back()->with('success', 'Grades imported.');
     }
 }

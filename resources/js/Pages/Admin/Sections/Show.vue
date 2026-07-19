@@ -227,6 +227,7 @@
                                     />
                                 </th>
                                 <th class="px-3 py-2">Rank</th>
+                                <th class="px-3 py-2">Student No.</th>
                                 <th class="px-3 py-2">Name</th>
                                 <th v-for="item in gradeItems" :key="item.category + item.title" class="px-3 py-2">
                                     {{ item.title }}
@@ -246,6 +247,7 @@
                                     />
                                 </td>
                                 <td class="px-3 py-2 text-slate-500">{{ row.rank }}</td>
+                                <td class="px-3 py-2 text-slate-500">{{ row.student_number }}</td>
                                 <td class="px-3 py-2 text-slate-700 font-medium">
                                     <span class="inline-flex items-center gap-1.5">
                                         {{ row.name }}

@@ -6,11 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class Announcement extends Model
 {
-    protected $fillable = ['section_id', 'title', 'body', 'posted_by'];
+    protected $fillable = ['title', 'body', 'is_global', 'posted_by'];
 
-    public function section()
+    protected $casts = ['is_global' => 'boolean'];
+
+    public function sections()
     {
-        return $this->belongsTo(Section::class);
+        return $this->belongsToMany(Section::class, 'announcement_section');
     }
 
     public function postedBy()

@@ -44,10 +44,16 @@
                     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition">
                         <div class="text-sm font-semibold text-slate-700 mb-3">Announcements — {{ activeSectionLabel }}</div>
                         <p v-if="filteredAnnouncements.length === 0" class="text-xs text-slate-400">
-                            Wala pang announcement.
+                            Wala pang announcement as of {{ todayFormatted }}.
                         </p>
-                        <div v-for="a in filteredAnnouncements" :key="a.id" class="text-sm text-slate-600 py-1.5 border-b border-slate-50 last:border-0">
-                            {{ a.title }}
+                        <div
+                            v-for="a in filteredAnnouncements"
+                            :key="a.id"
+                            class="py-1.5 border-b border-slate-50 last:border-0"
+                        >
+                            <div class="text-sm text-slate-600">{{ a.title }}</div>
+                            <div v-if="a.body" class="text-xs text-slate-400 mt-0.5 whitespace-pre-wrap">{{ a.body }}</div>
+                            <div class="text-[11px] text-slate-300 mt-1">Posted {{ formatPostedDate(a.created_at) }}</div>
                         </div>
                     </div>
 
@@ -607,6 +613,20 @@ const formatEventDate = (dateStr) => {
     const d = new Date(dateStr);
     return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
 };
+
+const todayFormatted = computed(() =>
+    new Date().toLocaleString('en-PH', {
+        month: 'long', day: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+    })
+);
+
+const formatPostedDate = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleString('en-PH', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+
 </script>
 
 <style scoped>

@@ -139,54 +139,62 @@
 
                 <template v-else>
                     <div
-                        class="border border-slate-200 rounded-xl p-5 text-center cursor-pointer hover:shadow-lg transition overflow-hidden"
-                        @click="showFullList = true"
-                    >
-                        <Transition :name="slideDirection" mode="out-in">
-                            <div :key="currentIndex">
-                                <div
-                                    class="w-full aspect-square rounded-lg overflow-hidden flex items-center justify-center text-5xl font-semibold"
-                                    :style="!currentStudent.photo_url ? { background: '#FFCC00', color: '#412402' } : {}"
-                                >
-                                    <img
-                                        v-if="currentStudent.photo_url"
-                                        :src="currentStudent.photo_url"
-                                        :alt="currentStudent.name"
-                                        class="w-full h-full object-cover"
-                                    />
-                                    <span v-else>{{ initials(currentStudent.name) }}</span>
-                                </div>
-                                <div class="text-xs font-medium text-[#003399] mt-4">top {{ currentIndex + 1 }}</div>
-                                <div class="text-base font-semibold text-slate-800 mt-1">{{ currentStudent.name }}</div>
-                                <div class="text-sm text-slate-400 mt-0.5">{{ currentStudent.grade }} average</div>
-                            </div>
-                        </Transition>
+    class="border border-slate-200 rounded-xl p-5 text-center cursor-pointer hover:shadow-lg transition overflow-hidden"
+    :class="{
+        'border-[#FFCC00] bg-gradient-to-b from-[#FFFBEB] to-white': currentIndex === 0,
+        'border-slate-300 bg-gradient-to-b from-slate-50 to-white': currentIndex === 1,
+        'border-[#D9A066] bg-gradient-to-b from-[#FDF3E7] to-white': currentIndex === 2,
+    }"
+    @click="showFullList = true"
+>
+    <Transition :name="slideDirection" mode="out-in">
+        <div :key="currentIndex">
+            <div
+                v-if="currentIndex < 3"
+                class="inline-flex items-center gap-1 text-[11px] font-semibold px-3 py-1 rounded-full mb-3"
+                :class="{
+                    'bg-[#FFCC00] text-[#412402]': currentIndex === 0,
+                    'bg-slate-300 text-slate-700': currentIndex === 1,
+                    'bg-[#D9A066] text-[#4A2E0A]': currentIndex === 2,
+                }"
+            >
+                {{ currentIndex === 0 ? '🥇 TOP 1' : currentIndex === 1 ? '🥈 TOP 2' : '🥉 TOP 3' }}
+            </div>
 
-                        <div class="flex items-center justify-center gap-1.5 mt-4">
-                            <button
-                                v-for="(s, i) in filteredStudents"
-                                :key="s.name"
-                                @click.stop="goTo(i)"
-                                class="rounded-full transition"
-                                :class="i === currentIndex ? 'w-2.5 h-2.5 bg-[#FFCC00]' : 'w-2 h-2 bg-slate-200'"
-                            ></button>
-                        </div>
-                    </div>
+            <div
+                class="w-40 h-40 rounded-xl overflow-hidden flex items-center justify-center text-5xl font-semibold mx-auto ring-4"
+                :class="{
+                    'ring-[#FFCC00] shadow-lg shadow-yellow-200/60': currentIndex === 0,
+                    'ring-slate-300 shadow-md shadow-slate-200/60': currentIndex === 1,
+                    'ring-[#D9A066] shadow-md shadow-amber-200/60': currentIndex === 2,
+                    'ring-[#003399]/20': currentIndex > 2,
+                }"
+                :style="!currentStudent.photo_url ? { background: '#FFCC00', color: '#412402' } : {}"
+            >
+                <img
+                    v-if="currentStudent.photo_url"
+                    :src="currentStudent.photo_url"
+                    :alt="currentStudent.name"
+                    class="w-full h-full object-cover"
+                />
+                <span v-else>{{ initials(currentStudent.name) }}</span>
+            </div>
 
-                    <button @click="showFullList = !showFullList" class="w-full text-xs text-[#003399] font-medium mt-4 hover:underline">
-                        {{ showFullList ? 'Hide full list' : 'View full list' }}
-                    </button>
+            <div class="text-xs font-medium text-[#003399] mt-4">top {{ currentIndex + 1 }}</div>
+            <div class="text-base font-semibold text-slate-800 mt-1">{{ currentStudent.name }}</div>
+            <div class="text-sm text-slate-400 mt-0.5">Grade: {{ currentStudent.grade }}</div>
+        </div>
+    </Transition>
 
-                    <div v-if="showFullList" class="mt-2 divide-y divide-slate-100 border-t border-slate-100">
-                        <div v-for="(s, i) in filteredStudents" :key="s.name" class="flex items-center gap-2 py-2">
-                            <span class="text-xs text-slate-400 w-4">{{ i + 1 }}</span>
-                            <div class="w-6 h-6 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-[10px] font-semibold" :style="!s.photo_url ? { background: '#FFCC00', color: '#412402' } : {}">
-                                <img v-if="s.photo_url" :src="s.photo_url" :alt="s.name" class="w-full h-full object-cover" />
-                                <span v-else>{{ initials(s.name) }}</span>
-                            </div>
-                            <div class="text-sm text-slate-700 flex-1 truncate">{{ s.name }}</div>
-                            <div class="text-xs font-semibold text-[#003399]">{{ s.grade }}</div>
-                        </div>
+    <div class="flex items-center justify-center gap-1.5 mt-4">
+        <button
+            v-for="(s, i) in filteredStudents"
+            :key="s.name"
+            @click.stop="goTo(i)"
+            class="rounded-full transition"
+            :class="i === currentIndex ? 'w-2.5 h-2.5 bg-[#FFCC00]' : 'w-2 h-2 bg-slate-200'"
+        ></button>
+    </div>
                     </div>
                 </template>
             </div>

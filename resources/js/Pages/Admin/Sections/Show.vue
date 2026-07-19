@@ -41,11 +41,18 @@
                     <Link :href="`/paulo/sections/${section.id}/students/import`" class="bg-[#003399] text-white text-xs font-medium px-4 py-2 rounded-lg">
                         Import students
                     </Link>
+                    <label class="border border-slate-200 text-xs font-medium px-4 py-2 rounded-lg text-slate-600 cursor-pointer hover:bg-slate-50 transition">
+                        {{ photosImporting ? 'Ina-import...' : 'Import photos (ZIP)' }}
+                        <input type="file" accept=".zip" class="hidden" @change="uploadPhotosZip" :disabled="photosImporting" />
+                    </label>
                     <button v-if="!revealed" @click="showModal = true" class="border border-slate-200 text-xs font-medium px-4 py-2 rounded-lg text-slate-600">
                         Show passwords
                     </button>
                     <Link v-else :href="`/paulo/sections/${section.id}`" class="text-xs text-slate-400 hover:underline">Hide passwords</Link>
                 </div>
+                <p class="text-[11px] text-slate-400 -mt-1">
+                    Photo ZIP: pangalanan ang bawat larawan gamit ang student number (e.g. <code>2021-0001.jpg</code>).
+                </p>
 
                 <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                     <p v-if="students.length === 0" class="text-xs text-slate-400 px-4 py-6">
@@ -62,6 +69,7 @@
                                         class="rounded border-slate-300"
                                     />
                                 </th>
+                                <th class="px-4 py-2 w-14">Photo</th>
                                 <th class="px-4 py-2">Student number</th>
                                 <th class="px-4 py-2">Name</th>
                                 <th class="px-4 py-2">Password</th>
@@ -77,6 +85,23 @@
                                         v-model="selectedStudents"
                                         class="rounded border-slate-300"
                                     />
+                                </td>
+                                <td class="px-4 py-2">
+                                    <button
+                                        @click="openPhotoUpload(s)"
+                                        title="Palitan ang picture"
+                                        class="block w-9 h-9 rounded-full overflow-hidden border border-slate-200 bg-slate-100 hover:opacity-80 transition shrink-0"
+                                    >
+                                        <img
+                                            v-if="s.photo_url"
+                                            :src="s.photo_url"
+                                            :alt="s.full_name"
+                                            class="w-full h-full object-cover"
+                                        />
+                                        <span v-else class="w-full h-full flex items-center justify-center text-slate-400 text-[10px] font-medium">
+                                            {{ initials(s.full_name) }}
+                                        </span>
+                                    </button>
                                 </td>
                                 <td class="px-4 py-2 text-slate-700">{{ s.student_number }}</td>
                                 <td class="px-4 py-2 text-slate-700">{{ s.full_name }}</td>
@@ -289,6 +314,54 @@
             </div>
         </div>
 
+        <!-- Photo Upload modal -->
+        <div v-if="photoModalOpen" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 px-4" @click.self="closePhotoUpload">
+            <div class="bg-white rounded-xl p-5 w-full max-w-xs shadow-xl">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-sm font-semibold text-slate-700">{{ photoStudent?.full_name }}</div>
+                    <button @click="closePhotoUpload" class="text-slate-400 hover:text-slate-600">✕</button>
+                </div>
+
+                <div class="flex flex-col items-center gap-3">
+                    <div class="w-28 h-28 rounded-full overflow-hidden border border-slate-200 bg-slate-100">
+                        <img
+                            v-if="photoPreview || photoStudent?.photo_url"
+                            :src="photoPreview || photoStudent?.photo_url"
+                            class="w-full h-full object-cover"
+                        />
+                        <span v-else class="w-full h-full flex items-center justify-center text-slate-400 text-lg font-medium">
+                            {{ initials(photoStudent?.full_name) }}
+                        </span>
+                    </div>
+
+                    <label class="border border-slate-200 text-xs font-medium px-4 py-2 rounded-lg text-slate-600 cursor-pointer hover:bg-slate-50 transition">
+                        Pumili ng picture
+                        <input type="file" accept="image/*" class="hidden" @change="onPhotoSelected" />
+                    </label>
+
+                    <p v-if="photoErrorMsg" class="text-xs text-red-500">{{ photoErrorMsg }}</p>
+
+                    <div class="flex gap-2 w-full mt-1">
+                        <button
+                            v-if="photoStudent?.photo_url"
+                            @click="removePhoto"
+                            :disabled="photoUploading"
+                            class="flex-1 border border-red-200 text-red-600 text-xs font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition disabled:opacity-50"
+                        >
+                            Alisin
+                        </button>
+                        <button
+                            @click="submitPhotoUpload"
+                            :disabled="!photoFile || photoUploading"
+                            class="flex-1 bg-[#003399] text-white text-xs font-medium px-4 py-2 rounded-lg disabled:opacity-50"
+                        >
+                            {{ photoUploading ? 'Ina-upload...' : 'I-save' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Edit Grades modal -->
         <div v-if="editGradesModalOpen" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 px-4" @click.self="closeEditGrades">
             <div class="bg-white rounded-xl p-5 w-full max-w-sm shadow-xl">
@@ -449,6 +522,96 @@ const submitEditStudent = () => {
     })).post(`/paulo/sections/${props.section.id}/students/${editingStudentId.value}`, {
         preserveScroll: true,
         onSuccess: () => { editStudentModalOpen.value = false; },
+    });
+};
+
+// ---- Masterlist: bulk photo import (ZIP) ----
+const photosImporting = ref(false);
+
+const uploadPhotosZip = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    photosImporting.value = true;
+    router.post(`/paulo/sections/${props.section.id}/students/photos/import`, { file }, {
+        forceFormData: true,
+        preserveScroll: true,
+        onFinish: () => { photosImporting.value = false; e.target.value = ''; },
+    });
+};
+
+// ---- Masterlist: photo upload ----
+const photoModalOpen = ref(false);
+const photoStudent = ref(null);
+const photoFile = ref(null);
+const photoPreview = ref(null);
+const photoUploading = ref(false);
+const photoErrorMsg = ref('');
+
+const initials = (name) => {
+    if (!name) return '?';
+    return name
+        .split(' ')
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((n) => n[0].toUpperCase())
+        .join('');
+};
+
+const openPhotoUpload = (student) => {
+    photoStudent.value = student;
+    photoFile.value = null;
+    photoPreview.value = null;
+    photoErrorMsg.value = '';
+    photoModalOpen.value = true;
+};
+
+const closePhotoUpload = () => {
+    photoModalOpen.value = false;
+    photoStudent.value = null;
+    photoFile.value = null;
+    photoPreview.value = null;
+};
+
+const onPhotoSelected = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    photoErrorMsg.value = '';
+    photoFile.value = file;
+    photoPreview.value = URL.createObjectURL(file);
+};
+
+const submitPhotoUpload = () => {
+    if (!photoFile.value || !photoStudent.value) return;
+
+    photoUploading.value = true;
+    photoErrorMsg.value = '';
+
+    router.post(
+        `/paulo/sections/${props.section.id}/students/${photoStudent.value.id}/photo`,
+        { photo: photoFile.value },
+        {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => { closePhotoUpload(); },
+            onError: (errors) => {
+                photoErrorMsg.value = errors.photo || 'Hindi na-upload ang picture.';
+            },
+            onFinish: () => { photoUploading.value = false; },
+        }
+    );
+};
+
+const removePhoto = () => {
+    if (!photoStudent.value) return;
+    if (!confirm('Sigurado ka bang aalisin ang picture?')) return;
+
+    photoUploading.value = true;
+    router.delete(`/paulo/sections/${props.section.id}/students/${photoStudent.value.id}/photo`, {
+        preserveScroll: true,
+        onSuccess: () => { closePhotoUpload(); },
+        onFinish: () => { photoUploading.value = false; },
     });
 };
 

@@ -57,6 +57,10 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
     Route::delete('sections/{section}/students/{student}', [SectionController::class, 'destroyStudent'])->name('sections.students.destroy');
     Route::delete('sections/{section}/students', [SectionController::class, 'destroyStudents'])->name('sections.students.destroyMany');
 
+    Route::post('sections/{section}/students/{student}/photo', [SectionController::class, 'updatePhoto'])->name('sections.students.photo.update');
+    Route::delete('sections/{section}/students/{student}/photo', [SectionController::class, 'deletePhoto'])->name('sections.students.photo.destroy');
+    Route::post('sections/{section}/students/photos/import', [SectionController::class, 'importPhotos'])->name('sections.students.photos.import');
+
     Route::delete('sections/{section}/grades', [GradeController::class, 'destroyForStudents'])->name('sections.grades.destroyMany');
 
     Route::get('sections/{section}/students/{student}/grades', [GradeController::class, 'forStudentInSection'])->name('sections.students.grades.show');

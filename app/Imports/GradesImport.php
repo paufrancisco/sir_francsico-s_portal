@@ -77,9 +77,7 @@ class GradesImport implements ToCollection
 
             foreach ($columnDefs as $idx => $def) {
                 $score = $row[$idx] ?? null;
-                if ($score === null || $score === '') {
-                    continue;
-                }
+                $score = ($score === null || $score === '') ? 0 : $score;
 
                 Grade::updateOrCreate(
                     [

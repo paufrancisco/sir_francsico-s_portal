@@ -45,11 +45,12 @@ class SectionController extends Controller
 
         return Inertia::render('Admin/Sections/Show', [
             'section' => $section,
-            'students' => $this->studentList($section),
-            'revealed' => false,
+            'students' => $this->studentList($section, withPassword: session()->has('revealed_section_' . $section->id)),
+            'revealed' => session()->pull('revealed_section_' . $section->id, false),
             'gradeItems' => $this->gradeItems($section, $period),
             'gradesBreakdown' => $this->gradesBreakdown($section, $period),
             'currentPeriod' => $period,
+            'periods' => self::PERIODS,
         ]);
     }
 
@@ -61,16 +62,9 @@ class SectionController extends Controller
             return back()->withErrors(['password' => 'Maling password.']);
         }
 
-        $period = $this->resolvePeriod($request->input('period'));
+        session(['revealed_section_' . $section->id => true]);
 
-        return Inertia::render('Admin/Sections/Show', [
-            'section' => $section,
-            'students' => $this->studentList($section, withPassword: true),
-            'revealed' => true,
-            'gradeItems' => $this->gradeItems($section, $period),
-            'gradesBreakdown' => $this->gradesBreakdown($section, $period),
-            'currentPeriod' => $period,
-        ]);
+        return redirect()->route('admin.sections.show', $section);
     }
 
     private function resolvePeriod(?string $period): string
@@ -110,11 +104,19 @@ class SectionController extends Controller
 
             $weighted = 0;
             foreach ($weights as $category => $weight) {
-                $catGrades = $studentGrades->where('category', $category);
-                if ($catGrades->isEmpty()) {
-                    continue;
+                $catItems = $items->where('category', $category);
+                if ($catItems->isEmpty()) {
+                    continue; // walang item na na-define para sa category na ito, kahit saang estudyante
                 }
-                $avgPercent = $catGrades->avg(fn ($g) => $g->max_score > 0 ? ($g->score / $g->max_score) * 100 : 0);
+
+                $avgPercent = $catItems->map(function ($item) use ($studentGrades) {
+                    $g = $studentGrades->first(fn ($gr) => $gr->category === $item['category'] && $gr->title === $item['title']);
+                    if (! $g) {
+                        return 0; // missing = 0
+                    }
+                    return $g->max_score > 0 ? ($g->score / $g->max_score) * 100 : 0;
+                })->avg();
+
                 $weighted += $avgPercent * $weight;
             }
 

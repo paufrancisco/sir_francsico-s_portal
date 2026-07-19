@@ -9,12 +9,11 @@ use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use App\Models\Grade;
 use App\Models\Student;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
-use ZipArchive;
 
 class SectionController extends Controller
 {
+    private const PERIODS = ['prelim', 'midterm', 'prefinal', 'finals'];
+
     public function index()
     {
         return Inertia::render('Admin/Sections/Index', [
@@ -40,14 +39,17 @@ class SectionController extends Controller
         return back()->with('success', 'Section added.');
     }
 
-    public function show(Section $section)
+    public function show(Request $request, Section $section)
     {
+        $period = $this->resolvePeriod($request->query('period'));
+
         return Inertia::render('Admin/Sections/Show', [
             'section' => $section,
             'students' => $this->studentList($section),
             'revealed' => false,
-            'gradeItems' => $this->gradeItems($section),
-            'gradesBreakdown' => $this->gradesBreakdown($section),
+            'gradeItems' => $this->gradeItems($section, $period),
+            'gradesBreakdown' => $this->gradesBreakdown($section, $period),
+            'currentPeriod' => $period,
         ]);
     }
 
@@ -59,20 +61,29 @@ class SectionController extends Controller
             return back()->withErrors(['password' => 'Maling password.']);
         }
 
+        $period = $this->resolvePeriod($request->input('period'));
+
         return Inertia::render('Admin/Sections/Show', [
             'section' => $section,
             'students' => $this->studentList($section, withPassword: true),
             'revealed' => true,
-            'gradeItems' => $this->gradeItems($section),
-            'gradesBreakdown' => $this->gradesBreakdown($section),
+            'gradeItems' => $this->gradeItems($section, $period),
+            'gradesBreakdown' => $this->gradesBreakdown($section, $period),
+            'currentPeriod' => $period,
         ]);
     }
 
-    private function gradeItems(Section $section)
+    private function resolvePeriod(?string $period): string
+    {
+        return in_array($period, self::PERIODS, true) ? $period : 'prelim';
+    }
+
+    private function gradeItems(Section $section, string $period)
     {
         $categoryOrder = ['long_quiz' => 0, 'tp' => 1, 'exam' => 2];
 
         return Grade::where('section_id', $section->id)
+            ->where('period', $period)
             ->get(['category', 'title'])
             ->unique(fn ($g) => $g->category . '|' . $g->title)
             ->sortBy(fn ($g) => $categoryOrder[$g->category] ?? 99)
@@ -80,11 +91,11 @@ class SectionController extends Controller
             ->map(fn ($g) => ['category' => $g->category, 'title' => $g->title]);
     }
 
-    private function gradesBreakdown(Section $section)
+    private function gradesBreakdown(Section $section, string $period)
     {
         $students = $section->students()->orderBy('full_name')->get();
-        $allGrades = Grade::where('section_id', $section->id)->get();
-        $items = $this->gradeItems($section);
+        $allGrades = Grade::where('section_id', $section->id)->where('period', $period)->get();
+        $items = $this->gradeItems($section, $period);
         $weights = ['long_quiz' => 0.20, 'tp' => 0.30, 'exam' => 0.50];
 
         $rows = $students->map(function ($student) use ($allGrades, $items, $weights) {
@@ -110,6 +121,7 @@ class SectionController extends Controller
             return [
                 'id' => $student->id,
                 'name' => $student->full_name,
+                'student_number' => $student->student_number,
                 'scores' => $scores,
                 'total_percentage' => round($weighted, 2),
             ];
@@ -201,7 +213,7 @@ class SectionController extends Controller
         ]);
 
         if ($student->photo_path) {
-            Storage::disk('supabase')->delete($student->photo_path);
+            \Storage::disk('supabase')->delete($student->photo_path);
         }
 
         $path = $request->file('photo')->store('students', 'supabase');
@@ -214,7 +226,7 @@ class SectionController extends Controller
     public function deletePhoto(Section $section, Student $student)
     {
         if ($student->photo_path) {
-            Storage::disk('supabase')->delete($student->photo_path);
+            \Storage::disk('supabase')->delete($student->photo_path);
             $student->update(['photo_path' => null]);
         }
 
@@ -228,7 +240,7 @@ class SectionController extends Controller
         ]);
 
         $zipPath = $request->file('file')->getRealPath();
-        $zip = new ZipArchive();
+        $zip = new \ZipArchive();
 
         if ($zip->open($zipPath) !== true) {
             return back()->with('error', 'Hindi mabuksan ang ZIP file.');
@@ -265,11 +277,11 @@ class SectionController extends Controller
             $contents = $zip->getFromIndex($i);
 
             if ($student->photo_path) {
-                Storage::disk('supabase')->delete($student->photo_path);
+                \Storage::disk('supabase')->delete($student->photo_path);
             }
 
-            $newPath = 'students/' . $student->id . '-' . Str::random(8) . '.' . $ext;
-            Storage::disk('supabase')->put($newPath, $contents, 'public');
+            $newPath = 'students/' . $student->id . '-' . \Str::random(8) . '.' . $ext;
+            \Storage::disk('supabase')->put($newPath, $contents, 'public');
 
             $student->update(['photo_path' => $newPath]);
             $matched++;

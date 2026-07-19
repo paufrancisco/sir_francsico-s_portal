@@ -139,10 +139,16 @@
                         <Transition :name="slideDirection" mode="out-in">
                             <div :key="currentIndex">
                                 <div
-                                    class="w-full aspect-square rounded-lg flex items-center justify-center text-5xl font-semibold"
-                                    :style="{ background: '#FFCC00', color: '#412402' }"
+                                    class="w-full aspect-square rounded-lg overflow-hidden flex items-center justify-center text-5xl font-semibold"
+                                    :style="!currentStudent.photo_url ? { background: '#FFCC00', color: '#412402' } : {}"
                                 >
-                                    {{ initials(currentStudent.name) }}
+                                    <img
+                                        v-if="currentStudent.photo_url"
+                                        :src="currentStudent.photo_url"
+                                        :alt="currentStudent.name"
+                                        class="w-full h-full object-cover"
+                                    />
+                                    <span v-else>{{ initials(currentStudent.name) }}</span>
                                 </div>
                                 <div class="text-xs font-medium text-[#003399] mt-4">top {{ currentIndex + 1 }}</div>
                                 <div class="text-base font-semibold text-slate-800 mt-1">{{ currentStudent.name }}</div>
@@ -168,6 +174,10 @@
                     <div v-if="showFullList" class="mt-2 divide-y divide-slate-100 border-t border-slate-100">
                         <div v-for="(s, i) in filteredStudents" :key="s.name" class="flex items-center gap-2 py-2">
                             <span class="text-xs text-slate-400 w-4">{{ i + 1 }}</span>
+                            <div class="w-6 h-6 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-[10px] font-semibold" :style="!s.photo_url ? { background: '#FFCC00', color: '#412402' } : {}">
+                                <img v-if="s.photo_url" :src="s.photo_url" :alt="s.name" class="w-full h-full object-cover" />
+                                <span v-else>{{ initials(s.name) }}</span>
+                            </div>
                             <div class="text-sm text-slate-700 flex-1 truncate">{{ s.name }}</div>
                             <div class="text-xs font-semibold text-[#003399]">{{ s.grade }}</div>
                         </div>

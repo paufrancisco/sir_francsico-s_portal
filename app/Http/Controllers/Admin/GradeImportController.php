@@ -24,10 +24,27 @@ class GradeImportController extends Controller
             'period' => 'required|in:prelim,midterm,prefinal,finals',
         ]);
 
-        Excel::import(new GradesImport($section->id, $request->input('period')), $request->file('file'));
+        Grade::where('section_id', $section->id)
+            ->where('period', $request->period)
+            ->delete();
+
+        $import = new GradesImport($section->id, $request->input('period'));
+        Excel::import($import, $request->file('file'));
 
         $section->update(['grades_computed_at' => now()]);
 
-        return back()->with('success', 'Grades imported.');
+        $message = "{$import->importedCount} estudyante ang na-import ang grades para sa " . ucfirst($request->period) . ".";
+
+        if (! empty($import->skipped)) {
+            $message .= " May " . count($import->skipped) . " na hindi na-match sa Masterlist: " . implode(', ', $import->skipped) . ".";
+        }
+
+        if (! empty($import->duplicates)) {
+            $message .= " Babala: paulit-ulit sa file (huling row lang ang na-save): " . implode(', ', $import->duplicates) . ".";
+        }
+
+        return redirect()
+            ->route('admin.sections.show', ['section' => $section, 'period' => $request->period])
+            ->with('success', $message);
     }
 }

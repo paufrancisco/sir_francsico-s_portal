@@ -49,14 +49,7 @@
                     >
                         <svg v-if="isDarkMode" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
                         <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
-                    </button>
-                    <Link
-                        href="/login"
-                        class="text-[11px] font-semibold px-5 py-2.5 rounded-full hover:opacity-90 transition"
-                        style="background:var(--navy); color:#fff;"
-                    >
-                        Login
-                    </Link>
+                    </button> 
                 </div>
             </div>
         </header>
@@ -120,9 +113,9 @@
                     </button>
 
                     <button class="action-tile action-tile--surface">
-                        <span class="action-tile__icon" style="background:var(--chip-bg); color:var(--navy);">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                        </span>
+                    <span class="action-tile__icon" style="background:var(--chip-bg); color:var(--text-heading);">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    </span>
                         <div class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">Change password</div>
                         <div class="text-[11px] text-[var(--text-muted)] mt-0.5">Verify muna current mo</div>
                     </button>
@@ -146,25 +139,13 @@
                             <div
                                 v-for="a in filteredAnnouncements"
                                 :key="a.id"
-                                class="py-2"
+                                class="py-2 flex items-center gap-2 flex-wrap"
                             >
-                                <button
-                                    class="w-full flex items-center gap-2 text-left"
-                                    @click="a.body ? (expandedAnnouncementId = expandedAnnouncementId === a.id ? null : a.id) : null"
-                                >
-                                    <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background:var(--gold);"></span>
-                                    <span class="text-sm font-medium text-[var(--text-body)] truncate">{{ a.title }}</span>
-                                    <span class="text-[10px] text-[var(--text-muted)] shrink-0">{{ a.is_global ? 'All sections' : activeSectionLabel }}</span>
-                                    <span class="flex-1"></span>
-                                    <span class="text-[10px] text-[var(--text-muted)] whitespace-nowrap shrink-0" style="font-family:var(--font-mono);">{{ formatPostedDate(a.created_at) }}</span>
-                                    <svg v-if="a.body" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0 transition-transform text-[var(--text-muted)]" :class="expandedAnnouncementId === a.id ? 'rotate-180' : ''"><path d="M6 9l6 6 6-6"/></svg>
-                                </button>
-                                <div
-                                    v-if="a.body && expandedAnnouncementId === a.id"
-                                    class="text-xs text-[var(--text-secondary)] mt-1.5 pl-3.5 whitespace-pre-wrap"
-                                >
-                                    {{ a.body }}
-                                </div>
+                                <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background:var(--gold);"></span>
+                                <span class="text-sm font-medium text-[var(--text-body)] shrink-0">{{ a.title }}</span>
+                                <span v-if="a.body" class="text-xs text-[var(--text-secondary)] truncate">{{ a.body }}</span>
+                                <span class="flex-1"></span>
+                                <span class="text-[10px] text-[var(--text-muted)] whitespace-nowrap shrink-0" style="font-family:var(--font-mono);">{{ formatPostedDate(a.created_at) }}</span>
                             </div>
                         </div>
                     </div>
@@ -526,7 +507,6 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
-import { Link } from '@inertiajs/vue3';
 import axios from 'axios';
 
 const props = defineProps({
@@ -815,36 +795,42 @@ const formatPostedDate = (dateStr) => {
 
     --font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    --font-mono: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, monospace;
 
-    --navy: #0A1B4D;
-    --navy-deep: #061238;
-    --gold: #F7B125;
-    --teal: #31A24C;
-    --coral: #F02849;
+    /* GitHub Light tokens */
+    --navy: #24292f;        /* dark neutral panel (like GH header) */
+    --navy-deep: #1b1f24;
+    --gold: #0969da;        /* GH accent blue — links, primary CTAs */
+    --teal: #1a7f37;        /* GH success green */
+    --coral: #cf222e;       /* GH danger red */
 
-    --page-bg: #F0F2F5;
-    --surface: #FFFFFF;
-    --surface-border: #CED0D4;
-    --surface-border-soft: #E4E6EB;
-    --text-heading: #050505;
-    --text-body: #1C1E21;
-    --text-secondary: #65676B;
-    --text-muted: #8A8D91;
-    --chip-bg: #E4E6EB;
+    --page-bg: #f6f8fa;
+    --surface: #ffffff;
+    --surface-border: #d0d7de;
+    --surface-border-soft: #d8dee4;
+    --text-heading: #1f2328;
+    --text-body: #1f2328;
+    --text-secondary: #59636e;
+    --text-muted: #6e7781;
+    --chip-bg: #eaeef2;
 }
 .portal-root.dark {
-    --navy: #1B3B82;
-    --navy-deep: #2447A0;
-    --page-bg: #18191A;
-    --surface: #242526;
-    --surface-border: #3E4042;
-    --surface-border-soft: #3A3B3C;
-    --text-heading: #E4E6EB;
-    --text-body: #E4E6EB;
-    --text-secondary: #B0B3B8;
-    --text-muted: #8A8D91;
-    --chip-bg: #3A3B3C;
+    /* GitHub Dark tokens */
+    --navy: #21262d;
+    --navy-deep: #161b22;
+    --gold: #58a6ff;        /* GH accent blue, dark mode */
+    --teal: #3fb950;
+    --coral: #f85149;
+
+    --page-bg: #0d1117;
+    --surface: #161b22;
+    --surface-border: #30363d;
+    --surface-border-soft: #21262d;
+    --text-heading: #e6edf3;
+    --text-body: #c9d1d9;
+    --text-secondary: #8b949e;
+    --text-muted: #6e7681;
+    --chip-bg: #21262d;
 }
 
 /* ---- background texture ---- */
@@ -924,7 +910,7 @@ const formatPostedDate = (dateStr) => {
 .action-tile:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -14px rgba(20,33,61,0.25); }
 .action-tile--ink { background: linear-gradient(135deg, var(--navy), var(--navy-deep)); color: #fff; }
 .action-tile--surface { background: var(--surface); border: 1px solid var(--surface-border); }
-.action-tile--gold { background: linear-gradient(135deg, var(--gold), #E09B00); }
+.action-tile--gold { background: linear-gradient(135deg, #d4a72c, #9a6700); }
 .action-tile__icon {
     width: 2.25rem; height: 2.25rem;
     border-radius: 0.75rem;

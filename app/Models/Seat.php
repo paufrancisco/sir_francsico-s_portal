@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Seat extends Model
 {
-    protected $fillable = ['section_id', 'student_id', 'seat_label', 'position_x', 'position_y'];
+    protected $fillable = ['section_id', 'student_id', 'layout', 'position_x', 'position_y', 'seat_label'];
 
     public function section()
     {

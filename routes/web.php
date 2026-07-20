@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\AdminFaqController;
 use App\Http\Controllers\GradeCorrectionController;
 use App\Http\Controllers\Admin\GradeController;
 use App\Models\Section;
+use App\Http\Controllers\SeatingController;
 
 Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
@@ -65,6 +66,11 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
 
     Route::get('sections/{section}/students/{student}/grades', [GradeController::class, 'forStudentInSection'])->name('sections.students.grades.show');
     Route::post('grades', [GradeController::class, 'store'])->name('grades.store');
+
+    Route::get('seating', [SeatingController::class, 'index'])->name('seating.index');
+    Route::post('seating/assign', [SeatingController::class, 'assign'])->name('seating.assign');
+    Route::post('seating/unassign', [SeatingController::class, 'unassign'])->name('seating.unassign');
+    Route::patch('students/{student}/aura', [SeatingController::class, 'adjustAura'])->name('students.aura');
 });
 
 Route::post('/portal/chat/verify', [ChatController::class, 'verify'])->middleware('throttle:6,1');

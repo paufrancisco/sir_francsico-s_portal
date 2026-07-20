@@ -222,6 +222,10 @@ class SectionController extends Controller
 
         $student->update(['photo_path' => $path]);
 
+        if ($request->wantsJson()) {
+            return response()->json(['photo_url' => $student->fresh()->photo_url]);
+        }
+
         return back()->with('success', 'Na-update ang picture.');
     }
 

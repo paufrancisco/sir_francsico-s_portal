@@ -16,7 +16,20 @@ class StudentDashboardController extends Controller
     {
         $sections = Section::orderBy('name')->get(['id', 'name', 'subject', 'schedule']);
 
-        $announcementsBySection = Announcement::latest()->get()->groupBy('section_id');
+        $allAnnouncements = Announcement::with('sections')->latest()->get();
+        $globalAnnouncements = $allAnnouncements->where('is_global', true)->values();
+
+        $announcementsBySection = [];
+        foreach ($sections as $section) {
+            $specific = $allAnnouncements->filter(
+                fn ($a) => ! $a->is_global && $a->sections->contains('id', $section->id)
+            )->values();
+
+            $announcementsBySection[$section->id] = $globalAnnouncements
+                ->merge($specific)
+                ->sortByDesc('created_at')
+                ->values();
+        }
         $topicsBySection = Topic::orderBy('date_covered')->get()->groupBy('section_id');
 
         $allEvents = CalendarEvent::orderBy('event_date')->get();

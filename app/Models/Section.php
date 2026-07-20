@@ -44,6 +44,6 @@ class Section extends Model
 
     public function announcements()
     {
-        return $this->hasMany(Announcement::class);
+        return $this->belongsToMany(Announcement::class, 'announcement_section');
     }
 }

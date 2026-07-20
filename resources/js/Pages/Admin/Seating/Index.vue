@@ -8,13 +8,21 @@
                     <div class="text-xs text-slate-400">I-click ang box para mag-assign o mag-adjust ng aura points.</div>
                 </div>
 
-                <select
-                    :value="activeSectionId"
-                    @change="switchSection($event.target.value)"
-                    class="text-sm border border-slate-200 rounded-lg px-3 py-2"
-                >
-                    <option v-for="s in sections" :key="s.id" :value="s.id">{{ s.name }}</option>
-                </select>
+                <div class="relative">
+                    <select
+                        :value="activeSectionId"
+                        @change="switchSection($event.target.value)"
+                        class="appearance-none text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg pl-4 pr-10 py-2.5 shadow-sm cursor-pointer transition hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#003399]/20 focus:border-[#003399]/40"
+                    >
+                        <option v-for="s in sections" :key="s.id" :value="s.id">{{ s.name }}</option>
+                    </select>
+                    <svg
+                        class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    >
+                        <path d="M6 9l6 6 6-6" />
+                    </svg>
+                </div>
             </div>
 
             <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-1 w-fit">

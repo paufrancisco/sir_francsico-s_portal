@@ -1,6 +1,6 @@
 <template>
     <AdminLayout>
-        <main class="max-w-5xl mx-auto px-6 lg:px-10 py-8 space-y-4">
+        <main class="max-w-5xl mx-auto px-6 lg:px-10 py-8 space-y-4 overflow-x-hidden">
 
             <div v-if="$page.props.flash?.success" class="bg-[#EAF3DE] text-[#3B6D11] text-sm rounded-lg px-4 py-2">
                 {{ $page.props.flash.success }}
@@ -30,24 +30,6 @@
 
             <!-- MASTERLIST TAB -->
             <div v-if="activeTab === 'masterlist'" class="space-y-3">
-                <div class="flex items-center gap-2">
-                    <div class="relative flex-1">
-                        <svg
-                            width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                            class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
-                        >
-                            <circle cx="11" cy="11" r="8"/>
-                            <path d="m21 21-4.3-4.3"/>
-                        </svg>
-                        <input
-                            v-model="studentSearch"
-                            type="text"
-                            placeholder="Search student number o pangalan..."
-                            class="w-full text-sm border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-[#003399]"
-                        />
-                    </div>
-                </div>
-
                 <div class="flex justify-end gap-2">
                     <button
                         v-if="selectedStudents.length > 0"
@@ -95,7 +77,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="s in filteredStudents" :key="s.id" class="border-t border-slate-100">
+                            <tr v-for="s in students" :key="s.id" class="border-t border-slate-100">
                                 <td class="px-4 py-2">
                                     <input
                                         type="checkbox"
@@ -150,11 +132,6 @@
                                     </div>
                                 </td>
                             </tr>
-                            <tr v-if="students.length > 0 && filteredStudents.length === 0">
-                                <td colspan="6" class="text-center text-slate-400 text-sm py-8">
-                                    Walang nahanap na estudyante.
-                                </td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -170,9 +147,9 @@
                     >
                         Clear grades ({{ selectedGradeRows.length }})
                     </button>
-                    <label class="bg-[#003399] text-white text-xs font-medium px-4 py-2 rounded-lg cursor-pointer">
-                        {{ uploading ? 'Uploading...' : 'Import grades (Excel)' }}
-                        <input type="file" accept=".xlsx,.xls,.csv" class="hidden" @change="uploadGrades" :disabled="uploading" />
+                    <label class="bg-[#003399] text-white text-xs font-medium px-4 py-2 rounded-lg cursor-pointer" :class="{ 'opacity-50 cursor-not-allowed': periodLoading }">
+                        {{ uploading ? 'Uploading...' : periodLoading ? 'Naglo-load...' : 'Import grades (Excel)' }}
+                        <input type="file" accept=".xlsx,.xls,.csv" class="hidden" @change="uploadGrades" :disabled="uploading || periodLoading" />
                     </label>
                 </div>
                 <p class="text-[11px] text-slate-400">
@@ -231,14 +208,14 @@
                     </select>
                 </div>
 
-                <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-x-auto">
+                <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-x-auto max-w-full">
                     <p v-if="gradesBreakdown.length === 0" class="text-xs text-slate-400 px-4 py-6">
                         Wala pang na-import na grades.
                     </p>
                     <p v-else-if="filteredGradesBreakdown.length === 0" class="text-xs text-slate-400 px-4 py-6">
                         Walang tumugma na estudyante.
                     </p>
-                    <table v-else class="w-full text-sm whitespace-nowrap">
+                    <table v-else class="w-full text-sm">
                         <thead>
                             <tr class="bg-slate-50 text-left text-xs text-slate-500">
                                 <th class="px-3 py-2 w-8">
@@ -250,9 +227,8 @@
                                     />
                                 </th>
                                 <th class="px-3 py-2">Rank</th>
-                                <th class="px-3 py-2">Student No.</th>
                                 <th class="px-3 py-2">Name</th>
-                                <th v-for="item in gradeItems" :key="item.category + item.title" class="px-3 py-2">
+                                <th v-for="item in gradeItems" :key="item.category + item.title" class="px-2 py-2 text-center w-16">
                                     {{ item.title }}
                                 </th>
                                 <th class="px-3 py-2">Total %</th>
@@ -270,8 +246,7 @@
                                     />
                                 </td>
                                 <td class="px-3 py-2 text-slate-500">{{ row.rank }}</td>
-                                <td class="px-3 py-2 text-slate-500">{{ row.student_number }}</td>
-                                <td class="px-3 py-2 text-slate-700 font-medium">
+                                <td class="px-3 py-2 text-slate-700 font-medium whitespace-nowrap">
                                     <span class="inline-flex items-center gap-1.5">
                                         {{ row.name }}
                                         <span
@@ -281,13 +256,16 @@
                                         ></span>
                                     </span>
                                 </td>
-                                <td v-for="item in gradeItems" :key="item.category + item.title" class="px-3 py-2 text-slate-600">
+                                <td v-for="item in gradeItems" :key="item.category + item.title" class="px-2 py-2 text-slate-600 text-center">
                                     <template v-if="row.scores[item.category + '|' + item.title]">
-                                        {{ row.scores[item.category + '|' + item.title].score }}/{{ row.scores[item.category + '|' + item.title].max_score }}
+                                        <div class="leading-tight">
+                                            <div class="font-medium">{{ row.scores[item.category + '|' + item.title].score }}</div>
+                                            <div class="text-[10px] text-slate-400">/{{ row.scores[item.category + '|' + item.title].max_score }}</div>
+                                        </div>
                                     </template>
                                     <span v-else class="text-slate-300">—</span>
                                 </td>
-                                <td class="px-3 py-2 font-semibold text-[#003399]">{{ row.total_percentage }}%</td>
+                                <td class="px-3 py-2 font-semibold text-[#003399] whitespace-nowrap">{{ row.total_percentage }}%</td>
                                 <td class="px-3 py-2">
                                     <div class="flex items-center justify-center gap-2">
                                         <button
@@ -537,36 +515,15 @@ const uploadGrades = (e) => {
     });
 };
 
-// ---- Masterlist: search ----
-const studentSearch = ref('');
-
-const filteredStudents = computed(() => {
-    const q = studentSearch.value.trim().toLowerCase();
-    if (!q) return props.students;
-
-    return props.students.filter((s) =>
-        s.student_number.toLowerCase().includes(q) ||
-        s.full_name.toLowerCase().includes(q)
-    );
-});
-
 // ---- Masterlist: checkboxes + bulk delete ----
 const selectedStudents = ref([]);
 
 const allStudentsSelected = computed(() =>
-    filteredStudents.value.length > 0
-    && filteredStudents.value.every((s) => selectedStudents.value.includes(s.id))
+    props.students.length > 0 && selectedStudents.value.length === props.students.length
 );
 
 const toggleSelectAllStudents = () => {
-    if (allStudentsSelected.value) {
-        const filteredIds = new Set(filteredStudents.value.map((s) => s.id));
-        selectedStudents.value = selectedStudents.value.filter((id) => !filteredIds.has(id));
-    } else {
-        const currentIds = new Set(selectedStudents.value);
-        filteredStudents.value.forEach((s) => currentIds.add(s.id));
-        selectedStudents.value = Array.from(currentIds);
-    }
+    selectedStudents.value = allStudentsSelected.value ? [] : props.students.map((s) => s.id);
 };
 
 const deleteSelectedStudents = () => {

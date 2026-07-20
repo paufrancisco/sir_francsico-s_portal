@@ -48,52 +48,66 @@ class GradesImport implements ToCollection
             }
         }
 
+        // Isang query lang para kunin lahat ng estudyante ng section (imbes na isa-isa kada row)
+        $students = Student::where('section_id', $this->sectionId)
+            ->get()
+            ->keyBy(fn ($s) => strtolower(trim($s->student_number)));
+
+        $now = now();
+        $userId = auth()->id();
+        $toInsert = []; // keyed para awtomatikong mapalitan ang duplicate rows (huling row lang manalo)
+
         foreach ($rows->skip(1) as $row) {
-            $studentNumber = trim((string) ($row[0] ?? ''));
-            if ($studentNumber === '') {
+            $studentNumberRaw = trim((string) ($row[0] ?? ''));
+            if ($studentNumberRaw === '') {
                 continue;
             }
 
-            if (isset($this->seenStudentNumbers[$studentNumber])) {
-                if (! in_array($studentNumber, $this->duplicates, true)) {
-                    $this->duplicates[] = $studentNumber;
+            $lookupKey = strtolower($studentNumberRaw);
+
+            if (isset($this->seenStudentNumbers[$lookupKey])) {
+                if (! in_array($studentNumberRaw, $this->duplicates, true)) {
+                    $this->duplicates[] = $studentNumberRaw;
                 }
             } else {
-                $this->seenStudentNumbers[$studentNumber] = true;
+                $this->seenStudentNumbers[$lookupKey] = true;
             }
 
-            $student = Student::where('section_id', $this->sectionId)
-                ->where('student_number', $studentNumber)
-                ->first();
+            $student = $students->get($lookupKey);
 
             if (! $student) {
-                if (! in_array($studentNumber, $this->skipped, true)) {
-                    $this->skipped[] = $studentNumber;
+                if (! in_array($studentNumberRaw, $this->skipped, true)) {
+                    $this->skipped[] = $studentNumberRaw;
                 }
                 continue;
             }
-
-            $this->importedCount++;
 
             foreach ($columnDefs as $idx => $def) {
                 $score = $row[$idx] ?? null;
                 $score = ($score === null || $score === '') ? 0 : $score;
 
-                Grade::updateOrCreate(
-                    [
-                        'student_id' => $student->id,
-                        'section_id' => $this->sectionId,
-                        'category' => $def['category'],
-                        'period' => $this->period,
-                        'title' => $def['title'],
-                    ],
-                    [
-                        'score' => (float) $score,
-                        'max_score' => $def['max_score'],
-                        'recorded_by' => auth()->id(),
-                    ]
-                );
+                $key = $student->id . '|' . $def['category'] . '|' . $def['title'];
+
+                $toInsert[$key] = [
+                    'student_id' => $student->id,
+                    'section_id' => $this->sectionId,
+                    'category' => $def['category'],
+                    'period' => $this->period,
+                    'title' => $def['title'],
+                    'score' => (float) $score,
+                    'max_score' => $def['max_score'],
+                    'recorded_by' => $userId,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
             }
+        }
+
+        $this->importedCount = $students->count() - count($this->skipped);
+
+        // I-insert lahat nang sabay-sabay sa mga chunks ng 200 (mabilis, konting queries lang)
+        foreach (array_chunk(array_values($toInsert), 200) as $chunk) {
+            Grade::insert($chunk);
         }
     }
 }

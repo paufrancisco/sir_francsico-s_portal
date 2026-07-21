@@ -103,9 +103,11 @@ class SectionController extends Controller
             });
 
             $weighted = 0;
+            $categoryPercentages = [];
             foreach ($weights as $category => $weight) {
                 $catItems = $items->where('category', $category);
                 if ($catItems->isEmpty()) {
+                    $categoryPercentages[$category] = null;
                     continue; // walang item na na-define para sa category na ito, kahit saang estudyante
                 }
 
@@ -117,8 +119,18 @@ class SectionController extends Controller
                     return $g->max_score > 0 ? ($g->score / $g->max_score) * 100 : 0;
                 })->avg();
 
+                $categoryPercentages[$category] = round($avgPercent, 2);
                 $weighted += $avgPercent * $weight;
             }
+
+            return [
+                'id' => $student->id,
+                'name' => $student->full_name,
+                'student_number' => $student->student_number,
+                'scores' => $scores,
+                'category_percentages' => $categoryPercentages,
+                'total_percentage' => round($weighted, 2),
+            ];
 
             return [
                 'id' => $student->id,

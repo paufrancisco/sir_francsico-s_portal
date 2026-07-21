@@ -1,6 +1,6 @@
 <template>
     <AdminLayout>
-        <main class="max-w-5xl mx-auto px-6 lg:px-10 py-8 space-y-4 overflow-x-hidden">
+        <main class="w-full px-6 lg:px-10 py-8 space-y-4">
 
             <div v-if="$page.props.flash?.success" class="bg-[#EAF3DE] text-[#3B6D11] text-sm rounded-lg px-4 py-2">
                 {{ $page.props.flash.success }}
@@ -182,6 +182,10 @@
                     Ia-import bilang <span class="font-semibold text-[#003399]">{{ periods.find(p => p.value === currentPeriod)?.label }}</span> — piliin muna ang tamang tab sa itaas bago mag-click ng "Import grades".
                 </p>
 
+                <p class="text-[11px] text-slate-400">
+                    Total % = (Quiz % × 20%) + (TP % × 30%) + (Exam % × 50%)
+                </p>
+
                 <!-- Search + missing-grade filter -->
                 <div class="flex items-center gap-2">
                     <div class="relative flex-1">
@@ -227,10 +231,14 @@
                                     />
                                 </th>
                                 <th class="px-3 py-2">Rank</th>
+                                <th class="px-3 py-2">ID No.</th>
                                 <th class="px-3 py-2">Name</th>
                                 <th v-for="item in gradeItems" :key="item.category + item.title" class="px-2 py-2 text-center w-16">
                                     {{ item.title }}
                                 </th>
+                                <th class="px-2 py-2 text-center w-16">Quiz %</th>
+                                <th class="px-2 py-2 text-center w-16">TP %</th>
+                                <th class="px-2 py-2 text-center w-16">Exam %</th>
                                 <th class="px-3 py-2">Total %</th>
                                 <th class="px-3 py-2 text-center">Action</th>
                             </tr>
@@ -246,6 +254,7 @@
                                     />
                                 </td>
                                 <td class="px-3 py-2 text-slate-500">{{ row.rank }}</td>
+                                <td class="px-3 py-2 text-slate-500 whitespace-nowrap">{{ row.student_number }}</td>
                                 <td class="px-3 py-2 text-slate-700 font-medium whitespace-nowrap">
                                     <span class="inline-flex items-center gap-1.5">
                                         {{ row.name }}
@@ -258,14 +267,33 @@
                                 </td>
                                 <td v-for="item in gradeItems" :key="item.category + item.title" class="px-2 py-2 text-slate-600 text-center">
                                     <template v-if="row.scores[item.category + '|' + item.title]">
-                                        <div class="leading-tight">
-                                            <div class="font-medium">{{ row.scores[item.category + '|' + item.title].score }}</div>
-                                            <div class="text-[10px] text-slate-400">/{{ row.scores[item.category + '|' + item.title].max_score }}</div>
+                                        <div
+                                            class="leading-tight inline-block rounded px-1"
+                                            :class="isLowScore(row.scores[item.category + '|' + item.title]) ? 'bg-red-50' : ''"
+                                        >
+                                            <div class="font-medium" :class="isLowScore(row.scores[item.category + '|' + item.title]) ? 'text-red-600' : ''">
+                                                {{ row.scores[item.category + '|' + item.title].score }}
+                                            </div>
+                                            <div class="text-[10px]" :class="isLowScore(row.scores[item.category + '|' + item.title]) ? 'text-red-400' : 'text-slate-400'">
+                                                /{{ row.scores[item.category + '|' + item.title].max_score }}
+                                            </div>
                                         </div>
                                     </template>
                                     <span v-else class="text-slate-300">—</span>
                                 </td>
-                                <td class="px-3 py-2 font-semibold text-[#003399] whitespace-nowrap">{{ row.total_percentage }}%</td>
+                                <td class="px-2 py-2 text-center text-slate-500">
+                                    <span v-if="row.category_percentages?.long_quiz !== null && row.category_percentages?.long_quiz !== undefined">{{ row.category_percentages.long_quiz }}%</span>
+                                    <span v-else class="text-slate-300">—</span>
+                                </td>
+                                <td class="px-2 py-2 text-center text-slate-500">
+                                    <span v-if="row.category_percentages?.tp !== null && row.category_percentages?.tp !== undefined">{{ row.category_percentages.tp }}%</span>
+                                    <span v-else class="text-slate-300">—</span>
+                                </td>
+                                <td class="px-2 py-2 text-center text-slate-500">
+                                    <span v-if="row.category_percentages?.exam !== null && row.category_percentages?.exam !== undefined">{{ row.category_percentages.exam }}%</span>
+                                    <span v-else class="text-slate-300">—</span>
+                                </td>
+                                <td class="px-3 py-2 font-semibold whitespace-nowrap" :class="row.total_percentage < 60 ? 'text-red-600' : 'text-[#003399]'">{{ row.total_percentage }}%</td>
                                 <td class="px-3 py-2">
                                     <div class="flex items-center justify-center gap-2">
                                         <button
@@ -675,7 +703,15 @@ const gradeSearch = ref('');
 const missingOnly = ref(false);
 
 const rowHasMissingGrade = (row) =>
-    props.gradeItems.some((item) => !row.scores[item.category + '|' + item.title]);
+    props.gradeItems.some((item) => {
+        const entry = row.scores[item.category + '|' + item.title];
+        return !entry || Number(entry.score) === 0;
+    });
+
+const isLowScore = (entry) => {
+    if (!entry || Number(entry.max_score) === 0) return false;
+    return (Number(entry.score) / Number(entry.max_score)) * 100 < 60;
+};
 
 const filteredGradesBreakdown = computed(() => {
     const q = gradeSearch.value.trim().toLowerCase();

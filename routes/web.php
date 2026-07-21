@@ -17,6 +17,7 @@ use App\Http\Controllers\GradeCorrectionController;
 use App\Http\Controllers\Admin\GradeController;
 use App\Models\Section;
 use App\Http\Controllers\SeatingController;
+use App\Http\Controllers\StudentPasswordController;
 
 Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
@@ -80,6 +81,10 @@ Route::get('/portal/chat/history', [ChatController::class, 'history'])->middlewa
 Route::post('/portal/grades/verify', [StudentDashboardController::class, 'verifyGrades'])
     ->middleware('throttle:6,1') // 6 attempts per minute, konting brute-force protection
     ->name('portal.grades.verify');
+
+Route::post('/portal/password/change', [StudentPasswordController::class, 'change'])
+    ->middleware('throttle:6,1')
+    ->name('portal.password.change');
 
 Route::get('/', [StudentDashboardController::class, 'index']);
 

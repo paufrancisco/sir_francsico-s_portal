@@ -257,7 +257,11 @@
                                 <td class="px-3 py-2 text-slate-500 whitespace-nowrap">{{ row.student_number }}</td>
                                 <td class="px-3 py-2 text-slate-700 font-medium whitespace-nowrap">
                                     <span class="inline-flex items-center gap-1.5">
-                                        {{ row.name }}
+                                        <span
+                                            :class="row.total_percentage < 60 ? 'text-red-600 bg-red-50 px-2 py-0.5 rounded-full' : ''"
+                                        >
+                                            {{ row.name }}
+                                        </span>
                                         <span
                                             v-if="rowHasMissingGrade(row)"
                                             title="May kulang na grade"

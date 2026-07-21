@@ -42,13 +42,38 @@
                                 {{ c.type === 'confirmed' ? 'Confirmed' : 'Recheck' }}
                             </span>
                         </td>
-                        <td class="px-4 py-3 text-slate-600 max-w-xs">{{ c.notes ?? '—' }}</td>
+                        <td class="px-4 py-3 text-slate-600 max-w-xs">
+                            {{ c.notes ?? '—' }}
+                            <a
+                                v-if="c.attachment_url"
+                                :href="c.attachment_url"
+                                target="_blank"
+                                class="flex items-center gap-1 text-[11px] text-[#003399] mt-1"
+                            >
+                                📎 View attachment
+                            </a>
+                        </td>
                         <td class="px-4 py-3">
                             <span
-                                class="text-xs font-medium px-2 py-0.5 rounded-full"
-                                :class="c.status === 'resolved' ? 'bg-slate-100 text-slate-500' : 'bg-[#E6F1FB] text-[#003399]'"
+                                v-if="c.status === 'pending'"
+                                class="text-xs font-medium px-2 py-0.5 rounded-full bg-[#E6F1FB] text-[#003399]"
                             >
-                                {{ c.status }}
+                                pending
+                            </span>
+                            <span
+                                v-else-if="c.decision === 'approved'"
+                                class="text-xs font-medium px-2 py-0.5 rounded-full bg-[#EAF3DE] text-[#3B6D11]"
+                            >
+                                approved
+                            </span>
+                            <span
+                                v-else-if="c.decision === 'rejected'"
+                                class="text-xs font-medium px-2 py-0.5 rounded-full bg-[#FBEAEA] text-[#9B1C1C]"
+                            >
+                                rejected
+                            </span>
+                            <span v-else class="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                                resolved
                             </span>
                         </td>
                         <td class="px-4 py-3 text-xs text-slate-400">
@@ -58,22 +83,12 @@
                             <div class="flex items-center justify-center gap-2">
                                 <button
                                     @click="openGrades(c)"
-                                    title="Edit Grades"
+                                    title="Review / Edit Grades"
                                     class="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition"
                                 >
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                                         <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                    </svg>
-                                </button>
-                                <button
-                                    v-if="c.status === 'pending'"
-                                    @click="resolve(c.id)"
-                                    title="Mark resolved"
-                                    class="p-1.5 rounded-lg text-[#003399] hover:bg-[#E6F1FB] transition"
-                                >
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M20 6 9 17l-5-5"/>
                                     </svg>
                                 </button>
                             </div>
@@ -88,7 +103,7 @@
             </table>
         </div>
 
-        <!-- Edit Grades Modal -->
+        <!-- Edit Grades / Review Modal -->
         <div v-if="showModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 px-4" @click.self="closeModal">
             <div class="bg-white rounded-xl p-5 w-full max-w-sm shadow-xl">
 
@@ -96,6 +111,14 @@
                     <div>
                         <div class="text-sm font-semibold text-slate-700">{{ activeStudentName }}</div>
                         <div class="text-xs text-slate-400">{{ activeNotes ?? 'Walang notes' }}</div>
+                        <a
+                            v-if="activeAttachmentUrl"
+                            :href="activeAttachmentUrl"
+                            target="_blank"
+                            class="text-[11px] text-[#003399] mt-0.5 inline-block"
+                        >
+                            📎 View attachment
+                        </a>
                     </div>
                     <button @click="closeModal" class="text-slate-400 hover:text-slate-600">✕</button>
                 </div>
@@ -106,48 +129,61 @@
                     Wala pang na-record na grades.
                 </p>
 
-                <div v-else class="divide-y divide-slate-100 border-t border-slate-100">
-                    <div
-                        v-for="g in grades"
-                        :key="g.id"
-                        class="flex items-center gap-2 py-2 text-sm"
-                    >
-                        <span class="flex-1 min-w-0 truncate text-slate-600">{{ g.title ?? g.category }}</span>
-                        <input
-                            type="number"
-                            v-model="g.editValue"
-                            :max="g.max_score"
-                            min="0"
-                            step="0.01"
-                            style="width: 92px;"
-                            class="grade-score-input shrink-0 px-1.5 text-right font-medium text-slate-700 bg-transparent border border-transparent hover:border-slate-200 focus:border-[#003399] focus:outline-none rounded transition"
-                        />
-                        <span class="w-14 shrink-0 text-right text-slate-400">/{{ g.max_score }}</span>
-                        <button
-                            @click="saveGrade(g)"
-                            :disabled="savingId === g.id || Number(g.editValue) === Number(g.score)"
-                            title="Save"
-                            class="shrink-0 text-slate-500 hover:text-[#003399] disabled:opacity-30 disabled:cursor-not-allowed transition"
+                <template v-else>
+                    <p class="text-[11px] text-amber-700 bg-amber-50 rounded-lg px-2.5 py-1.5 mb-2">
+                        Naka-highlight yung mga item na may proposed change galing sa student. Pwede mo pang i-adjust bago mag-Approve.
+                    </p>
+
+                    <div class="divide-y divide-slate-100 border-t border-slate-100">
+                        <div
+                            v-for="g in grades"
+                            :key="g.id"
+                            class="flex items-center gap-2 py-2 text-sm"
+                            :class="g.hasProposal ? 'bg-amber-50 -mx-2 px-2 rounded-lg' : ''"
                         >
-                            <svg
-                                v-if="savingId !== g.id"
-                                width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
-                            >
-                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/>
-                                <path d="M17 21v-8H7v8"/>
-                                <path d="M7 3v5h8"/>
-                            </svg>
-                            <svg
-                                v-else
-                                width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" class="animate-spin"
-                            >
-                                <path d="M21 12a9 9 0 1 1-6.219-8.56" stroke-linecap="round"/>
-                            </svg>
+                            <div class="flex-1 min-w-0">
+                                <div class="truncate text-slate-600">{{ g.title ?? g.category }}</div>
+                                <div v-if="g.hasProposal" class="text-[11px] text-amber-700 mt-0.5">
+                                    Original: <span class="font-medium">{{ Number(g.score).toFixed(2) }}</span>
+                                    → Proposal: <span class="font-medium">{{ Number(g.editValue).toFixed(2) }}</span>
+                                </div>
+                            </div>
+                            <input
+                                type="number"
+                                v-model="g.editValue"
+                                :max="g.max_score"
+                                min="0"
+                                step="0.01"
+                                style="width: 92px;"
+                                class="grade-score-input shrink-0 px-1.5 text-right font-medium text-slate-700 bg-transparent border border-transparent hover:border-slate-200 focus:border-[#003399] focus:outline-none rounded transition"
+                            />
+                            <span class="w-14 shrink-0 text-right text-slate-400">/{{ g.max_score }}</span>
+                        </div>
+                    </div>
+
+                    <p v-if="errorMsg" class="text-xs text-red-500 mt-3">{{ errorMsg }}</p>
+
+                    <div v-if="activeStatus === 'pending'" class="flex gap-2 mt-4 pt-3 border-t border-slate-100">
+                        <button
+                            @click="approveCorrection"
+                            :disabled="resolving"
+                            class="flex-1 text-white text-xs font-semibold py-2 rounded-lg disabled:opacity-50"
+                            style="background:#003399;"
+                        >
+                            {{ resolving ? 'Nagpo-process...' : 'Approve' }}
+                        </button>
+                        <button
+                            @click="rejectCorrection"
+                            :disabled="resolving"
+                            class="flex-1 border border-red-200 text-red-600 text-xs font-semibold py-2 rounded-lg disabled:opacity-50"
+                        >
+                            Reject
                         </button>
                     </div>
-                </div>
-
-                <p v-if="errorMsg" class="text-xs text-red-500 mt-3">{{ errorMsg }}</p>
+                    <p v-else class="text-xs text-slate-400 mt-4 pt-3 border-t border-slate-100 text-center">
+                        Na-resolve na ito ({{ activeDecision }}).
+                    </p>
+                </template>
             </div>
         </div>
     </div>
@@ -155,7 +191,6 @@
 
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import axios from 'axios';
 
@@ -171,39 +206,58 @@ const tabs = [
 ];
 const activeTab = ref('pending');
 
+const localCorrections = ref([...props.corrections]);
+
 const counts = computed(() => ({
-    pending: props.corrections.filter((c) => c.status === 'pending').length,
-    resolved: props.corrections.filter((c) => c.status === 'resolved').length,
+    pending: localCorrections.value.filter((c) => c.status === 'pending').length,
+    resolved: localCorrections.value.filter((c) => c.status !== 'pending').length,
 }));
 
 const filteredCorrections = computed(() =>
-    props.corrections.filter((c) => c.status === activeTab.value)
+    activeTab.value === 'pending'
+        ? localCorrections.value.filter((c) => c.status === 'pending')
+        : localCorrections.value.filter((c) => c.status !== 'pending')
 );
 
-const resolve = (id) => {
-    router.patch(`/paulo/grade-corrections/${id}/resolve`, {}, { preserveScroll: true });
-};
-
-// ---- Edit Grades modal ----
+// ---- Edit Grades / Review modal ----
 const showModal = ref(false);
 const loadingGrades = ref(false);
+const activeCorrectionId = ref(null);
 const activeStudentName = ref('');
 const activeNotes = ref('');
+const activeAttachmentUrl = ref(null);
+const activeStatus = ref('pending');
+const activeDecision = ref(null);
+const activeCorrectionItems = ref([]); // proposed items galing sa student
 const grades = ref([]);
-const savingId = ref(null);
 const errorMsg = ref('');
+const resolving = ref(false);
 
 const openGrades = async (correction) => {
     showModal.value = true;
     loadingGrades.value = true;
     errorMsg.value = '';
+    activeCorrectionId.value = correction.id;
     activeStudentName.value = correction.student_name;
     activeNotes.value = correction.notes;
+    activeAttachmentUrl.value = correction.attachment_url ?? null;
+    activeStatus.value = correction.status;
+    activeDecision.value = correction.decision;
+    activeCorrectionItems.value = correction.edited_items ?? []; // [{category, title, claimed_score}]
     grades.value = [];
 
     try {
         const res = await axios.get(`/paulo/students/${correction.student_id}/grades`);
-        grades.value = res.data.grades.map((g) => ({ ...g, editValue: g.score }));
+        grades.value = res.data.grades.map((g) => {
+            const proposal = activeCorrectionItems.value.find(
+                (p) => p.category === g.category && p.title === g.title
+            );
+            return {
+                ...g,
+                editValue: proposal ? proposal.claimed_score : g.score,
+                hasProposal: !!proposal,
+            };
+        });
     } catch (e) {
         errorMsg.value = 'Hindi na-load ang grades ng estudyante.';
     } finally {
@@ -211,19 +265,54 @@ const openGrades = async (correction) => {
     }
 };
 
-const saveGrade = async (grade) => {
-    savingId.value = grade.id;
+const approveCorrection = async () => {
+    resolving.value = true;
     errorMsg.value = '';
 
     try {
-        const res = await axios.patch(`/paulo/grades/${grade.id}`, { score: grade.editValue });
-        grade.score = res.data.grade.score;
+        // 1. I-save lahat ng may pagbabago (proposed man o admin-adjusted)
+        const changed = grades.value.filter((g) => Number(g.editValue) !== Number(g.score));
+        for (const g of changed) {
+            await axios.patch(`/paulo/grades/${g.id}`, { score: g.editValue });
+        }
+
+        // 2. I-mark ang correction bilang approved
+        const { data } = await axios.patch(`/paulo/grade-corrections/${activeCorrectionId.value}/resolve`, {
+            decision: 'approved',
+        });
+        applyResolution(data.correction);
+        closeModal();
     } catch (e) {
         errorMsg.value = e.response?.data?.message
             || Object.values(e.response?.data?.errors ?? {}).flat().join(' ')
-            || 'Hindi na-save ang grade.';
+            || 'Hindi na-approve, subukan ulit.';
     } finally {
-        savingId.value = null;
+        resolving.value = false;
+    }
+};
+
+const rejectCorrection = async () => {
+    resolving.value = true;
+    errorMsg.value = '';
+
+    try {
+        // Reject = walang binago sa grades, i-mark lang bilang rejected
+        const { data } = await axios.patch(`/paulo/grade-corrections/${activeCorrectionId.value}/resolve`, {
+            decision: 'rejected',
+        });
+        applyResolution(data.correction);
+        closeModal();
+    } catch (e) {
+        errorMsg.value = e.response?.data?.message ?? 'Hindi na-reject, subukan ulit.';
+    } finally {
+        resolving.value = false;
+    }
+};
+
+const applyResolution = (updatedCorrection) => {
+    const idx = localCorrections.value.findIndex((c) => c.id === activeCorrectionId.value);
+    if (idx !== -1) {
+        localCorrections.value[idx] = { ...localCorrections.value[idx], ...updatedCorrection };
     }
 };
 

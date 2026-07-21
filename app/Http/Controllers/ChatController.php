@@ -29,6 +29,10 @@ class ChatController extends Controller
             return response()->json(['message' => 'Mali ang student number o password.'], 422);
         }
 
+        if (is_null($student->password_changed_at)) {
+            return response()->json(['must_change_password' => true]);
+        }
+
         $cutoff = now()->subMinutes(self::SESSION_WINDOW_MINUTES);
         $activeSessions = ChatSession::where('last_active_at', '>=', $cutoff)->get();
         $alreadyActive = $activeSessions->firstWhere('student_id', $student->id);

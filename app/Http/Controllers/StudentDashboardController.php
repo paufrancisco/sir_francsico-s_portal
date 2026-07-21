@@ -84,6 +84,7 @@ class StudentDashboardController extends Controller
         $request->validate([
             'student_number' => 'required|string',
             'password' => 'required|string',
+            'period' => 'nullable|in:prelim,midterm,prefinal,finals',
         ]);
 
         $student = Student::where('student_number', $request->student_number)->first();
@@ -92,10 +93,18 @@ class StudentDashboardController extends Controller
             return response()->json(['message' => 'Mali ang student number o password.'], 422);
         }
 
+        if (is_null($student->password_changed_at)) {
+            return response()->json(['must_change_password' => true]);
+        }
+
+        $period = in_array($request->period, ['prelim', 'midterm', 'prefinal', 'finals'], true)
+            ? $request->period
+            : 'prelim';
+
         $weights = ['long_quiz' => 0.20, 'tp' => 0.30, 'exam' => 0.50];
         $categoryLabels = ['long_quiz' => 'Quizzes', 'tp' => 'Task Performance', 'exam' => 'Exams'];
 
-        $grades = $student->grades;
+        $grades = $student->grades()->where('period', $period)->get();
 
         $categoryOrder = ['long_quiz' => 0, 'tp' => 1, 'exam' => 2];
 
@@ -147,6 +156,7 @@ class StudentDashboardController extends Controller
 
         return response()->json([
             'name' => $student->full_name,
+            'period' => $period,
             'items' => $items,
             'scores' => $scores,
             'breakdown' => $breakdown,

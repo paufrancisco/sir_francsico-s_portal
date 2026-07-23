@@ -30,6 +30,24 @@
 
             <!-- MASTERLIST TAB -->
             <div v-if="activeTab === 'masterlist'" class="space-y-3">
+                <div class="flex items-center gap-2">
+                    <div class="relative flex-1">
+                        <svg
+                            width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+                        >
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="m21 21-4.3-4.3"/>
+                        </svg>
+                        <input
+                            v-model="studentSearch"
+                            type="text"
+                            placeholder="Search student number o pangalan..."
+                            class="w-full text-sm border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-[#003399]"
+                        />
+                    </div>
+                </div>
+
                 <div class="flex justify-end gap-2">
                     <button
                         v-if="selectedStudents.length > 0"
@@ -77,7 +95,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="s in students" :key="s.id" class="border-t border-slate-100">
+                            <tr v-for="s in filteredStudents" :key="s.id" class="border-t border-slate-100">
                                 <td class="px-4 py-2">
                                     <input
                                         type="checkbox"
@@ -130,6 +148,11 @@
                                             </svg>
                                         </button>
                                     </div>
+                                </td>
+                            </tr>
+                            <tr v-if="students.length > 0 && filteredStudents.length === 0">
+                                <td colspan="6" class="text-center text-slate-400 text-sm py-8">
+                                    Walang nahanap na estudyante.
                                 </td>
                             </tr>
                         </tbody>
@@ -547,15 +570,36 @@ const uploadGrades = (e) => {
     });
 };
 
+// ---- Masterlist: search ----
+const studentSearch = ref('');
+
+const filteredStudents = computed(() => {
+    const q = studentSearch.value.trim().toLowerCase();
+    if (!q) return props.students;
+
+    return props.students.filter((s) =>
+        s.student_number.toLowerCase().includes(q) ||
+        s.full_name.toLowerCase().includes(q)
+    );
+});
+
 // ---- Masterlist: checkboxes + bulk delete ----
 const selectedStudents = ref([]);
 
 const allStudentsSelected = computed(() =>
-    props.students.length > 0 && selectedStudents.value.length === props.students.length
+    filteredStudents.value.length > 0
+    && filteredStudents.value.every((s) => selectedStudents.value.includes(s.id))
 );
 
 const toggleSelectAllStudents = () => {
-    selectedStudents.value = allStudentsSelected.value ? [] : props.students.map((s) => s.id);
+    if (allStudentsSelected.value) {
+        const filteredIds = new Set(filteredStudents.value.map((s) => s.id));
+        selectedStudents.value = selectedStudents.value.filter((id) => !filteredIds.has(id));
+    } else {
+        const currentIds = new Set(selectedStudents.value);
+        filteredStudents.value.forEach((s) => currentIds.add(s.id));
+        selectedStudents.value = Array.from(currentIds);
+    }
 };
 
 const deleteSelectedStudents = () => {

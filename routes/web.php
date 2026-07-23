@@ -17,7 +17,6 @@ use App\Http\Controllers\GradeCorrectionController;
 use App\Http\Controllers\Admin\GradeController;
 use App\Models\Section;
 use App\Http\Controllers\SeatingController;
-use App\Http\Controllers\StudentPasswordController;
 
 Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
@@ -48,7 +47,7 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
     // Admin-facing (naka-loob na sa auth middleware group at prefix('paulo') sa itaas)
     Route::get('grade-corrections', [GradeCorrectionController::class, 'index'])->name('grade-corrections.index');
     Route::patch('grade-corrections/{gradeCorrection}/resolve', [GradeCorrectionController::class, 'resolve'])->name('grade-corrections.resolve');
-
+    Route::post('grade-corrections/deadline', [GradeCorrectionController::class, 'setDeadline'])->name('grade-corrections.deadline');
     Route::get('students/{student}/grades', [GradeController::class, 'forStudent'])->name('students.grades');
     Route::patch('grades/{grade}', [GradeController::class, 'update'])->name('grades.update');
 
@@ -81,10 +80,14 @@ Route::get('/portal/chat/history', [ChatController::class, 'history'])->middlewa
 Route::post('/portal/grades/verify', [StudentDashboardController::class, 'verifyGrades'])
     ->middleware('throttle:6,1') // 6 attempts per minute, konting brute-force protection
     ->name('portal.grades.verify');
-
-Route::post('/portal/password/change', [StudentPasswordController::class, 'change'])
+Route::post('/portal/grades/change-password', [StudentDashboardController::class, 'changePassword'])
     ->middleware('throttle:6,1')
-    ->name('portal.password.change');
+    ->name('portal.grades.change-password');
+
+// Student-facing grade correction (public, verified via student_number+password sa request body)
+Route::post('/portal/grades/correction', [GradeCorrectionController::class, 'store']);
+Route::delete('/portal/grades/correction/{gradeCorrection}', [GradeCorrectionController::class, 'cancel'])
+    ->middleware('throttle:10,1');
 
 Route::get('/', [StudentDashboardController::class, 'index']);
 
@@ -97,9 +100,5 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
-// Student-facing (public, verified via student_number+password sa request body)
-Route::post('/portal/grades/correction', [GradeCorrectionController::class, 'store']);
-
-
 
 require __DIR__.'/auth.php';

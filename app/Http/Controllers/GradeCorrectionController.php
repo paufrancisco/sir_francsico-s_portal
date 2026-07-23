@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Grade;
+use App\Models\Setting;
 use App\Models\GradeCorrection;
 use App\Models\Student;
 use Illuminate\Http\Request;
@@ -21,8 +22,7 @@ class GradeCorrectionController extends Controller
             'period' => 'nullable|in:prelim,midterm,prefinal,finals',
             'notes' => 'nullable|string|max:1000',
             'edited_items' => 'required_if:type,recheck|nullable|string',
-            // 5MB max, gaya ng hiningi — 5120 KB (Laravel image validation is in KB)
-            'attachment' => 'required_if:type,recheck|nullable|image|max:5120',
+            'attachment' => 'nullable|image|max:5120',
         ]);
 
         $student = Student::where('student_number', $request->student_number)->first();
@@ -31,43 +31,87 @@ class GradeCorrectionController extends Controller
             return response()->json(['message' => 'Mali ang student number o password.'], 422);
         }
 
-        $editedItems = null;
+        if ($request->type === 'confirmed') {
+            GradeCorrection::create([
+                'student_id' => $student->id,
+                'section_id' => $student->section_id,
+                'type' => 'confirmed',
+                'period' => $request->period,
+                'status' => 'resolved',
+                'decision' => 'approved',
+                'resolved_at' => now(),
+            ]);
 
-        if ($request->type === 'recheck') {
-            $editedItems = json_decode($request->edited_items, true);
+            return response()->json(['message' => 'Salamat! Na-confirm na ang grades mo.']);
+        }
 
-            if (! is_array($editedItems) || count($editedItems) === 0) {
-                return response()->json(['message' => 'Ilagay muna kung alin ang mali sa grades mo.'], 422);
-            }
+        // ---- type === 'recheck' ----
+        $deadline = Setting::get('grade_correction_deadline');
+        if ($deadline && now()->gt(\Carbon\Carbon::parse($deadline)->endOfDay())) {
+            return response()->json([
+                'message' => 'Tapos na ang deadline para sa grade correction requests (' . \Carbon\Carbon::parse($deadline)->format('M d, Y') . '). Makipag-ugnayan na lang kay Sir Francisco.',
+            ], 422);
+        }
 
-            foreach ($editedItems as $item) {
-                if (! isset($item['category'], $item['title'], $item['claimed_score'])) {
-                    return response()->json(['message' => 'May kulang na detalye sa binagong item.'], 422);
-                }
+        $editedItems = json_decode($request->edited_items, true);
+
+        if (! is_array($editedItems) || count($editedItems) === 0) {
+            return response()->json(['message' => 'Ilagay muna kung alin ang mali sa grades mo.'], 422);
+        }
+
+        foreach ($editedItems as $item) {
+            if (! isset($item['category'], $item['title'], $item['claimed_score'])) {
+                return response()->json(['message' => 'May kulang na detalye sa binagong item.'], 422);
             }
         }
 
-        $attachmentPath = $request->hasFile('attachment')
-            ? $request->file('attachment')->store('grade-correction-attachments', 'supabase')
-            : null;
+        $existing = GradeCorrection::where('student_id', $student->id)
+            ->where('section_id', $student->section_id)
+            ->where('period', $request->period)
+            ->where('type', 'recheck')
+            ->where('status', 'pending')
+            ->first();
+
+        $attachmentPath = $existing?->attachment_path;
+
+        if ($request->hasFile('attachment')) {
+            if ($existing?->attachment_path) {
+                Storage::disk('supabase')->delete($existing->attachment_path);
+            }
+            $attachmentPath = $request->file('attachment')->store('grade-correction-attachments', 'supabase');
+        } elseif (! $existing) {
+            return response()->json(['message' => 'Maglagay ng patunay (attachment) para sa recheck request.'], 422);
+        }
+
+        if ($existing) {
+            $existing->update([
+                'notes' => $request->notes,
+                'edited_items' => $editedItems,
+                'attachment_path' => $attachmentPath,
+            ]);
+
+            return response()->json([
+                'message' => 'Na-update ang recheck request mo. Isa lang ang active request habang naka-pending, kaya ito ang bagong laman na titingnan ni Sir Francisco.',
+                'updated_existing' => true,
+            ]);
+        }
 
         GradeCorrection::create([
             'student_id' => $student->id,
             'section_id' => $student->section_id,
-            'type' => $request->type,
+            'type' => 'recheck',
             'period' => $request->period,
             'notes' => $request->notes,
             'edited_items' => $editedItems,
             'attachment_path' => $attachmentPath,
-            'status' => $request->type === 'confirmed' ? 'resolved' : 'pending',
-            'decision' => $request->type === 'confirmed' ? 'approved' : null,
-            'resolved_at' => $request->type === 'confirmed' ? now() : null,
+            'status' => 'pending',
+            'decision' => null,
+            'resolved_at' => null,
         ]);
 
         return response()->json([
-            'message' => $request->type === 'confirmed'
-                ? 'Salamat! Na-confirm na ang grades mo.'
-                : 'Naipasa na ang recheck request mo, titingnan ito ni Sir Francisco.',
+            'message' => 'Naipasa na ang recheck request mo, titingnan ito ni Sir Francisco.',
+            'updated_existing' => false,
         ]);
     }
 
@@ -87,7 +131,7 @@ class GradeCorrectionController extends Controller
                 'notes' => $c->notes,
                 'status' => $c->status,
                 'decision' => $c->decision,
-                'edited_items' => $c->edited_items, // [{category, title, claimed_score}, ...]
+                'edited_items' => $c->edited_items,
                 'attachment_url' => $c->attachment_path
                     ? Storage::disk('supabase')->temporaryUrl($c->attachment_path, now()->addMinutes(30))
                     : null,
@@ -97,7 +141,19 @@ class GradeCorrectionController extends Controller
 
         return Inertia::render('Admin/GradeCorrections/Index', [
             'corrections' => $corrections,
+            'deadline' => Setting::get('grade_correction_deadline'),
         ]);
+    }
+
+    public function setDeadline(Request $request)
+    {
+        $request->validate(['deadline' => 'nullable|date']);
+
+        Setting::set('grade_correction_deadline', $request->deadline);
+
+        return back()->with('success', $request->deadline
+            ? 'Na-set ang deadline sa ' . \Carbon\Carbon::parse($request->deadline)->format('M d, Y') . '.'
+            : 'Naalis ang deadline (walang limitasyon ngayon).');
     }
 
     public function resolve(Request $request, GradeCorrection $gradeCorrection)
@@ -120,5 +176,31 @@ class GradeCorrectionController extends Controller
                 'resolved_at' => $gradeCorrection->resolved_at,
             ],
         ]);
+    }
+
+    public function cancel(Request $request, GradeCorrection $gradeCorrection)
+    {
+        $request->validate([
+            'student_number' => 'required|string',
+            'password' => 'required|string',
+        ]);
+
+        $student = Student::where('student_number', $request->student_number)->first();
+
+        if (! $student || $student->password !== $request->password || $gradeCorrection->student_id !== $student->id) {
+            return response()->json(['message' => 'Mali ang student number o password.'], 422);
+        }
+
+        if ($gradeCorrection->status !== 'pending') {
+            return response()->json(['message' => 'Hindi na pwedeng kanselahin ang request na ito.'], 422);
+        }
+
+        if ($gradeCorrection->attachment_path) {
+            Storage::disk('supabase')->delete($gradeCorrection->attachment_path);
+        }
+
+        $gradeCorrection->delete();
+
+        return response()->json(['message' => 'Nakansela na ang recheck request mo.']);
     }
 }

@@ -9,6 +9,10 @@ use App\Models\Student;
 use App\Models\Topic;
 use Illuminate\Http\Request; 
 use Inertia\Inertia;
+use App\Models\Setting;
+use App\Models\GradeCorrection;
+use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
 
 class StudentDashboardController extends Controller
 {
@@ -79,6 +83,35 @@ class StudentDashboardController extends Controller
             'lastCalendarUpdate' => $allEvents->max('updated_at'),
         ]);
     }
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'student_number' => 'required|string',
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:4|confirmed',
+        ]);
+
+        $student = Student::where('student_number', $request->student_number)->first();
+
+        if (! $student || $student->password !== $request->current_password) {
+            return response()->json(['message' => 'Mali ang student number o password.'], 422);
+        }
+
+        if ($request->new_password === $request->current_password) {
+            return response()->json(['message' => 'Ibahin mo ang bagong password sa luma.'], 422);
+        }
+
+        $student->update([
+            'password' => $request->new_password,
+            'password_changed_at' => now(),
+        ]);
+
+        // Diretsong ibalik ang grades gamit ang bagong password, parang ni-verify ulit
+        $request->merge(['password' => $request->new_password]);
+        return $this->verifyGrades($request);
+    }
+
     public function verifyGrades(Request $request)
     {
         $request->validate([
@@ -154,6 +187,16 @@ class StudentDashboardController extends Controller
             ];
         }
 
+        $pendingCorrection = GradeCorrection::where('student_id', $student->id)
+            ->where('section_id', $student->section_id)
+            ->where('period', $period)
+            ->where('type', 'recheck')
+            ->where('status', 'pending')
+            ->latest()
+            ->first();
+
+        $deadline = Setting::get('grade_correction_deadline');
+
         return response()->json([
             'name' => $student->full_name,
             'period' => $period,
@@ -161,6 +204,17 @@ class StudentDashboardController extends Controller
             'scores' => $scores,
             'breakdown' => $breakdown,
             'total_percentage' => round($weighted, 2),
+            'correction_deadline' => $deadline,
+            'correction_locked' => $deadline ? now()->gt(\Carbon\Carbon::parse($deadline)->endOfDay()) : false,
+            'pending_correction' => $pendingCorrection ? [
+                'id' => $pendingCorrection->id,
+                'notes' => $pendingCorrection->notes,
+                'edited_items' => $pendingCorrection->edited_items,
+                'attachment_url' => $pendingCorrection->attachment_path
+                    ? Storage::disk('supabase')->temporaryUrl($pendingCorrection->attachment_path, now()->addMinutes(30))
+                    : null,
+                'created_at' => $pendingCorrection->created_at,
+            ] : null,
         ]);
     }
 }

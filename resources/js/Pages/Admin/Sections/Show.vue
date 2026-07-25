@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <AdminLayout>
         <main class="w-full px-6 lg:px-10 py-8 space-y-4">
 
@@ -263,6 +263,7 @@
                                 <th class="px-2 py-2 text-center w-16">TP %</th>
                                 <th class="px-2 py-2 text-center w-16">Exam %</th>
                                 <th class="px-3 py-2">Total %</th>
+                                <th class="px-3 py-2">Status</th>
                                 <th class="px-3 py-2 text-center">Action</th>
                             </tr>
                         </thead>
@@ -321,6 +322,16 @@
                                     <span v-else class="text-slate-300">—</span>
                                 </td>
                                 <td class="px-3 py-2 font-semibold whitespace-nowrap" :class="row.total_percentage < 60 ? 'text-red-600' : 'text-[#003399]'">{{ row.total_percentage }}%</td>
+                                <td class="px-3 py-2">
+                                    <button
+                                        v-if="row.has_pending_request"
+                                        @click="openCorrectionReview(row)"
+                                        class="text-xs font-medium px-2 py-0.5 rounded-full bg-[#E6F1FB] text-[#003399] whitespace-nowrap hover:opacity-80 transition"
+                                    >
+                                        Has grade request
+                                    </button>
+                                    <span v-else class="text-xs text-slate-300">—</span>
+                                </td>
                                 <td class="px-3 py-2">
                                     <div class="flex items-center justify-center gap-2">
                                         <button
@@ -503,6 +514,87 @@
                 </div>
 
                 <p v-if="editGradesErrorMsg" class="text-xs text-red-500 mt-3">{{ editGradesErrorMsg }}</p>
+            </div>
+        </div>
+
+        <!-- Grade Correction Review Modal (inline, walang paglipat ng page) -->
+        <div v-if="correctionModalOpen" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 px-4" @click.self="closeCorrectionModal">
+            <div class="bg-white rounded-xl p-5 w-full max-w-sm shadow-xl">
+
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <div class="text-sm font-semibold text-slate-700">{{ correctionStudentName }}</div>
+                        <div class="text-xs text-slate-400">{{ correctionNotes ?? 'Walang notes' }}</div>
+                        <a 
+                            v-if="correctionAttachmentUrl"
+                            :href="correctionAttachmentUrl"
+                            target="_blank"
+                            class="text-[11px] text-[#003399] mt-0.5 inline-block"
+                        >
+                            📎 View attachment
+                        </a>
+                    </div>
+                    <button @click="closeCorrectionModal" class="text-slate-400 hover:text-slate-600">✕</button>
+                </div>
+
+                <p v-if="correctionLoadingGrades" class="text-xs text-slate-400 py-4">Naglo-load...</p>
+
+                <p v-else-if="correctionGrades.length === 0" class="text-xs text-slate-400 py-4">
+                    Wala pang na-record na grades.
+                </p>
+
+                <template v-else>
+                    <p class="text-[11px] text-amber-700 bg-amber-50 rounded-lg px-2.5 py-1.5 mb-2">
+                        Naka-highlight yung mga item na may proposed change galing sa student. Pwede mo pang i-adjust bago mag-Approve.
+                    </p>
+
+                    <div class="divide-y divide-slate-100 border-t border-slate-100">
+                        <div
+                            v-for="g in correctionGrades"
+                            :key="g.id"
+                            class="flex items-center gap-2 py-2 text-sm"
+                            :class="g.hasProposal ? 'bg-amber-50 -mx-2 px-2 rounded-lg' : ''"
+                        >
+                            <div class="flex-1 min-w-0">
+                                <div class="truncate text-slate-600">{{ g.title ?? g.category }}</div>
+                                <div v-if="g.hasProposal" class="text-[11px] text-amber-700 mt-0.5">
+                                    Original: <span class="font-medium">{{ Number(g.score).toFixed(2) }}</span>
+                                    → Proposal: <span class="font-medium">{{ Number(g.editValue).toFixed(2) }}</span>
+                                </div>
+                            </div>
+                            <input
+                                type="number"
+                                v-model="g.editValue"
+                                :max="g.max_score"
+                                min="0"
+                                step="0.01"
+                                style="width: 92px;"
+                                class="grade-score-input shrink-0 px-1.5 text-right font-medium text-slate-700 bg-transparent border border-transparent hover:border-slate-200 focus:border-[#003399] focus:outline-none rounded transition"
+                            />
+                            <span class="w-14 shrink-0 text-right text-slate-400">/{{ g.max_score }}</span>
+                        </div>
+                    </div>
+
+                    <p v-if="correctionErrorMsg" class="text-xs text-red-500 mt-3">{{ correctionErrorMsg }}</p>
+
+                    <div class="flex gap-2 mt-4 pt-3 border-t border-slate-100">
+                        <button
+                            @click="approveCorrectionInline"
+                            :disabled="correctionResolving"
+                            class="flex-1 text-white text-xs font-semibold py-2 rounded-lg disabled:opacity-50"
+                            style="background:#003399;"
+                        >
+                            {{ correctionResolving ? 'Nagpo-process...' : 'Approve' }}
+                        </button>
+                        <button
+                            @click="rejectCorrectionInline"
+                            :disabled="correctionResolving"
+                            class="flex-1 border border-red-200 text-red-600 text-xs font-semibold py-2 rounded-lg disabled:opacity-50"
+                        >
+                            Reject
+                        </button>
+                    </div>
+                </template>
             </div>
         </div>
     </AdminLayout>
@@ -879,6 +971,102 @@ const deleteGradeRow = (row) => {
         preserveScroll: true,
     });
 };
+
+// ---- Grade Correction Review modal (inline, walang paglipat ng page) ----
+const correctionModalOpen = ref(false);
+const correctionLoadingGrades = ref(false);
+const correctionId = ref(null);
+const correctionStudentId = ref(null);
+const correctionStudentName = ref('');
+const correctionNotes = ref('');
+const correctionAttachmentUrl = ref(null);
+const correctionEditedItems = ref([]);
+const correctionGrades = ref([]);
+const correctionErrorMsg = ref('');
+const correctionResolving = ref(false);
+
+const openCorrectionReview = async (row) => {
+    if (!row.pending_correction) return;
+
+    correctionModalOpen.value = true;
+    correctionLoadingGrades.value = true;
+    correctionErrorMsg.value = '';
+    correctionId.value = row.pending_correction.id;
+    correctionStudentId.value = row.id;
+    correctionStudentName.value = row.name;
+    correctionNotes.value = row.pending_correction.notes;
+    correctionAttachmentUrl.value = row.pending_correction.attachment_url;
+    correctionEditedItems.value = row.pending_correction.edited_items ?? [];
+    correctionGrades.value = [];
+
+    try {
+        const res = await axios.get(`/paulo/sections/${props.section.id}/students/${row.id}/grades`, {
+            params: { period: props.currentPeriod },
+        });
+        correctionGrades.value = res.data.grades.map((g) => {
+            const proposal = correctionEditedItems.value.find(
+                (p) => p.category === g.category && p.title === g.title
+            );
+            return {
+                ...g,
+                editValue: proposal ? proposal.claimed_score : g.score,
+                hasProposal: !!proposal,
+            };
+        });
+    } catch (e) {
+        correctionErrorMsg.value = 'Hindi na-load ang grades ng estudyante.';
+    } finally {
+        correctionLoadingGrades.value = false;
+    }
+};
+
+const closeCorrectionModal = () => {
+    correctionModalOpen.value = false;
+};
+
+const approveCorrectionInline = async () => {
+    correctionResolving.value = true;
+    correctionErrorMsg.value = '';
+
+    try {
+        const changed = correctionGrades.value.filter((g) => Number(g.editValue) !== Number(g.score));
+        for (const g of changed) {
+            await axios.patch(`/paulo/grades/${g.id}`, { score: g.editValue });
+        }
+
+        await axios.patch(`/paulo/grade-corrections/${correctionId.value}/resolve`, {
+            decision: 'approved',
+        });
+
+        closeCorrectionModal();
+        router.reload({ only: ['gradesBreakdown'] });
+    } catch (e) {
+        correctionErrorMsg.value = e.response?.data?.message
+            || Object.values(e.response?.data?.errors ?? {}).flat().join(' ')
+            || 'Hindi na-approve, subukan ulit.';
+    } finally {
+        correctionResolving.value = false;
+    }
+};
+
+const rejectCorrectionInline = async () => {
+    correctionResolving.value = true;
+    correctionErrorMsg.value = '';
+
+    try {
+        await axios.patch(`/paulo/grade-corrections/${correctionId.value}/resolve`, {
+            decision: 'rejected',
+        });
+
+        closeCorrectionModal();
+        router.reload({ only: ['gradesBreakdown'] });
+    } catch (e) {
+        correctionErrorMsg.value = e.response?.data?.message ?? 'Hindi na-reject, subukan ulit.';
+    } finally {
+        correctionResolving.value = false;
+    }
+};
+// ---- End Grade Correction Review modal ----
 </script>
 
 <style scoped>

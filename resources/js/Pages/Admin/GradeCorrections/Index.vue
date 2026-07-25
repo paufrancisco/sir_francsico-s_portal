@@ -2,6 +2,10 @@
     <div class="p-6">
         <h1 class="text-lg font-semibold text-slate-800 mb-4">Grade Correction Requests</h1>
 
+        <p class="text-xs text-slate-400 mb-4">
+            {{ counts.total }} total &middot; {{ counts.pending }} pending &middot; {{ counts.approved }} approved &middot; {{ counts.rejected }} rejected &middot; {{ counts.cancelled }} cancelled
+        </p>
+
         <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-1 w-fit mb-4">
             <button
                 v-for="tab in tabs"
@@ -10,8 +14,55 @@
                 class="text-xs font-medium px-4 py-1.5 rounded-md transition"
                 :class="activeTab === tab.value ? 'bg-white text-[#003399] shadow-sm' : 'text-slate-500'"
             >
-                {{ tab.label }} <span class="text-slate-400">({{ counts[tab.value] }})</span>
+                {{ tab.label }} <span class="text-slate-400">({{ tab.value === 'pending' ? counts.pending : counts.resolved }})</span>
             </button>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-4 mb-4">
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Search student</label>
+                    <input
+                        v-model="searchQuery"
+                        type="text"
+                        placeholder="Pangalan ng estudyante..."
+                        class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 text-slate-700"
+                    />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Section</label>
+                    <select
+                        v-model="sectionFilter"
+                        class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 text-slate-700 bg-white"
+                    >
+                        <option value="all">All Sections</option>
+                        <option v-for="s in sectionsList" :key="s" :value="s">{{ s }}</option>
+                    </select>
+                </div>
+
+                <div v-if="activeTab === 'resolved'">
+                    <label class="block text-xs font-medium text-slate-600 mb-1.5">Status</label>
+                    <select
+                        v-model="statusFilter"
+                        class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 text-slate-700 bg-white"
+                    >
+                        <option value="all">All</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+
+                <div class="flex items-end">
+                    <button
+                        @click="resetFilters"
+                        class="text-sm font-medium border border-slate-300 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50 transition"
+                    >
+                        Reset
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
@@ -20,7 +71,6 @@
                     <tr>
                         <th class="text-left px-4 py-3">Student</th>
                         <th class="text-left px-4 py-3">Section</th>
-                        <th class="text-left px-4 py-3">Type</th>
                         <th class="text-left px-4 py-3">Notes</th>
                         <th class="text-left px-4 py-3">Status</th>
                         <th class="text-left px-4 py-3">Date</th>
@@ -34,14 +84,6 @@
                             <div class="text-xs text-slate-400">{{ c.student_number }}</div>
                         </td>
                         <td class="px-4 py-3 text-slate-600">{{ c.section ?? '—' }}</td>
-                        <td class="px-4 py-3">
-                            <span
-                                class="text-xs font-medium px-2 py-0.5 rounded-full"
-                                :class="c.type === 'confirmed' ? 'bg-[#EAF3DE] text-[#3B6D11]' : 'bg-[#FAEEDA] text-[#854F0B]'"
-                            >
-                                {{ c.type === 'confirmed' ? 'Confirmed' : 'Recheck' }}
-                            </span>
-                        </td>
                         <td class="px-4 py-3 text-slate-600 max-w-xs">
                             {{ c.notes ?? '—' }}
                             <a
@@ -58,29 +100,39 @@
                                 v-if="c.status === 'pending'"
                                 class="text-xs font-medium px-2 py-0.5 rounded-full bg-[#E6F1FB] text-[#003399]"
                             >
-                                pending
+                                Pending
                             </span>
                             <span
                                 v-else-if="c.decision === 'approved'"
                                 class="text-xs font-medium px-2 py-0.5 rounded-full bg-[#EAF3DE] text-[#3B6D11]"
                             >
-                                approved
+                                Approved
                             </span>
                             <span
-                                v-else-if="c.decision === 'rejected'"
-                                class="text-xs font-medium px-2 py-0.5 rounded-full bg-[#FBEAEA] text-[#9B1C1C]"
+                                v-else-if="c.decision === 'cancelled'"
+                                class="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500"
                             >
-                                rejected
+                                Cancelled
                             </span>
-                            <span v-else class="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
-                                resolved
+                            <span v-else-if="c.decision === 'rejected'" class="text-xs font-medium px-2 py-0.5 rounded-full bg-[#FBEAEA] text-[#9B1C1C]">
+                                Rejected
+                            </span>
+                            <span v-else class="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500" :title="`decision: ${c.decision ?? 'null'}`">
+                                Unknown
                             </span>
                         </td>
-                        <td class="px-4 py-3 text-xs text-slate-400">
-                            {{ new Date(c.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) }}
+                        <td class="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">
+                            <template v-if="c.status === 'pending'">
+                                <div class="text-slate-500">Submitted</div>
+                                <div>{{ formatDateTime(c.created_at) }}</div>
+                            </template>
+                            <template v-else>
+                                <div class="text-slate-500">{{ decisionLabel(c.decision) }}</div>
+                                <div>{{ formatDateTime(c.resolved_at ?? c.updated_at) }}</div>
+                            </template>
                         </td>
                         <td class="px-4 py-3">
-                            <div class="flex items-center justify-center gap-2">
+                            <div class="flex items-center justify-center gap-1">
                                 <button
                                     @click="openGrades(c)"
                                     title="Review / Edit Grades"
@@ -91,11 +143,35 @@
                                         <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                                     </svg>
                                 </button>
+                                <button
+                                    @click="openHistory(c)"
+                                    title="View history ng changes"
+                                    class="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition"
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M3 3v5h5"/>
+                                        <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/>
+                                        <path d="M12 7v5l4 2"/>
+                                    </svg>
+                                </button>
+                                <button
+                                    @click="deleteCorrection(c)"
+                                    :disabled="deletingId === c.id"
+                                    title="Delete"
+                                    class="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 transition disabled:opacity-40"
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                                        <path d="M10 11v6M14 11v6"/>
+                                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                </button>
                             </div>
                         </td>
                     </tr>
                     <tr v-if="filteredCorrections.length === 0">
-                        <td colspan="7" class="text-center text-slate-400 text-sm py-8">
+                        <td colspan="6" class="text-center text-slate-400 text-sm py-8">
                             Wala pang grade correction requests dito.
                         </td>
                     </tr>
@@ -186,6 +262,104 @@
                 </template>
             </div>
         </div>
+
+        <!-- View History Modal -->
+        <div v-if="showHistoryModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 px-4" @click.self="closeHistoryModal">
+            <div class="bg-white rounded-xl p-5 w-full max-w-sm shadow-xl">
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <div class="text-sm font-semibold text-slate-700">{{ historyCorrection?.student_name }}</div>
+                        <div class="text-xs text-slate-400">History ng correction request</div>
+                    </div>
+                    <button @click="closeHistoryModal" class="text-slate-400 hover:text-slate-600">✕</button>
+                </div>
+
+                <div class="space-y-3 text-xs">
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500">Type</span>
+                        <span class="font-medium text-slate-700">
+                            {{ historyCorrection?.type === 'confirmed' ? 'Confirmed' : 'Recheck' }}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500">Section</span>
+                        <span class="font-medium text-slate-700">{{ historyCorrection?.section ?? '—' }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500">Isinumite</span>
+                        <span class="font-medium text-slate-700">{{ formatDateTime(historyCorrection?.created_at) }}</span>
+                    </div>
+
+                    <div v-if="historyCorrection?.notes">
+                        <span class="text-slate-500 block mb-1">Notes</span>
+                        <p class="text-slate-700 bg-slate-50 rounded-lg px-2.5 py-1.5">{{ historyCorrection.notes }}</p>
+                    </div>
+
+                    <a
+                        v-if="historyCorrection?.attachment_url"
+                        :href="historyCorrection.attachment_url"
+                        target="_blank"
+                        class="text-[11px] text-[#003399] inline-block"
+                    >
+                        📎 View attachment
+                    </a>
+
+                    <div v-if="historyCorrection?.edited_items?.length">
+                        <span class="text-slate-500 block mb-1">Mga in-propose na item</span>
+                        <div class="divide-y divide-slate-100 border-t border-slate-100">
+                            <div
+                                v-for="item in historyCorrection.edited_items"
+                                :key="item.category + item.title"
+                                class="flex items-center justify-between py-1.5"
+                            >
+                                <span class="text-slate-600">{{ item.title }}</span>
+                                <span class="font-medium text-slate-700">→ {{ item.claimed_score }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-100">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-500">Status</span>
+                            <span
+                                class="text-xs font-medium px-2 py-0.5 rounded-full"
+                                :class="historyCorrection?.status === 'pending'
+                                    ? 'bg-[#E6F1FB] text-[#003399]'
+                                    : historyCorrection?.decision === 'approved'
+                                        ? 'bg-[#EAF3DE] text-[#3B6D11]'
+                                        : historyCorrection?.decision === 'cancelled'
+                                            ? 'bg-slate-100 text-slate-500'
+                                            : historyCorrection?.decision === 'rejected'
+                                                ? 'bg-[#FBEAEA] text-[#9B1C1C]'
+                                                : 'bg-slate-100 text-slate-500'"
+                            >
+                                {{ historyCorrection?.status === 'pending' ? 'Pending' : decisionLabel(historyCorrection?.decision) }}
+                            </span>
+                        </div>
+                        <p v-if="historyCorrection?.decision === 'cancelled'" class="text-[11px] text-slate-400 mt-1">
+                            Ang estudyante mismo ang nag-cancel ng sarili niyang request.
+                        </p>
+                        <p v-else-if="historyCorrection?.decision === 'rejected'" class="text-[11px] text-slate-400 mt-1">
+                            Na-reject ni admin ang request na ito.
+                        </p>
+                        <div v-if="historyCorrection?.status !== 'pending'" class="flex items-center justify-between mt-2">
+                            <span class="text-slate-500">
+                                {{ historyCorrection?.decision === 'approved'
+                                    ? 'Na-approve noong'
+                                    : historyCorrection?.decision === 'cancelled'
+                                        ? 'Na-cancel noong'
+                                        : historyCorrection?.decision === 'rejected'
+                                            ? 'Na-reject noong'
+                                            : 'Na-resolve noong' }}
+                            </span>
+                            <span class="font-medium text-slate-700">
+                                {{ formatDateTime(historyCorrection?.resolved_at ?? historyCorrection?.updated_at) }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -200,24 +374,85 @@ const props = defineProps({
     corrections: { type: Array, default: () => [] },
 });
 
+const localCorrections = ref([...props.corrections]);
+
+const counts = computed(() => {
+    const all = localCorrections.value;
+    const approved = all.filter((c) => c.status !== 'pending' && c.decision === 'approved').length;
+    const cancelled = all.filter((c) => c.status !== 'pending' && c.decision === 'cancelled').length;
+    const rejected = all.filter((c) => c.status !== 'pending' && c.decision === 'rejected').length;
+    const resolved = all.filter((c) => c.status !== 'pending').length;
+    return {
+        total: all.length,
+        pending: all.filter((c) => c.status === 'pending').length,
+        resolved,
+        approved,
+        cancelled,
+        rejected,
+    };
+});
+
+// Explicit label for a decision value — used instead of an "else = Rejected"
+// fallback so an unexpected/missing value from the API shows up as "Unknown"
+// rather than silently displaying as Rejected.
+const decisionLabel = (decision) => {
+    if (decision === 'approved') return 'Approved';
+    if (decision === 'cancelled') return 'Cancelled';
+    if (decision === 'rejected') return 'Rejected';
+    return 'Unknown';
+};
+
+// ---- Tabs ----
 const tabs = [
     { value: 'pending', label: 'Pending' },
     { value: 'resolved', label: 'Resolved' },
 ];
 const activeTab = ref('pending');
+// ---- End tabs ----
 
-const localCorrections = ref([...props.corrections]);
+// ---- Filters ----
+const sectionFilter = ref('all');
+const statusFilter = ref('all'); // only applies within the Resolved tab: approved | rejected | cancelled
+const searchQuery = ref('');
 
-const counts = computed(() => ({
-    pending: localCorrections.value.filter((c) => c.status === 'pending').length,
-    resolved: localCorrections.value.filter((c) => c.status !== 'pending').length,
-}));
-
-const filteredCorrections = computed(() =>
-    activeTab.value === 'pending'
-        ? localCorrections.value.filter((c) => c.status === 'pending')
-        : localCorrections.value.filter((c) => c.status !== 'pending')
+const sectionsList = computed(() =>
+    [...new Set(localCorrections.value.map((c) => c.section).filter(Boolean))].sort()
 );
+
+const filteredCorrections = computed(() => {
+    let list = activeTab.value === 'pending'
+        ? localCorrections.value.filter((c) => c.status === 'pending')
+        : localCorrections.value.filter((c) => c.status !== 'pending');
+
+    if (activeTab.value === 'resolved' && statusFilter.value !== 'all') {
+        list = list.filter((c) => c.decision === statusFilter.value);
+    }
+
+    if (sectionFilter.value !== 'all') {
+        list = list.filter((c) => c.section === sectionFilter.value);
+    }
+
+    if (searchQuery.value.trim()) {
+        const q = searchQuery.value.trim().toLowerCase();
+        list = list.filter((c) => c.student_name?.toLowerCase().includes(q));
+    }
+
+    return list;
+});
+
+const resetFilters = () => {
+    sectionFilter.value = 'all';
+    statusFilter.value = 'all';
+    searchQuery.value = '';
+};
+// ---- End filters ----
+
+const formatDateTime = (dateStr) => {
+    if (!dateStr) return '—';
+    return new Date(dateStr).toLocaleString('en-PH', {
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+};
 
 // ---- Edit Grades / Review modal ----
 const showModal = ref(false);
@@ -319,6 +554,41 @@ const applyResolution = (updatedCorrection) => {
 const closeModal = () => {
     showModal.value = false;
 };
+// ---- End Edit Grades / Review modal ----
+
+// ---- View History modal ----
+const showHistoryModal = ref(false);
+const historyCorrection = ref(null);
+
+const openHistory = (correction) => {
+    historyCorrection.value = correction;
+    showHistoryModal.value = true;
+};
+
+const closeHistoryModal = () => {
+    showHistoryModal.value = false;
+    historyCorrection.value = null;
+};
+// ---- End View History modal ----
+
+// ---- Delete ----
+const deletingId = ref(null);
+
+const deleteCorrection = async (correction) => {
+    const confirmed = confirm(`Sigurado ka bang gusto mong burahin ang request ni ${correction.student_name}? Hindi na ito mababawi.`);
+    if (!confirmed) return;
+
+    deletingId.value = correction.id;
+    try {
+        await axios.delete(`/paulo/grade-corrections/${correction.id}`);
+        localCorrections.value = localCorrections.value.filter((c) => c.id !== correction.id);
+    } catch (e) {
+        alert(e.response?.data?.message ?? 'Hindi na-delete, subukan ulit.');
+    } finally {
+        deletingId.value = null;
+    }
+};
+// ---- End Delete ----
 </script>
 
 <style scoped>

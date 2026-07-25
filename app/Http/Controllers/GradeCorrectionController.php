@@ -132,9 +132,7 @@ class GradeCorrectionController extends Controller
                 'status' => $c->status,
                 'decision' => $c->decision,
                 'edited_items' => $c->edited_items,
-                'attachment_url' => $c->attachment_path
-                    ? Storage::disk('supabase')->temporaryUrl($c->attachment_path, now()->addMinutes(30))
-                    : null,
+                'attachment_url' => $c->attachment_url,
                 'created_at' => $c->created_at,
                 'resolved_at' => $c->resolved_at,
             ]);

@@ -8,7 +8,7 @@ class GradeCorrection extends Model
 {
     protected $fillable = [
         'student_id', 'section_id', 'type', 'period', 'notes',
-        'edited_items', 'attachment_path', 'status', 'resolved_at',
+        'edited_items', 'attachment_path', 'status', 'decision', 'resolved_at',
     ];
 
     protected $appends = ['attachment_url'];

@@ -17,8 +17,18 @@ use App\Http\Controllers\GradeCorrectionController;
 use App\Http\Controllers\Admin\GradeController;
 use App\Models\Section;
 use App\Http\Controllers\SeatingController;
-
+use App\Http\Controllers\TopicController;
+ 
 Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () {
+
+    Route::post('sections/{section}/topics', [TopicController::class, 'store']);
+    Route::patch('topics/{topic}/details', [TopicController::class, 'updateDetails']); // uses _method: patch via Inertia form
+    Route::patch('topics/{topic}/archive', [TopicController::class, 'archive']);
+    Route::patch('topics/{topic}/restore', [TopicController::class, 'restore']);
+    Route::delete('topics/{topic}', [TopicController::class, 'destroy']);
+
+
+
     Route::get('/', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('sections', SectionController::class);

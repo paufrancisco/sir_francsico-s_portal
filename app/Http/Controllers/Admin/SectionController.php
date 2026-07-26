@@ -13,7 +13,7 @@ use App\Models\GradeCorrection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use ZipArchive;
-
+use App\Models\Topic;
 class SectionController extends Controller
 {
     private const PERIODS = ['prelim', 'midterm', 'prefinal', 'finals'];
@@ -47,6 +47,8 @@ class SectionController extends Controller
     {
         $period = $this->resolvePeriod($request->query('period'));
 
+        
+
         return Inertia::render('Admin/Sections/Show', [
             'section' => $section,
             'students' => $this->studentList($section, withPassword: session()->has('revealed_section_' . $section->id)),
@@ -55,6 +57,16 @@ class SectionController extends Controller
             'gradesBreakdown' => $this->gradesBreakdown($section, $period),
             'currentPeriod' => $period,
             'periods' => self::PERIODS,
+            'topics' => Topic::where('section_id', $section->id)
+                ->period($period)
+                ->active()
+                ->orderBy('sort_order')
+                ->get(),
+            'archivedTopics' => Topic::where('section_id', $section->id)
+                ->period($period)
+                ->archived()
+                ->orderByDesc('archived_at')
+                ->get(),
         ]);
     }
 

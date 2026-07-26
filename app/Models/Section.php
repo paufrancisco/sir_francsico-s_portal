@@ -16,6 +16,10 @@ class Section extends Model
     {
         return $this->hasMany(Student::class);
     }
+    public function topics()
+    {
+        return $this->hasMany(Topic::class);
+    }
 
     public function seats()
     {
@@ -25,11 +29,6 @@ class Section extends Model
     public function attendanceRecords()
     {
         return $this->hasMany(AttendanceRecord::class);
-    }
-
-    public function topics()
-    {
-        return $this->hasMany(Topic::class);
     }
 
     public function calendarEvents()

@@ -47,6 +47,8 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
     // Admin-facing (naka-loob na sa auth middleware group at prefix('paulo') sa itaas)
     Route::get('grade-corrections', [GradeCorrectionController::class, 'index'])->name('grade-corrections.index');
     Route::patch('grade-corrections/{gradeCorrection}/resolve', [GradeCorrectionController::class, 'resolve'])->name('grade-corrections.resolve');
+    Route::post('grade-corrections/archive', [GradeCorrectionController::class, 'archiveMany'])->name('grade-corrections.archive');
+    Route::post('grade-corrections/unarchive', [GradeCorrectionController::class, 'unarchiveMany'])->name('grade-corrections.unarchive');
     Route::post('grade-corrections/deadline', [GradeCorrectionController::class, 'setDeadline'])->name('grade-corrections.deadline');
     Route::get('students/{student}/grades', [GradeController::class, 'forStudent'])->name('students.grades');
     Route::patch('grades/{grade}', [GradeController::class, 'update'])->name('grades.update');
@@ -89,6 +91,9 @@ Route::post('/portal/grades/correction', [GradeCorrectionController::class, 'sto
 Route::delete('/portal/grades/correction/{gradeCorrection}', [GradeCorrectionController::class, 'cancel'])
     ->middleware('throttle:10,1');
 
+
+
+
 Route::get('/', [StudentDashboardController::class, 'index']);
 
 Route::get('/dashboard', function () {
@@ -100,5 +105,8 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+
+
 
 require __DIR__.'/auth.php';

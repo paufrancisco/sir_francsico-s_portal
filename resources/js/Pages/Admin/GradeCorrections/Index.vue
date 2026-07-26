@@ -14,7 +14,7 @@
                 class="text-xs font-medium px-4 py-1.5 rounded-md transition"
                 :class="activeTab === tab.value ? 'bg-white text-[#003399] shadow-sm' : 'text-slate-500'"
             >
-                {{ tab.label }} <span class="text-slate-400">({{ tab.value === 'pending' ? counts.pending : counts.resolved }})</span>
+                {{ tab.label }} <span class="text-slate-400">({{ tab.value === 'pending' ? counts.pending : tab.value === 'archived' ? counts.archived : counts.resolved }})</span>
             </button>
         </div>
 
@@ -65,10 +65,38 @@
             </div>
         </div>
 
+        <div v-if="selectedIds.length > 0" class="flex items-center gap-2 mb-3">
+            <span class="text-xs text-slate-500">{{ selectedIds.length }} napili</span>
+            <button
+                v-if="activeTab !== 'archived'"
+                @click="bulkArchive"
+                :disabled="bulkProcessing"
+                class="text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-700 text-white disabled:opacity-50"
+            >
+                {{ bulkProcessing ? 'Nagpo-process...' : 'I-archive ang napili' }}
+            </button>
+            <button
+                v-else
+                @click="bulkUnarchive"
+                :disabled="bulkProcessing"
+                class="text-xs font-medium px-3 py-1.5 rounded-lg bg-[#003399] text-white disabled:opacity-50"
+            >
+                {{ bulkProcessing ? 'Nagpo-process...' : 'I-restore mula sa archive' }}
+            </button>
+        </div>
+
         <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-slate-500 text-xs">
                     <tr>
+                        <th class="px-4 py-3 w-8">
+                            <input
+                                type="checkbox"
+                                :checked="allSelected"
+                                @change="toggleSelectAll"
+                                class="rounded border-slate-300"
+                            />
+                        </th>
                         <th class="text-left px-4 py-3">Student</th>
                         <th class="text-left px-4 py-3">Section</th>
                         <th class="text-left px-4 py-3">Notes</th>
@@ -79,6 +107,14 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     <tr v-for="c in filteredCorrections" :key="c.id">
+                        <td class="px-4 py-3">
+                            <input
+                                type="checkbox"
+                                :value="c.id"
+                                v-model="selectedIds"
+                                class="rounded border-slate-300"
+                            />
+                        </td>
                         <td class="px-4 py-3">
                             <div class="font-medium text-slate-700">{{ c.student_name }}</div>
                             <div class="text-xs text-slate-400">{{ c.student_number }}</div>
@@ -171,7 +207,7 @@
                         </td>
                     </tr>
                     <tr v-if="filteredCorrections.length === 0">
-                        <td colspan="6" class="text-center text-slate-400 text-sm py-8">
+                        <td colspan="7" class="text-center text-slate-400 text-sm py-8">
                             Wala pang grade correction requests dito.
                         </td>
                     </tr>
@@ -365,7 +401,7 @@
 
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import axios from 'axios';
 
 defineOptions({ layout: AdminLayout });
@@ -378,17 +414,19 @@ const localCorrections = ref([...props.corrections]);
 
 const counts = computed(() => {
     const all = localCorrections.value;
-    const approved = all.filter((c) => c.status !== 'pending' && c.decision === 'approved').length;
-    const cancelled = all.filter((c) => c.status !== 'pending' && c.decision === 'cancelled').length;
-    const rejected = all.filter((c) => c.status !== 'pending' && c.decision === 'rejected').length;
-    const resolved = all.filter((c) => c.status !== 'pending').length;
+    const active = all.filter((c) => !c.archived);
+    const approved = active.filter((c) => c.status !== 'pending' && c.decision === 'approved').length;
+    const cancelled = active.filter((c) => c.status !== 'pending' && c.decision === 'cancelled').length;
+    const rejected = active.filter((c) => c.status !== 'pending' && c.decision === 'rejected').length;
+    const resolved = active.filter((c) => c.status !== 'pending').length;
     return {
         total: all.length,
-        pending: all.filter((c) => c.status === 'pending').length,
+        pending: active.filter((c) => c.status === 'pending').length,
         resolved,
         approved,
         cancelled,
         rejected,
+        archived: all.filter((c) => c.archived).length,
     };
 });
 
@@ -406,9 +444,10 @@ const decisionLabel = (decision) => {
 const tabs = [
     { value: 'pending', label: 'Pending' },
     { value: 'resolved', label: 'Resolved' },
+    { value: 'archived', label: 'Archived' },
 ];
 const activeTab = ref('pending');
-// ---- End tabs ----
+watch(activeTab, () => { selectedIds.value = []; });
 
 // ---- Filters ----
 const sectionFilter = ref('all');
@@ -420,9 +459,14 @@ const sectionsList = computed(() =>
 );
 
 const filteredCorrections = computed(() => {
-    let list = activeTab.value === 'pending'
-        ? localCorrections.value.filter((c) => c.status === 'pending')
-        : localCorrections.value.filter((c) => c.status !== 'pending');
+    let list;
+    if (activeTab.value === 'archived') {
+        list = localCorrections.value.filter((c) => c.archived);
+    } else if (activeTab.value === 'pending') {
+        list = localCorrections.value.filter((c) => c.status === 'pending' && !c.archived);
+    } else {
+        list = localCorrections.value.filter((c) => c.status !== 'pending' && !c.archived);
+    }
 
     if (activeTab.value === 'resolved' && statusFilter.value !== 'all') {
         list = list.filter((c) => c.decision === statusFilter.value);
@@ -447,12 +491,67 @@ const resetFilters = () => {
 };
 // ---- End filters ----
 
+// ---- Bulk select + archive ----
+const selectedIds = ref([]);
+const bulkProcessing = ref(false);
+
+const allSelected = computed(() =>
+    filteredCorrections.value.length > 0
+    && filteredCorrections.value.every((c) => selectedIds.value.includes(c.id))
+);
+
+const toggleSelectAll = () => {
+    if (allSelected.value) {
+        const ids = new Set(filteredCorrections.value.map((c) => c.id));
+        selectedIds.value = selectedIds.value.filter((id) => !ids.has(id));
+    } else {
+        const current = new Set(selectedIds.value);
+        filteredCorrections.value.forEach((c) => current.add(c.id));
+        selectedIds.value = Array.from(current);
+    }
+};
+
+const bulkArchive = async () => {
+    if (selectedIds.value.length === 0) return;
+    bulkProcessing.value = true;
+    try {
+        await axios.post('/paulo/grade-corrections/archive', { ids: selectedIds.value });
+        localCorrections.value = localCorrections.value.map((c) =>
+            selectedIds.value.includes(c.id) ? { ...c, archived: true } : c
+        );
+        selectedIds.value = [];
+    } catch (e) {
+        alert(e.response?.data?.message ?? 'Hindi na-archive, subukan ulit.');
+    } finally {
+        bulkProcessing.value = false;
+    }
+};
+
+const bulkUnarchive = async () => {
+    if (selectedIds.value.length === 0) return;
+    bulkProcessing.value = true;
+    try {
+        await axios.post('/paulo/grade-corrections/unarchive', { ids: selectedIds.value });
+        localCorrections.value = localCorrections.value.map((c) =>
+            selectedIds.value.includes(c.id) ? { ...c, archived: false } : c
+        );
+        selectedIds.value = [];
+    } catch (e) {
+        alert(e.response?.data?.message ?? 'Hindi na-restore, subukan ulit.');
+    } finally {
+        bulkProcessing.value = false;
+    }
+};
+// ---- End bulk select + archive ----
+
 const formatDateTime = (dateStr) => {
     if (!dateStr) return '—';
     return new Date(dateStr).toLocaleString('en-PH', {
         month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
     });
 };
+
+// ---- Edit Grades / Review modal ----
 
 // ---- Edit Grades / Review modal ----
 const showModal = ref(false);

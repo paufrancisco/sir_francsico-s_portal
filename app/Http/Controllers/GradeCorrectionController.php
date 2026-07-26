@@ -131,8 +131,11 @@ class GradeCorrectionController extends Controller
                 'notes' => $c->notes,
                 'status' => $c->status,
                 'decision' => $c->decision,
+                'archived' => (bool) $c->archived,
                 'edited_items' => $c->edited_items,
-                'attachment_url' => $c->attachment_url,
+                'attachment_url' => $c->attachment_path
+                    ? Storage::disk('supabase')->temporaryUrl($c->attachment_path, now()->addMinutes(30))
+                    : null,
                 'created_at' => $c->created_at,
                 'resolved_at' => $c->resolved_at,
             ]);
@@ -174,6 +177,24 @@ class GradeCorrectionController extends Controller
                 'resolved_at' => $gradeCorrection->resolved_at,
             ],
         ]);
+    }
+
+    public function archiveMany(Request $request)
+    {
+        $request->validate(['ids' => 'required|array', 'ids.*' => 'exists:grade_corrections,id']);
+
+        GradeCorrection::whereIn('id', $request->ids)->update(['archived' => true]);
+
+        return response()->json(['message' => count($request->ids) . ' na request ang na-archive.']);
+    }
+
+    public function unarchiveMany(Request $request)
+    {
+        $request->validate(['ids' => 'required|array', 'ids.*' => 'exists:grade_corrections,id']);
+
+        GradeCorrection::whereIn('id', $request->ids)->update(['archived' => false]);
+
+        return response()->json(['message' => count($request->ids) . ' na request ang naibalik mula sa archive.']);
     }
 
     public function cancel(Request $request, GradeCorrection $gradeCorrection)

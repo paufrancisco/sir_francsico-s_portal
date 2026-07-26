@@ -324,11 +324,12 @@
                                 <td class="px-3 py-2 font-semibold whitespace-nowrap" :class="row.total_percentage < 60 ? 'text-red-600' : 'text-[#003399]'">{{ row.total_percentage }}%</td>
                                 <td class="px-3 py-2">
                                     <button
-                                        v-if="row.has_pending_request"
+                                        v-if="row.pending_correction"
                                         @click="openCorrectionReview(row)"
-                                        class="text-xs font-medium px-2 py-0.5 rounded-full bg-[#E6F1FB] text-[#003399] whitespace-nowrap hover:opacity-80 transition"
+                                        class="text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap hover:opacity-80 transition"
+                                        :class="correctionBadgeClass(row.pending_correction)"
                                     >
-                                        Has grade request
+                                        {{ correctionBadgeLabel(row.pending_correction) }}
                                     </button>
                                     <span v-else class="text-xs text-slate-300">—</span>
                                 </td>
@@ -523,7 +524,15 @@
 
                 <div class="flex items-center justify-between mb-3">
                     <div>
-                        <div class="text-sm font-semibold text-slate-700">{{ correctionStudentName }}</div>
+                        <div class="flex items-center gap-2">
+                            <div class="text-sm font-semibold text-slate-700">{{ correctionStudentName }}</div>
+                            <span
+                                class="text-[10px] font-medium px-2 py-0.5 rounded-full"
+                                :class="correctionBadgeClass({ status: correctionStatus, decision: correctionDecision })"
+                            >
+                                {{ correctionBadgeLabel({ status: correctionStatus, decision: correctionDecision }) }}
+                            </span>
+                        </div>
                         <div class="text-xs text-slate-400">{{ correctionNotes ?? 'Walang notes' }}</div>
                         <a 
                             v-if="correctionAttachmentUrl"
@@ -584,14 +593,14 @@
                             class="flex-1 text-white text-xs font-semibold py-2 rounded-lg disabled:opacity-50"
                             style="background:#003399;"
                         >
-                            {{ correctionResolving ? 'Nagpo-process...' : 'Approve' }}
+                            {{ correctionResolving ? 'Nagpo-process...' : (correctionDecision === 'approved' ? 'Re-apply approve' : 'Approve') }}
                         </button>
                         <button
                             @click="rejectCorrectionInline"
                             :disabled="correctionResolving"
                             class="flex-1 border border-red-200 text-red-600 text-xs font-semibold py-2 rounded-lg disabled:opacity-50"
                         >
-                            Reject
+                            {{ correctionDecision === 'rejected' ? 'Rejected na' : 'Reject' }}
                         </button>
                     </div>
                 </template>
@@ -984,6 +993,22 @@ const correctionEditedItems = ref([]);
 const correctionGrades = ref([]);
 const correctionErrorMsg = ref('');
 const correctionResolving = ref(false);
+const correctionStatus = ref('pending');
+const correctionDecision = ref(null);
+
+const correctionBadgeLabel = (c) => {
+    if (c.status === 'pending') return 'Pending request';
+    if (c.decision === 'approved') return 'Approved';
+    if (c.decision === 'rejected') return 'Rejected';
+    return 'Resolved';
+};
+
+const correctionBadgeClass = (c) => {
+    if (c.status === 'pending') return 'bg-[#E6F1FB] text-[#003399]';
+    if (c.decision === 'approved') return 'bg-[#EAF3DE] text-[#3B6D11]';
+    if (c.decision === 'rejected') return 'bg-red-50 text-red-600';
+    return 'bg-slate-100 text-slate-500';
+};
 
 const openCorrectionReview = async (row) => {
     if (!row.pending_correction) return;
@@ -997,6 +1022,8 @@ const openCorrectionReview = async (row) => {
     correctionNotes.value = row.pending_correction.notes;
     correctionAttachmentUrl.value = row.pending_correction.attachment_url;
     correctionEditedItems.value = row.pending_correction.edited_items ?? [];
+    correctionStatus.value = row.pending_correction.status;
+    correctionDecision.value = row.pending_correction.decision;
     correctionGrades.value = [];
 
     try {
@@ -1038,6 +1065,9 @@ const approveCorrectionInline = async () => {
             decision: 'approved',
         });
 
+        correctionStatus.value = 'resolved';
+        correctionDecision.value = 'approved';
+
         closeCorrectionModal();
         router.reload({ only: ['gradesBreakdown'] });
     } catch (e) {
@@ -1057,6 +1087,9 @@ const rejectCorrectionInline = async () => {
         await axios.patch(`/paulo/grade-corrections/${correctionId.value}/resolve`, {
             decision: 'rejected',
         });
+
+        correctionStatus.value = 'resolved';
+        correctionDecision.value = 'rejected';
 
         closeCorrectionModal();
         router.reload({ only: ['gradesBreakdown'] });

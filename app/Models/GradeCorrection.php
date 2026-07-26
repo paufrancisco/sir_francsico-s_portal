@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class GradeCorrection extends Model
 {
     protected $fillable = [
-        'student_id', 'section_id', 'type', 'period', 'notes',
-        'edited_items', 'attachment_path', 'status', 'decision', 'resolved_at',
+        'student_id', 'section_id', 'type', 'period', 'notes', 'edited_items',
+        'attachment_path', 'status', 'decision', 'resolved_at', 'archived',
     ];
 
     protected $appends = ['attachment_url'];

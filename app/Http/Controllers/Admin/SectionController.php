@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use App\Models\Grade;
 use App\Models\Student;
+use App\Models\GradeCorrection;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use ZipArchive;
 
 class SectionController extends Controller
 {
@@ -92,7 +96,16 @@ class SectionController extends Controller
         $items = $this->gradeItems($section, $period);
         $weights = ['long_quiz' => 0.20, 'tp' => 0.30, 'exam' => 0.50];
 
-        $rows = $students->map(function ($student) use ($allGrades, $items, $weights) {
+        // Pinaka-huling correction (anumang status) kada estudyante, para dito lang sa section+period na 'to
+        $corrections = GradeCorrection::where('section_id', $section->id)
+            ->where('period', $period)
+            ->where('type', 'recheck')
+            ->latest()
+            ->get()
+            ->unique('student_id')
+            ->keyBy('student_id');
+
+        $rows = $students->map(function ($student) use ($allGrades, $items, $weights, $corrections) {
             $studentGrades = $allGrades->where('student_id', $student->id);
 
             $scores = $items->mapWithKeys(function ($item) use ($studentGrades) {
@@ -123,6 +136,8 @@ class SectionController extends Controller
                 $weighted += $avgPercent * $weight;
             }
 
+            $correction = $corrections->get($student->id);
+
             return [
                 'id' => $student->id,
                 'name' => $student->full_name,
@@ -130,14 +145,16 @@ class SectionController extends Controller
                 'scores' => $scores,
                 'category_percentages' => $categoryPercentages,
                 'total_percentage' => round($weighted, 2),
-            ];
-
-            return [
-                'id' => $student->id,
-                'name' => $student->full_name,
-                'student_number' => $student->student_number,
-                'scores' => $scores,
-                'total_percentage' => round($weighted, 2),
+                'pending_correction' => $correction ? [
+                    'id' => $correction->id,
+                    'status' => $correction->status,
+                    'decision' => $correction->decision,
+                    'notes' => $correction->notes,
+                    'edited_items' => $correction->edited_items,
+                    'attachment_url' => $correction->attachment_path
+                        ? Storage::disk('supabase')->temporaryUrl($correction->attachment_path, now()->addMinutes(30))
+                        : null,
+                ] : null,
             ];
         })
         ->sortByDesc('total_percentage')
@@ -227,7 +244,7 @@ class SectionController extends Controller
         ]);
 
         if ($student->photo_path) {
-            \Storage::disk('supabase')->delete($student->photo_path);
+            Storage::disk('supabase')->delete($student->photo_path);
         }
 
         $path = $request->file('photo')->store('students', 'supabase');
@@ -244,7 +261,7 @@ class SectionController extends Controller
     public function deletePhoto(Section $section, Student $student)
     {
         if ($student->photo_path) {
-            \Storage::disk('supabase')->delete($student->photo_path);
+            Storage::disk('supabase')->delete($student->photo_path);
             $student->update(['photo_path' => null]);
         }
 
@@ -258,7 +275,7 @@ class SectionController extends Controller
         ]);
 
         $zipPath = $request->file('file')->getRealPath();
-        $zip = new \ZipArchive();
+        $zip = new ZipArchive();
 
         if ($zip->open($zipPath) !== true) {
             return back()->with('error', 'Hindi mabuksan ang ZIP file.');
@@ -295,11 +312,11 @@ class SectionController extends Controller
             $contents = $zip->getFromIndex($i);
 
             if ($student->photo_path) {
-                \Storage::disk('supabase')->delete($student->photo_path);
+                Storage::disk('supabase')->delete($student->photo_path);
             }
 
-            $newPath = 'students/' . $student->id . '-' . \Str::random(8) . '.' . $ext;
-            \Storage::disk('supabase')->put($newPath, $contents, 'public');
+            $newPath = 'students/' . $student->id . '-' . Str::random(8) . '.' . $ext;
+            Storage::disk('supabase')->put($newPath, $contents, 'public');
 
             $student->update(['photo_path' => $newPath]);
             $matched++;

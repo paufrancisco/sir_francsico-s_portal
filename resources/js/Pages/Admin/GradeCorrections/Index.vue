@@ -25,7 +25,7 @@
                     <input
                         v-model="searchQuery"
                         type="text"
-                        placeholder="Pangalan ng estudyante..."
+                        placeholder="Student name..."
                         class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 text-slate-700"
                     />
                 </div>
@@ -66,14 +66,14 @@
         </div>
 
         <div v-if="selectedIds.length > 0" class="flex items-center gap-2 mb-3">
-            <span class="text-xs text-slate-500">{{ selectedIds.length }} napili</span>
+            <span class="text-xs text-slate-500">{{ selectedIds.length }} selected</span>
             <button
                 v-if="activeTab !== 'archived'"
                 @click="bulkArchive"
                 :disabled="bulkProcessing"
                 class="text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-700 text-white disabled:opacity-50"
             >
-                {{ bulkProcessing ? 'Nagpo-process...' : 'I-archive ang napili' }}
+                {{ bulkProcessing ? 'Processing...' : 'Archive selected' }}
             </button>
             <button
                 v-else
@@ -81,7 +81,7 @@
                 :disabled="bulkProcessing"
                 class="text-xs font-medium px-3 py-1.5 rounded-lg bg-[#003399] text-white disabled:opacity-50"
             >
-                {{ bulkProcessing ? 'Nagpo-process...' : 'I-restore mula sa archive' }}
+                {{ bulkProcessing ? 'Processing...' : 'Restore from archive' }}
             </button>
         </div>
 
@@ -181,7 +181,7 @@
                                 </button>
                                 <button
                                     @click="openHistory(c)"
-                                    title="View history ng changes"
+                                    title="View change history"
                                     class="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition"
                                 >
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -208,7 +208,7 @@
                     </tr>
                     <tr v-if="filteredCorrections.length === 0">
                         <td colspan="7" class="text-center text-slate-400 text-sm py-8">
-                            Wala pang grade correction requests dito.
+                            No grade correction requests here yet.
                         </td>
                     </tr>
                 </tbody>
@@ -222,7 +222,7 @@
                 <div class="flex items-center justify-between mb-3">
                     <div>
                         <div class="text-sm font-semibold text-slate-700">{{ activeStudentName }}</div>
-                        <div class="text-xs text-slate-400">{{ activeNotes ?? 'Walang notes' }}</div>
+                        <div class="text-xs text-slate-400">{{ activeNotes ?? 'No notes' }}</div>
                         <a
                             v-if="activeAttachmentUrl"
                             :href="activeAttachmentUrl"
@@ -235,15 +235,15 @@
                     <button @click="closeModal" class="text-slate-400 hover:text-slate-600">✕</button>
                 </div>
 
-                <p v-if="loadingGrades" class="text-xs text-slate-400 py-4">Naglo-load...</p>
+                <p v-if="loadingGrades" class="text-xs text-slate-400 py-4">Loading...</p>
 
                 <p v-else-if="grades.length === 0" class="text-xs text-slate-400 py-4">
-                    Wala pang na-record na grades.
+                    No grades recorded yet.
                 </p>
 
                 <template v-else>
                     <p class="text-[11px] text-amber-700 bg-amber-50 rounded-lg px-2.5 py-1.5 mb-2">
-                        Naka-highlight yung mga item na may proposed change galing sa student. Pwede mo pang i-adjust bago mag-Approve.
+                        Items with a proposed change from the student are highlighted. You can still adjust them before approving.
                     </p>
 
                     <div class="divide-y divide-slate-100 border-t border-slate-100">
@@ -282,7 +282,7 @@
                             class="flex-1 text-white text-xs font-semibold py-2 rounded-lg disabled:opacity-50"
                             style="background:#003399;"
                         >
-                            {{ resolving ? 'Nagpo-process...' : 'Approve' }}
+                            {{ resolving ? 'Processing...' : 'Approve' }}
                         </button>
                         <button
                             @click="rejectCorrection"
@@ -293,7 +293,7 @@
                         </button>
                     </div>
                     <p v-else class="text-xs text-slate-400 mt-4 pt-3 border-t border-slate-100 text-center">
-                        Na-resolve na ito ({{ activeDecision }}).
+                        This has already been resolved ({{ activeDecision }}).
                     </p>
                 </template>
             </div>
@@ -305,7 +305,7 @@
                 <div class="flex items-center justify-between mb-3">
                     <div>
                         <div class="text-sm font-semibold text-slate-700">{{ historyCorrection?.student_name }}</div>
-                        <div class="text-xs text-slate-400">History ng correction request</div>
+                        <div class="text-xs text-slate-400">Correction request history</div>
                     </div>
                     <button @click="closeHistoryModal" class="text-slate-400 hover:text-slate-600">✕</button>
                 </div>
@@ -322,7 +322,7 @@
                         <span class="font-medium text-slate-700">{{ historyCorrection?.section ?? '—' }}</span>
                     </div>
                     <div class="flex items-center justify-between">
-                        <span class="text-slate-500">Isinumite</span>
+                        <span class="text-slate-500">Submitted</span>
                         <span class="font-medium text-slate-700">{{ formatDateTime(historyCorrection?.created_at) }}</span>
                     </div>
 
@@ -341,7 +341,7 @@
                     </a>
 
                     <div v-if="historyCorrection?.edited_items?.length">
-                        <span class="text-slate-500 block mb-1">Mga in-propose na item</span>
+                        <span class="text-slate-500 block mb-1">Proposed items</span>
                         <div class="divide-y divide-slate-100 border-t border-slate-100">
                             <div
                                 v-for="item in historyCorrection.edited_items"
@@ -373,20 +373,20 @@
                             </span>
                         </div>
                         <p v-if="historyCorrection?.decision === 'cancelled'" class="text-[11px] text-slate-400 mt-1">
-                            Ang estudyante mismo ang nag-cancel ng sarili niyang request.
+                            The student cancelled their own request.
                         </p>
                         <p v-else-if="historyCorrection?.decision === 'rejected'" class="text-[11px] text-slate-400 mt-1">
-                            Na-reject ni admin ang request na ito.
+                            This request was rejected by the admin.
                         </p>
                         <div v-if="historyCorrection?.status !== 'pending'" class="flex items-center justify-between mt-2">
                             <span class="text-slate-500">
                                 {{ historyCorrection?.decision === 'approved'
-                                    ? 'Na-approve noong'
+                                    ? 'Approved on'
                                     : historyCorrection?.decision === 'cancelled'
-                                        ? 'Na-cancel noong'
+                                        ? 'Cancelled on'
                                         : historyCorrection?.decision === 'rejected'
-                                            ? 'Na-reject noong'
-                                            : 'Na-resolve noong' }}
+                                            ? 'Rejected on'
+                                            : 'Resolved on' }}
                             </span>
                             <span class="font-medium text-slate-700">
                                 {{ formatDateTime(historyCorrection?.resolved_at ?? historyCorrection?.updated_at) }}
@@ -521,7 +521,7 @@ const bulkArchive = async () => {
         );
         selectedIds.value = [];
     } catch (e) {
-        alert(e.response?.data?.message ?? 'Hindi na-archive, subukan ulit.');
+        alert(e.response?.data?.message ?? 'Failed to archive, please try again.');
     } finally {
         bulkProcessing.value = false;
     }
@@ -537,7 +537,7 @@ const bulkUnarchive = async () => {
         );
         selectedIds.value = [];
     } catch (e) {
-        alert(e.response?.data?.message ?? 'Hindi na-restore, subukan ulit.');
+        alert(e.response?.data?.message ?? 'Failed to restore, please try again.');
     } finally {
         bulkProcessing.value = false;
     }
@@ -562,7 +562,7 @@ const activeNotes = ref('');
 const activeAttachmentUrl = ref(null);
 const activeStatus = ref('pending');
 const activeDecision = ref(null);
-const activeCorrectionItems = ref([]); // proposed items galing sa student
+const activeCorrectionItems = ref([]); // proposed items from the student
 const grades = ref([]);
 const errorMsg = ref('');
 const resolving = ref(false);
@@ -593,7 +593,7 @@ const openGrades = async (correction) => {
             };
         });
     } catch (e) {
-        errorMsg.value = 'Hindi na-load ang grades ng estudyante.';
+        errorMsg.value = 'Failed to load the student\'s grades.';
     } finally {
         loadingGrades.value = false;
     }
@@ -604,13 +604,13 @@ const approveCorrection = async () => {
     errorMsg.value = '';
 
     try {
-        // 1. I-save lahat ng may pagbabago (proposed man o admin-adjusted)
+        // 1. Save all changed entries (whether proposed by the student or admin-adjusted)
         const changed = grades.value.filter((g) => Number(g.editValue) !== Number(g.score));
         for (const g of changed) {
             await axios.patch(`/paulo/grades/${g.id}`, { score: g.editValue });
         }
 
-        // 2. I-mark ang correction bilang approved
+        // 2. Mark the correction as approved
         const { data } = await axios.patch(`/paulo/grade-corrections/${activeCorrectionId.value}/resolve`, {
             decision: 'approved',
         });
@@ -619,7 +619,7 @@ const approveCorrection = async () => {
     } catch (e) {
         errorMsg.value = e.response?.data?.message
             || Object.values(e.response?.data?.errors ?? {}).flat().join(' ')
-            || 'Hindi na-approve, subukan ulit.';
+            || 'Failed to approve, please try again.';
     } finally {
         resolving.value = false;
     }
@@ -630,14 +630,14 @@ const rejectCorrection = async () => {
     errorMsg.value = '';
 
     try {
-        // Reject = walang binago sa grades, i-mark lang bilang rejected
+        // Reject = no grade changes, just mark as rejected
         const { data } = await axios.patch(`/paulo/grade-corrections/${activeCorrectionId.value}/resolve`, {
             decision: 'rejected',
         });
         applyResolution(data.correction);
         closeModal();
     } catch (e) {
-        errorMsg.value = e.response?.data?.message ?? 'Hindi na-reject, subukan ulit.';
+        errorMsg.value = e.response?.data?.message ?? 'Failed to reject, please try again.';
     } finally {
         resolving.value = false;
     }
@@ -674,7 +674,7 @@ const closeHistoryModal = () => {
 const deletingId = ref(null);
 
 const deleteCorrection = async (correction) => {
-    const confirmed = confirm(`Sigurado ka bang gusto mong burahin ang request ni ${correction.student_name}? Hindi na ito mababawi.`);
+    const confirmed = confirm(`Are you sure you want to delete ${correction.student_name}'s request? This cannot be undone.`);
     if (!confirmed) return;
 
     deletingId.value = correction.id;
@@ -682,7 +682,7 @@ const deleteCorrection = async (correction) => {
         await axios.delete(`/paulo/grade-corrections/${correction.id}`);
         localCorrections.value = localCorrections.value.filter((c) => c.id !== correction.id);
     } catch (e) {
-        alert(e.response?.data?.message ?? 'Hindi na-delete, subukan ulit.');
+        alert(e.response?.data?.message ?? 'Failed to delete, please try again.');
     } finally {
         deletingId.value = null;
     }

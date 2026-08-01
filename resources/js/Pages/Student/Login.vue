@@ -19,7 +19,7 @@ const submit = () => {
         <div style="width: 100%; max-width: 400px; border: 6px solid #003399; border-radius: 8px; padding: 32px;">
             <div style="text-align: center; margin-bottom: 24px;">
                 <h1 style="color: #003399; font-size: 22px; font-weight: 600;">Sir Francisco's Portal</h1>
-                <p style="color: #666; font-size: 13px;">Mag-login gamit ang student number mo</p>
+                <p style="color: #666; font-size: 13px;">Log in using your student number</p>
             </div>
 
             <form @submit.prevent="submit">

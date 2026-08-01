@@ -6,7 +6,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <div class="text-lg font-semibold text-slate-800">Overview</div>
-                    <div class="text-xs text-slate-400 mt-0.5">Buod ng sections mo ngayon</div>
+                    <div class="text-xs text-slate-400 mt-0.5">Summary of your sections</div>
                 </div>
                 <button
                     @click="openAddModal"
@@ -37,11 +37,11 @@
 
             <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
                 <div class="text-sm font-semibold text-slate-700 mb-3">Sections</div>
-                <p v-if="sections.length === 0" class="text-xs text-slate-400">Wala pang section.</p>
+                <p v-if="sections.length === 0" class="text-xs text-slate-400">No sections yet.</p>
                 <div v-for="s in sections" :key="s.id" class="flex items-center justify-between py-3 border-b border-slate-50 last:border-0">
                     <div>
                         <div class="text-sm font-medium text-slate-800">{{ s.name }}</div>
-                        <div class="text-xs text-slate-400">{{ s.schedule || 'Walang schedule' }} · {{ s.students_count }} students</div>
+                        <div class="text-xs text-slate-400">{{ s.schedule || 'No schedule' }} · {{ s.students_count }} students</div>
                     </div>
                     <span
                         class="text-[11px] font-medium px-2 py-0.5 rounded-full"
@@ -54,7 +54,7 @@
 
             <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                 <div class="text-sm font-semibold text-slate-700 px-5 pt-5 mb-3">Recent announcements</div>
-                <p v-if="announcements.length === 0" class="text-xs text-slate-400 px-5 pb-5">Wala pang announcement.</p>
+                <p v-if="announcements.length === 0" class="text-xs text-slate-400 px-5 pb-5">No announcements yet.</p>
                 <table v-else class="w-full text-sm">
                     <thead>
                         <tr class="bg-slate-50 text-left text-xs text-slate-500">
@@ -133,11 +133,11 @@
                     <div class="space-y-2">
                         <label class="flex items-center gap-2 text-sm text-slate-600">
                             <input type="radio" :value="true" v-model="form.is_global" />
-                            Lahat ng section
+                            All sections
                         </label>
                         <label class="flex items-center gap-2 text-sm text-slate-600">
                             <input type="radio" :value="false" v-model="form.is_global" />
-                            Specific na section
+                            Specific section
                         </label>
 
                         <div v-if="!form.is_global" class="pl-6 space-y-1 max-h-32 overflow-y-auto">
@@ -222,7 +222,7 @@ const submit = () => {
 };
 
 const destroy = (a) => {
-    if (!confirm(`Sigurado ka bang tatanggalin ang announcement na "${a.title}"?`)) return;
+    if (!confirm(`Are you sure you want to delete the announcement "${a.title}"?`)) return;
     router.delete(`/paulo/announcements/${a.id}`);
 };
 </script>

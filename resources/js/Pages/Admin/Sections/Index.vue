@@ -16,31 +16,39 @@
                 </button>
             </div>
 
-            <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+            <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm overflow-x-auto">
                 <div class="text-sm font-semibold text-slate-700 mb-3">All sections</div>
-                <p v-if="sections.length === 0" class="text-xs text-slate-400">Wala pang section. Mag-add gamit ang button sa itaas.</p>
-                <div v-for="s in sections" :key="s.id" class="flex items-center justify-between py-3 border-b border-slate-50 last:border-0">
-                    <Link :href="`/paulo/sections/${s.id}`" class="flex-1 hover:opacity-70 transition">
-                        <div class="text-sm font-medium text-slate-800">{{ s.name }}</div>
-                        <div class="text-xs text-slate-400">{{ s.subject || 'Walang subject' }} · {{ s.schedule || 'Walang schedule' }} · {{ s.students_count }} students</div>
-                    </Link>
-                    <div class="flex items-center gap-3">
-                        <button @click="openEditModal(s)" class="text-slate-400 hover:text-[#003399] transition" title="Edit">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                            </svg>
-                        </button>
-                        <button @click="destroy(s)" class="text-slate-400 hover:text-red-500 transition" title="Delete">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 6h18" />
-                                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                                <path d="M10 11v6" />
-                                <path d="M14 11v6" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
+                <p v-if="sections.length === 0" class="text-xs text-slate-400">No sections yet. Add one using the button above.</p>
+
+                <table v-else class="w-full text-sm">
+    <thead>
+        <tr class="text-left text-xs text-slate-400 border-b border-slate-100">
+            <th class="py-2 pr-4 font-medium">Section</th>
+            <th class="py-2 pr-4 font-medium">Subject</th>
+            <th class="py-2 pr-4 font-medium">Schedule</th>
+            <th class="py-2 pr-4 font-medium">Students</th>
+            <th class="py-2 font-medium w-6"></th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr
+            v-for="item in sections"
+            :key="item.id"
+            @click="router.visit(`/paulo/sections/${item.id}`)"
+            class="border-b border-slate-50 last:border-0 hover:bg-slate-50 cursor-pointer transition"
+        >
+            <td class="py-2.5 pr-4 font-medium text-slate-800">{{ item.name }}</td>
+            <td class="py-2.5 pr-4 text-slate-500">{{ item.subject || '—' }}</td>
+            <td class="py-2.5 pr-4 text-slate-500">{{ item.schedule || '—' }}</td>
+            <td class="py-2.5 pr-4 text-slate-500">{{ item.students_count }}</td>
+            <td class="py-2.5 text-right">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-300 inline-block">
+                    <path d="m9 18 6-6-6-6" />
+                </svg>
+            </td>
+        </tr>
+    </tbody>
+                </table>
             </div>
         </main>
 
@@ -129,7 +137,7 @@ const submit = () => {
 };
 
 const destroy = (section) => {
-    if (!confirm(`Sigurado ka bang gusto mong burahin ang "${section.name}"?`)) return;
+    if (!confirm(`Are you sure you want to delete "${section.name}"?`)) return;
     router.delete(`/paulo/sections/${section.id}`);
 };
 </script>

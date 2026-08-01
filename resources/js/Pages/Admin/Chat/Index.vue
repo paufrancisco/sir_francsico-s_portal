@@ -5,7 +5,7 @@
 
             <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                 <p v-if="students.length === 0" class="text-xs text-slate-400 px-4 py-6">
-                    Wala pang nagtatanong.
+                    No one has asked anything yet.
                 </p>
                 <Link
                     v-for="s in students"
@@ -17,7 +17,7 @@
                         <div class="text-sm font-medium text-slate-800 flex items-center gap-2">
                             {{ s.name }}
                             <span v-if="s.needs_review" class="text-[10px] font-medium bg-[#FAEEDA] text-[#854F0B] px-2 py-0.5 rounded-full">
-                                kailangan sagutin
+                                needs reply
                             </span>
                         </div>
                         <div class="text-xs text-slate-400 truncate max-w-xs">{{ s.last_message }}</div>

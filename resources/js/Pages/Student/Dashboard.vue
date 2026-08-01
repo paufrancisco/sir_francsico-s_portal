@@ -77,7 +77,7 @@
                             <div class="text-[10px] uppercase tracking-wide" style="color:var(--text-secondary);">Next event</div>
                             <div v-if="nextEvent" class="text-sm font-semibold mt-1 truncate" style="color:var(--text-heading);">{{ nextEvent.title }}</div>
                             <div v-if="nextEvent" class="text-[11px] mt-0.5" style="font-family:var(--font-mono); color:var(--text-secondary);">{{ formatEventDate(nextEvent.event_date) }}</div>
-                            <div v-else class="text-sm font-medium mt-1" style="color:var(--text-muted);">Wala pang naka-schedule</div>
+                            <div v-else class="text-sm font-medium mt-1" style="color:var(--text-muted);">No event scheduled yet</div>
                         </div>
                         <div class="ledger-tile ledger-tile--white">
                             <div class="ledger-tile__icon" style="background:rgba(247,177,37,0.18); color:#9A6B00;">
@@ -86,7 +86,7 @@
                             <div class="text-[10px] uppercase tracking-wide" style="color:var(--text-secondary);">Latest announcement</div>
                             <div v-if="latestAnnouncement" class="text-sm font-semibold mt-1 truncate" style="color:var(--text-heading);">{{ latestAnnouncement.title }}</div>
                             <div v-if="latestAnnouncement" class="text-[11px] mt-0.5" style="font-family:var(--font-mono); color:var(--text-secondary);">{{ formatPostedDate(latestAnnouncement.created_at) }}</div>
-                            <div v-else class="text-sm font-medium mt-1" style="color:var(--text-muted);">Wala pang announcement</div>
+                            <div v-else class="text-sm font-medium mt-1" style="color:var(--text-muted);">No announcements yet</div>
                         </div>
                         <div class="ledger-tile ledger-tile--white">
                             <div class="ledger-tile__icon" style="background:rgba(49,162,76,0.16); color:#227A38;">
@@ -95,7 +95,7 @@
                             <div class="text-[10px] uppercase tracking-wide" style="color:var(--text-secondary);">Top student</div>
                             <div v-if="filteredStudents.length" class="text-sm font-semibold mt-1 truncate" style="color:var(--text-heading);">{{ filteredStudents[0].name }}</div>
                             <div v-if="filteredStudents.length" class="text-[11px] mt-0.5" style="font-family:var(--font-mono); color:var(--text-secondary);">Grade: {{ filteredStudents[0].grade }}</div>
-                            <div v-else class="text-sm font-medium mt-1" style="color:var(--text-muted);">Wala pang grades</div>
+                            <div v-else class="text-sm font-medium mt-1" style="color:var(--text-muted);">No grades yet</div>
                         </div>
                     </div>
 
@@ -117,7 +117,7 @@
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     </span>
                         <div class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">Change password</div>
-                        <div class="text-[11px] text-[var(--text-muted)] mt-0.5">Verify muna current mo</div>
+                        <div class="text-[11px] text-[var(--text-muted)] mt-0.5">Verify your current password first</div>
                     </button>
 
                     <button class="action-tile action-tile--gold">
@@ -125,7 +125,7 @@
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4M16 16l4 4m0-4l-4 4"/></svg>
                         </span>
                         <div class="text-sm font-semibold" style="color:var(--navy-deep); font-family:var(--font-display);">Inform sir absent</div>
-                        <div class="text-[11px] mt-0.5" style="color:var(--navy-deep); opacity:0.65;">Auto-fill section mo</div>
+                        <div class="text-[11px] mt-0.5" style="color:var(--navy-deep); opacity:0.65;">Auto-fills your section</div>
                     </button>
                 </div>
 
@@ -133,7 +133,7 @@
                     <div class="sm:col-span-3 surface-card p-5">
                         <div class="card-heading">Recent announcements</div>
                         <p v-if="filteredAnnouncements.length === 0" class="text-xs text-[var(--text-muted)] mt-1">
-                            Wala pang announcement as of {{ todayFormatted }}.
+                            No announcements yet as of {{ todayFormatted }}.
                         </p>
                         <div v-else class="mt-2 divide-y divide-[var(--surface-border-soft)]">
                             <div
@@ -153,7 +153,7 @@
                     <div class="sm:col-span-2 surface-card p-5">
                         <div class="card-heading">This week's topics</div>
                         <p v-if="filteredTopics.length === 0" class="text-xs text-[var(--text-muted)] mt-1">
-                            Wala pang naka-post na topic ngayong linggo.
+                            No topics posted yet this week.
                         </p>
                         <div v-for="t in filteredTopics" :key="t.id" class="flex items-center justify-between py-2.5 border-b border-[var(--surface-border-soft)] last:border-0">
                             <div>
@@ -207,7 +207,7 @@
                     <div class="text-[10px] uppercase tracking-[0.16em] text-white/40 mb-3">Class ledger — {{ activeSectionLabel }}</div>
 
                     <p v-if="filteredStudents.length === 0" class="text-xs text-white/35 text-center py-8">
-                        Wala pang grades na na-record para sa section na ito.
+                        No grades have been recorded yet for this section.
                     </p>
 
                     <template v-else>
@@ -297,23 +297,23 @@
                 style="max-height: 420px; border-radius: 1.5rem;"
             >
                 <div class="text-white text-sm font-semibold px-4 py-3 flex items-center justify-between shrink-0" style="background:var(--navy); font-family:var(--font-display);">
-                    Tanong kay Sir Francisco
+                    Ask Sir Francisco
                     <button @click="chatOpen = false" class="text-white/70 hover:text-white">✕</button>
                 </div>
 
                 <!-- Force change password (first login) -->
                 <div v-if="chatMustChangePassword" class="p-4 space-y-2">
-                    <p class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">Baguhin muna ang password mo</p>
-                    <p class="text-xs text-[var(--text-muted)]">First time login mo — kailangan mo munang baguhin ang password bago makapagtanong.</p>
+                    <p class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">Change your password first</p>
+                    <p class="text-xs text-[var(--text-muted)]">This is your first login — you need to change your password before you can ask a question.</p>
                     <div class="relative">
-                        <input v-model="newPasswordForm.new_password" :type="showNewPassword ? 'text' : 'password'" placeholder="Bagong password" class="portal-input pr-9" />
+                        <input v-model="newPasswordForm.new_password" :type="showNewPassword ? 'text' : 'password'" placeholder="New password" class="portal-input pr-9" />
                         <button type="button" @click="showNewPassword = !showNewPassword" tabindex="-1" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-body)]">
                             <svg v-if="showNewPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.77 21.77 0 0 1-3.22 4.53M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
                             <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
                         </button>
                     </div>
                     <div class="relative">
-                        <input v-model="newPasswordForm.confirm_password" :type="showConfirmPassword ? 'text' : 'password'" placeholder="Kumpirmahin ang bagong password" class="portal-input pr-9" />
+                        <input v-model="newPasswordForm.confirm_password" :type="showConfirmPassword ? 'text' : 'password'" placeholder="Confirm new password" class="portal-input pr-9" />
                         <button type="button" @click="showConfirmPassword = !showConfirmPassword" tabindex="-1" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-body)]">
                             <svg v-if="showConfirmPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.77 21.77 0 0 1-3.22 4.53M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
                             <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -322,7 +322,7 @@
                     <p v-if="passwordChangeError" class="text-xs text-red-500">{{ passwordChangeError }}</p>
                     <div class="flex gap-2">
                         <button @click="submitPasswordChange" :disabled="passwordChangeLoading" class="flex-1 text-white text-sm font-semibold py-2 rounded-xl disabled:opacity-50" style="background:var(--navy);">
-                            {{ passwordChangeLoading ? 'Ina-update...' : 'I-update ang password' }}
+                            {{ passwordChangeLoading ? 'Updating...' : 'Update password' }}
                         </button>
                         <button @click="cancelPasswordChange" class="text-xs text-[var(--text-muted)] px-3">Cancel</button>
                     </div>
@@ -330,7 +330,7 @@
 
                 <!-- Sign-in -->
                 <div v-else-if="!chatStudent" class="p-4 space-y-2">
-                    <p class="text-xs text-[var(--text-muted)]">Kailangan mag-sign in muna para makapagtanong.</p>
+                    <p class="text-xs text-[var(--text-muted)]">You need to sign in first to ask a question.</p>
                     <input v-model="chatLogin.student_number" placeholder="Student number" class="portal-input" />
                     <div class="relative">
                         <input v-model="chatLogin.password" :type="showChatLoginPassword ? 'text' : 'password'" placeholder="Password" class="portal-input pr-9" />
@@ -361,7 +361,7 @@
                             {{ m.body }}
                         </div>
                         <p v-if="chatMessages.length === 0" class="text-xs text-[var(--text-muted)] text-center py-4">
-                            Magtanong ka na, sasagutin ka agad ng AI assistant.
+                            Go ahead and ask — the AI assistant will respond right away.
                         </p>
                         <div v-if="chatSending" class="mr-auto max-w-[85%] text-xs rounded-xl px-3 py-2.5 flex items-center gap-1" style="background:var(--chip-bg);">
                             <span class="typing-dot"></span>
@@ -400,20 +400,20 @@
                     <!-- Force change password (first login) -->
                     <template v-if="gradesMustChangePassword">
                         <div class="flex items-center justify-between mb-3">
-                            <div class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">Baguhin muna ang password mo</div>
+                            <div class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">Change your password first</div>
                             <button @click="closeGradesModal" class="text-[var(--text-muted)] hover:text-[var(--text-body)]">✕</button>
                         </div>
-                        <p class="text-xs text-[var(--text-muted)] mb-3">First time login mo — kailangan mo munang baguhin ang password bago makita ang grades mo.</p>
+                        <p class="text-xs text-[var(--text-muted)] mb-3">This is your first login — you need to change your password before you can view your grades.</p>
                         <div class="space-y-3">
                             <div class="relative">
-                                <input v-model="newPasswordForm.new_password" :type="showNewPassword ? 'text' : 'password'" placeholder="Bagong password" class="portal-input pr-9" />
+                                <input v-model="newPasswordForm.new_password" :type="showNewPassword ? 'text' : 'password'" placeholder="New password" class="portal-input pr-9" />
                                 <button type="button" @click="showNewPassword = !showNewPassword" tabindex="-1" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-body)]">
                                     <svg v-if="showNewPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.77 21.77 0 0 1-3.22 4.53M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
                                     <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
                                 </button>
                             </div>
                             <div class="relative">
-                                <input v-model="newPasswordForm.confirm_password" :type="showConfirmPassword ? 'text' : 'password'" placeholder="Kumpirmahin ang bagong password" class="portal-input pr-9" />
+                                <input v-model="newPasswordForm.confirm_password" :type="showConfirmPassword ? 'text' : 'password'" placeholder="Confirm new password" class="portal-input pr-9" />
                                 <button type="button" @click="showConfirmPassword = !showConfirmPassword" tabindex="-1" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-body)]">
                                     <svg v-if="showConfirmPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.77 21.77 0 0 1-3.22 4.53M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
                                     <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -427,7 +427,7 @@
                                     class="flex-1 text-white text-sm font-semibold py-2 rounded-xl disabled:opacity-50"
                                     style="background:var(--navy);"
                                 >
-                                    {{ passwordChangeLoading ? 'Ina-update...' : 'I-update ang password' }}
+                                    {{ passwordChangeLoading ? 'Updating...' : 'Update password' }}
                                 </button>
                                 <button @click="cancelPasswordChange" class="text-xs text-[var(--text-muted)] px-3">Cancel</button>
                             </div>
@@ -510,7 +510,7 @@
                         <div class="relative" style="min-height: 80px;">
                             <div :class="gradesLoading ? 'opacity-30 pointer-events-none transition' : 'transition'">
                                 <p v-if="gradesResult.items.length === 0" class="text-xs text-[var(--text-muted)] py-4">
-                                    Wala ka pang na-record na grades.
+                                    You don't have any recorded grades yet.
                                 </p>
 
                                 <div v-else class="mt-3 border-t border-[var(--surface-border-soft)]">
@@ -532,10 +532,10 @@
                                                     style="border: 1px solid var(--surface-border); background: var(--surface); color: var(--text-body);"
                                                 />
                                                 <span class="text-xs text-[var(--text-muted)] shrink-0">/{{ gradesResult.scores[item.category + '|' + item.title].max_score }}</span>
-                                                <button type="button" @click="confirmEditItem(item)" class="shrink-0 hover:opacity-70" style="color: var(--teal, #1a7f37);" title="Kumpirmahin">
+                                                <button type="button" @click="confirmEditItem(item)" class="shrink-0 hover:opacity-70" style="color: var(--teal, #1a7f37);" title="Confirm">
                                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
                                                 </button>
-                                                <button type="button" @click="cancelEditItem" class="shrink-0 text-[var(--text-muted)] hover:opacity-70" title="Kanselahin">
+                                                <button type="button" @click="cancelEditItem" class="shrink-0 text-[var(--text-muted)] hover:opacity-70" title="Cancel">
                                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
                                                 </button>
                                             </template>
@@ -549,10 +549,10 @@
                                                 <span class="font-medium text-xs shrink-0 tabular-nums" style="font-family:var(--font-mono); color: #cf222e;">
                                                     {{ editedItems[item.category + '|' + item.title].claimed_score }}/{{ gradesResult.scores[item.category + '|' + item.title].max_score }}
                                                 </span>
-                                                <button type="button" @click="startEditItem(item)" class="shrink-0 text-[var(--text-muted)] hover:text-[var(--text-body)]" title="I-edit ulit">
+                                                <button type="button" @click="startEditItem(item)" class="shrink-0 text-[var(--text-muted)] hover:text-[var(--text-body)]" title="Edit again">
                                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                                                 </button>
-                                                <button type="button" @click="removeEditedItem(item)" class="shrink-0 text-[var(--text-muted)] hover:opacity-70" title="I-undo">
+                                                <button type="button" @click="removeEditedItem(item)" class="shrink-0 text-[var(--text-muted)] hover:opacity-70" title="Undo">
                                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
                                                 </button>
                                             </template>
@@ -562,7 +562,7 @@
                                                 <span class="font-medium text-[var(--text-body)] shrink-0 tabular-nums" style="font-family:var(--font-mono);">
                                                     {{ gradesResult.scores[item.category + '|' + item.title].score }}/{{ gradesResult.scores[item.category + '|' + item.title].max_score }}
                                                 </span>
-                                                <button v-if="showRecheckForm" type="button" @click="startEditItem(item)" class="shrink-0 text-[var(--text-muted)] hover:text-[var(--text-body)]" title="I-edit">
+                                                <button v-if="showRecheckForm" type="button" @click="startEditItem(item)" class="shrink-0 text-[var(--text-muted)] hover:text-[var(--text-body)]" title="Edit">
                                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                                                 </button>
                                             </template>
@@ -584,7 +584,7 @@
                                             <template v-if="cat.avg_percent !== null">
                                                 {{ cat.avg_percent }}% → {{ cat.contribution }} pts
                                             </template>
-                                            <span v-else class="text-[var(--text-muted)]">walang grade</span>
+                                            <span v-else class="text-[var(--text-muted)]">no grade</span>
                                         </span>
                                     </div>
                                 </div>
@@ -607,12 +607,12 @@
 
                             <!-- deadline notice -->
                             <div v-if="gradesResult.correction_locked && correctionUiState !== 'pending'" class="text-xs mb-3" style="color:#cf222e;">
-                                Tapos na ang deadline para sa grade correction requests{{ gradesResult.correction_deadline ? ' (' + formatEventDate(gradesResult.correction_deadline) + ')' : '' }}. Makipag-ugnayan na lang kay Sir Francisco.
+                                The deadline for grade correction requests has passed{{ gradesResult.correction_deadline ? ' (' + formatEventDate(gradesResult.correction_deadline) + ')' : '' }}. Please get in touch with Sir Francisco directly.
                             </div>
 
                             <!-- pending correction: summary + cancel/edit -->
                             <template v-if="correctionUiState === 'pending'">
-                                <div class="text-xs font-semibold mb-2" style="color: var(--gold);">Naka-pending na recheck request mo</div>
+                                <div class="text-xs font-semibold mb-2" style="color: var(--gold);">You have a pending recheck request</div>
                                 <div class="space-y-1 text-xs mb-2">
                                     <div v-for="edit in gradesResult.pending_correction.edited_items" :key="edit.category + edit.title" class="flex items-center justify-between">
                                         <span class="text-[var(--text-secondary)]">{{ edit.title }}</span>
@@ -624,7 +624,7 @@
                                     </div>
                                 </div>
                                 <p v-if="gradesResult.pending_correction.notes" class="text-xs text-[var(--text-secondary)] mb-2">{{ gradesResult.pending_correction.notes }}</p>
-                                <a v-if="gradesResult.pending_correction.attachment_url" :href="gradesResult.pending_correction.attachment_url" target="_blank" class="text-xs hover:underline" style="color:var(--gold);">Tingnan ang attachment</a>
+                                <a v-if="gradesResult.pending_correction.attachment_url" :href="gradesResult.pending_correction.attachment_url" target="_blank" class="text-xs hover:underline" style="color:var(--gold);">View attachment</a>
                                 <div class="flex gap-2 mt-3">
                                     <button
                                         v-if="!gradesResult.correction_locked"
@@ -632,7 +632,7 @@
                                         class="flex-1 border text-[var(--text-body)] text-xs font-semibold py-2 rounded-xl"
                                         style="border-color:var(--surface-border);"
                                     >
-                                        I-edit ulit
+                                        Edit again
                                     </button>
                                     <button
                                         @click="cancelCorrection"
@@ -640,7 +640,7 @@
                                         class="flex-1 text-xs font-semibold py-2 rounded-xl disabled:opacity-50"
                                         style="color:#cf222e; border:1px solid rgba(207,34,46,0.4);"
                                     >
-                                        {{ correctionLoading ? 'Kinakansela...' : 'Kanselahin' }}
+                                        {{ correctionLoading ? 'Cancelling...' : 'Cancel' }}
                                     </button>
                                 </div>
                             </template>
@@ -653,39 +653,39 @@
                                     class="flex-1 text-white text-xs font-semibold py-2 rounded-xl disabled:opacity-50"
                                     style="background:var(--navy);"
                                 >
-                                    Tama ang grades ko
+                                    My grades are correct
                                 </button>
                                 <button
                                     @click="showRecheckForm = true"
                                     class="flex-1 border text-[var(--text-body)] text-xs font-semibold py-2 rounded-xl"
                                     style="border-color:var(--surface-border);"
                                 >
-                                    May mali, i-recheck
+                                    Something's wrong, recheck
                                 </button>
                             </div>
 
                             <!-- editing: composing / updating a recheck request -->
                             <div v-else-if="correctionUiState === 'editing'" class="space-y-2">
-                                <p class="text-xs text-[var(--text-muted)]">I-click ang pencil icon sa item na mali para i-edit ang score.</p>
+                                <p class="text-xs text-[var(--text-muted)]">Click the pencil icon on the incorrect item to edit the score.</p>
                                 <textarea
                                     v-model="recheckNotes"
                                     rows="2"
-                                    placeholder="Karagdagang paliwanag (opsyonal)"
+                                    placeholder="Additional explanation (optional)"
                                     class="portal-input text-xs"
                                 ></textarea>
 
                                 <div>
                                     <label class="text-xs text-[var(--text-secondary)] block mb-1">
-                                        Patunay (larawan, max 10MB) <span v-if="!hasExistingAttachment">*</span>
+                                        Proof (image, max 10MB) <span v-if="!hasExistingAttachment">*</span>
                                     </label>
                                     <input type="file" accept="image/*" @change="onAttachmentChange" class="text-xs" />
                                     <p v-if="correctionAttachment" class="text-xs text-[var(--text-muted)] mt-1">{{ correctionAttachment.name }}</p>
-                                    <p v-else-if="hasExistingAttachment" class="text-xs text-[var(--text-muted)] mt-1">May existing attachment ka na — puwede mo itong palitan o iwanan.</p>
+                                    <p v-else-if="hasExistingAttachment" class="text-xs text-[var(--text-muted)] mt-1">You already have an existing attachment — you can replace it or leave it as is.</p>
                                     <p v-if="correctionAttachmentError" class="text-xs text-red-500 mt-1">{{ correctionAttachmentError }}</p>
                                 </div>
 
                                 <div v-if="Object.keys(editedItems).length > 0" class="p-2.5 rounded-xl text-xs" style="background: rgba(207,34,46,0.08); border: 1px solid rgba(207,34,46,0.25);">
-                                    <div class="font-semibold mb-1" style="color: #cf222e;">Babaguhin sa recheck request:</div>
+                                    <div class="font-semibold mb-1" style="color: #cf222e;">Changes for this recheck request:</div>
                                     <div v-for="edit in Object.values(editedItems)" :key="edit.category + edit.title" class="flex items-center justify-between py-0.5">
                                         <span class="text-[var(--text-secondary)]">{{ edit.title }}</span>
                                         <span class="tabular-nums" style="font-family:var(--font-mono);">
@@ -703,7 +703,7 @@
                                         class="flex-1 text-white text-xs font-semibold py-2 rounded-xl disabled:opacity-50"
                                         style="background:var(--navy);"
                                     >
-                                        {{ correctionLoading ? 'Nagpo-process...' : 'I-submit ang recheck' }}
+                                        {{ correctionLoading ? 'Processing...' : 'Submit recheck' }}
                                     </button>
                                     <button
                                         @click="cancelEditingRecheckForm"
@@ -828,7 +828,7 @@ const signInChat = async () => {
         await loadChatHistory();
         chatPollTimer = setInterval(loadChatHistory, 6000);
     } catch (err) {
-        chatLoginError.value = err.response?.data?.message ?? 'May error, subukan ulit.';
+        chatLoginError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
     } finally {
         chatLoginLoading.value = false;
     }
@@ -857,7 +857,7 @@ const sendChatMessage = async () => {
         chatMessages.value.push(...data.messages);
         scrollChatToBottom();
     } catch (err) {
-        chatMessages.value.push({ id: Date.now(), sender: 'ai', body: 'May error, subukan ulit mamaya.' });
+        chatMessages.value.push({ id: Date.now(), sender: 'ai', body: 'Something went wrong, please try again later.' });
     } finally {
         chatSending.value = false;
     }
@@ -895,7 +895,7 @@ const switchGradesPeriod = async (period) => {
         });
         gradesResult.value = data;
     } catch (err) {
-        gradesError.value = err.response?.data?.message ?? 'May error, subukan ulit.';
+        gradesError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
     } finally {
         gradesLoading.value = false;
     }
@@ -939,7 +939,7 @@ const confirmEditItem = (item) => {
     const key = itemKeyOf(item);
     const val = parseFloat(editDraftScore.value);
     if (Number.isNaN(val) || val < 0) {
-        correctionError.value = 'Hindi valid na score.';
+        correctionError.value = 'Invalid score.';
         return;
     }
     editedItems.value = {
@@ -971,13 +971,13 @@ const onAttachmentChange = (e) => {
         return;
     }
     if (!file.type.startsWith('image/')) {
-        correctionAttachmentError.value = 'Larawan lang ang tinatanggap.';
+        correctionAttachmentError.value = 'Only images are accepted.';
         e.target.value = '';
         correctionAttachment.value = null;
         return;
     }
     if (file.size > 10 * 1024 * 1024) {
-        correctionAttachmentError.value = 'Dapat hindi hihigit sa 10MB ang larawan.';
+        correctionAttachmentError.value = 'The image must not exceed 10MB.';
         e.target.value = '';
         correctionAttachment.value = null;
         return;
@@ -1038,10 +1038,10 @@ const cancelCorrection = async () => {
                 password: gradesForm.value.password,
             },
         });
-        correctionSuccessMessage.value = 'Nakansela na ang recheck request mo.';
+        correctionSuccessMessage.value = 'Your recheck request has been cancelled.';
         await refetchGradesResult();
     } catch (err) {
-        correctionError.value = err.response?.data?.message ?? 'May error, subukan ulit.';
+        correctionError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
     } finally {
         correctionLoading.value = false;
     }
@@ -1052,11 +1052,11 @@ const submitCorrection = async (type) => {
 
     if (type === 'recheck') {
         if (Object.keys(editedItems.value).length === 0) {
-            correctionError.value = 'Mag-edit muna ng score na mali bago mag-submit.';
+            correctionError.value = 'Edit the incorrect score first before submitting.';
             return;
         }
         if (!correctionAttachment.value && !hasExistingAttachment.value) {
-            correctionError.value = 'Maglagay ng larawan bilang patunay (attachment).';
+            correctionError.value = 'Please attach an image as proof.';
             return;
         }
     }
@@ -1095,7 +1095,7 @@ const submitCorrection = async (type) => {
 
         await refetchGradesResult();
     } catch (err) {
-        correctionError.value = err.response?.data?.message ?? 'May error, subukan ulit.';
+        correctionError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
     } finally {
         correctionLoading.value = false;
     }
@@ -1133,7 +1133,7 @@ const submitGradesLogin = async () => {
         }
         gradesResult.value = data;
     } catch (err) {
-        gradesError.value = err.response?.data?.message ?? 'May error, subukan ulit.';
+        gradesError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
     } finally {
         gradesLoading.value = false;
     }
@@ -1170,11 +1170,11 @@ const submitPasswordChange = async () => {
     passwordChangeError.value = '';
 
     if (newPasswordForm.value.new_password.length < 8) {
-        passwordChangeError.value = 'Dapat at least 8 characters ang bagong password.';
+        passwordChangeError.value = 'The new password must be at least 8 characters.';
         return;
     }
     if (newPasswordForm.value.new_password !== newPasswordForm.value.confirm_password) {
-        passwordChangeError.value = 'Hindi magkatugma ang bagong password.';
+        passwordChangeError.value = "The new passwords don't match.";
         return;
     }
 
@@ -1203,7 +1203,7 @@ const submitPasswordChange = async () => {
             await signInChat();
         }
     } catch (err) {
-        passwordChangeError.value = err.response?.data?.message ?? 'May error, subukan ulit.';
+        passwordChangeError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
     } finally {
         passwordChangeLoading.value = false;
     }
@@ -1219,24 +1219,24 @@ const openFaqIndex = ref(null);
 
 const faqs = [
     {
-        q: 'Paano ako makakita ng grades ko?',
-        a: 'I-click yung "View my grades" button, tapos ilagay yung student number at password mo. Kailangan tama yung dalawa bago lumabas ang grades mo.',
+        q: 'How do I view my grades?',
+        a: 'Click the "View my grades" button, then enter your student number and password. Both need to be correct before your grades show up.',
     },
     {
-        q: 'Paano kung mali yung grade ko?',
-        a: 'Pagkatapos mong tingnan yung grades mo, may button na "May mali, i-recheck" — pindutin mo yun tapos ilagay yung specific na dahilan (hal. anong item, dapat ilan yung score).',
+        q: 'What if my grade is wrong?',
+        a: 'After viewing your grades, there\'s a "Something\'s wrong, recheck" button — click it, then enter the specific reason (e.g. which item, what the score should be).',
     },
     {
-        q: 'Paano ako mag-inform na absent si sir?',
-        a: 'I-click yung "Inform sir absent" card sa dashboard. Awtomatikong naka-fill na ang section mo, ikaw na lang mag-submit ng dahilan o detalye.',
+        q: 'How do I let sir know he\'ll be absent?',
+        a: 'Click the "Inform sir absent" card on the dashboard. Your section is auto-filled in — you just need to submit the reason or details.',
     },
     {
-        q: 'Paano gumagana ang chat / Ask Sir Francisco?',
-        a: 'I-click yung chat bubble sa ibaba kanan. Mag-sign in ka gamit ang student number at password, tapos pwede ka nang magtanong — sasagutin ka ng AI assistant o ni sir mismo.',
+        q: 'How does the chat / Ask Sir Francisco feature work?',
+        a: 'Click the chat bubble at the bottom right. Sign in with your student number and password, then you can start asking questions — the AI assistant or sir himself will respond.',
     },
     {
-        q: 'Bakit hindi ko makita yung Top 10 ranking ko?',
-        a: 'Lalabas lang sa Top 10 kung may naka-record nang grades sa section mo. Kung wala pang laman, ibig sabihin wala pa nailalagay na grades para dyan.',
+        q: 'Why can\'t I see my Top 10 ranking?',
+        a: 'You\'ll only appear in the Top 10 if there are recorded grades for your section. If it\'s empty, that means no grades have been entered yet.',
     },
 ];
 // ---- End FAQ state ----
@@ -1273,7 +1273,7 @@ const initials = (name) =>
     name.split(',')[0].trim().charAt(0) + (name.split(' ').pop()?.charAt(0) ?? '');
 
 const formattedUpdate = computed(() => {
-    if (!props.lastCalendarUpdate) return 'Wala pang update';
+    if (!props.lastCalendarUpdate) return 'No update yet';
     const d = new Date(props.lastCalendarUpdate);
     return d.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
 });

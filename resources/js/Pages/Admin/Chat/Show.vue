@@ -6,7 +6,7 @@
                     <div class="text-lg font-semibold text-slate-800">{{ student.full_name }}</div>
                     <div class="text-xs text-slate-400">{{ student.student_number }}</div>
                 </div>
-                <Link href="/paulo/chat" class="text-xs text-slate-400 hover:underline">← Back sa lahat</Link>
+                <Link href="/paulo/chat" class="text-xs text-slate-400 hover:underline">← Back to all</Link>
             </div>
 
             <div class="bg-white border border-slate-200 rounded-xl p-4 space-y-2 max-h-[60vh] overflow-y-auto">
@@ -17,7 +17,7 @@
                     class="max-w-[80%] text-sm rounded-lg px-3 py-2 whitespace-pre-wrap"
                 >
                     <div class="text-[10px] font-medium mb-0.5 opacity-70">
-                        {{ m.sender === 'admin' ? 'Ikaw' : m.sender === 'student' ? student.full_name : 'AI Assistant' }}
+                        {{ m.sender === 'admin' ? 'You' : m.sender === 'student' ? student.full_name : 'AI Assistant' }}
                     </div>
                     {{ m.body }}
                 </div>
@@ -27,7 +27,7 @@
                 <input
                     v-model="form.body"
                     type="text"
-                    placeholder="I-type ang sagot mo..."
+                    placeholder="Type your reply..."
                     class="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2"
                 />
                 <button type="submit" class="bg-[#003399] text-white text-sm font-medium px-4 py-2 rounded-lg">

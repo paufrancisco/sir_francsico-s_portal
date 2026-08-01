@@ -10,6 +10,7 @@ use Inertia\Inertia;
 use App\Models\Grade;
 use App\Models\Student;
 use App\Models\GradeCorrection;
+use App\Models\Seat;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use ZipArchive;
@@ -17,6 +18,7 @@ use App\Models\Topic;
 class SectionController extends Controller
 {
     private const PERIODS = ['prelim', 'midterm', 'prefinal', 'finals'];
+    private const LAYOUTS = ['lecture', 'comlab'];
 
     public function index()
     {
@@ -33,7 +35,7 @@ class SectionController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:sections,name',
+            'name' => 'required|string|max:255',
             'subject' => 'nullable|string|max:255',
             'schedule' => 'nullable|string|max:255',
         ]);
@@ -46,8 +48,7 @@ class SectionController extends Controller
     public function show(Request $request, Section $section)
     {
         $period = $this->resolvePeriod($request->query('period'));
-
-        
+        $layout = $this->resolveLayout($request->query('layout'));
 
         return Inertia::render('Admin/Sections/Show', [
             'section' => $section,
@@ -67,6 +68,9 @@ class SectionController extends Controller
                 ->archived()
                 ->orderByDesc('archived_at')
                 ->get(),
+            'currentLayout' => $layout,
+            'seats' => $this->seatsForLayout($section, $layout),
+            'unassignedStudents' => $this->unassignedStudents($section, $layout),
         ]);
     }
 
@@ -86,6 +90,50 @@ class SectionController extends Controller
     private function resolvePeriod(?string $period): string
     {
         return in_array($period, self::PERIODS, true) ? $period : 'prelim';
+    }
+
+    private function resolveLayout(?string $layout): string
+    {
+        return in_array($layout, self::LAYOUTS, true) ? $layout : 'lecture';
+    }
+
+    private function seatsForLayout(Section $section, string $layout)
+    {
+        $seats = Seat::where('section_id', $section->id)
+            ->where('layout', $layout)
+            ->with('student:id,student_number,full_name,aura_points,photo_path')
+            ->get()
+            ->keyBy('position_x');
+
+        return $seats->mapWithKeys(fn ($seat, $pos) => [$pos => [
+            'student_id' => $seat->student_id,
+            'student' => $seat->student ? [
+                'id' => $seat->student->id,
+                'student_number' => $seat->student->student_number,
+                'full_name' => $seat->student->full_name,
+                'aura_points' => $seat->student->aura_points,
+                'photo_url' => $seat->student->photo_url,
+            ] : null,
+        ]]);
+    }
+
+    private function unassignedStudents(Section $section, string $layout)
+    {
+        $students = $section->students()->orderBy('full_name')->get(['id', 'student_number', 'full_name', 'aura_points', 'photo_path']);
+
+        $assignedStudentIds = Seat::where('section_id', $section->id)
+            ->where('layout', $layout)
+            ->pluck('student_id')
+            ->filter()
+            ->values();
+
+        return $students->whereNotIn('id', $assignedStudentIds)->values()->map(fn ($s) => [
+            'id' => $s->id,
+            'student_number' => $s->student_number,
+            'full_name' => $s->full_name,
+            'aura_points' => $s->aura_points,
+            'photo_url' => $s->photo_url,
+        ]);
     }
 
     private function gradeItems(Section $section, string $period)
@@ -186,7 +234,7 @@ class SectionController extends Controller
     public function update(Request $request, Section $section)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:sections,name,' . $section->id,
+            'name' => 'required|string|max:255',
             'subject' => 'nullable|string|max:255',
             'schedule' => 'nullable|string|max:255',
         ]);

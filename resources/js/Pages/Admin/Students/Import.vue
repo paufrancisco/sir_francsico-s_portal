@@ -11,7 +11,7 @@
                 <div class="text-sm font-semibold text-slate-700 mb-2">Excel format</div>
                 <p class="text-xs text-slate-500 leading-relaxed">
                     Columns: <code class="bg-slate-100 px-1 rounded">student_number</code>, <code class="bg-slate-100 px-1 rounded">full_name</code>.
-                    Lahat ng ii-import dito ay mapupunta sa <strong>{{ section.name }}</strong>.
+                    Everything imported here will be added to <strong>{{ section.name }}</strong>.
                 </p>
             </div>
 

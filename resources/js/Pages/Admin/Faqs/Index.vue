@@ -3,7 +3,7 @@
         <main class="max-w-5xl mx-auto px-6 lg:px-10 py-8 space-y-4">
             <div class="text-lg font-semibold text-slate-800">FAQ — AI Assistant knowledge base</div>
             <p class="text-xs text-slate-400">
-                Ito yung gagamitin ng AI assistant bilang basehan ng sagot niya sa mga estudyante. Kung wala rito ang tanong, ipapaalam sa'yo via email.
+                This is what the AI assistant will use as the basis for its answers to students. If a question isn't covered here, you'll be notified via email.
             </p>
 
             <div v-if="$page.props.flash?.success" class="bg-[#EAF3DE] text-[#3B6D11] text-sm rounded-lg px-4 py-2">
@@ -12,14 +12,14 @@
 
             <form @submit.prevent="submitNew" class="bg-white border border-slate-200 rounded-xl p-4 space-y-2">
                 <select v-model="newForm.section_id" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2">
-                    <option :value="null">Para sa lahat ng section</option>
+                    <option :value="null">For all sections</option>
                     <option v-for="s in sections" :key="s.id" :value="s.id">
                         {{ s.subject ? `${s.subject} - ${s.name}` : s.name }}
                     </option>
                 </select>
-                <input v-model="newForm.question" placeholder="Tanong (hal. Kailan ang deadline ng project?)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2" />
-                <textarea v-model="newForm.answer" placeholder="Sagot" rows="2" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"></textarea>
-                <button type="submit" class="bg-[#003399] text-white text-xs font-medium px-4 py-2 rounded-lg">Idagdag</button>
+                <input v-model="newForm.question" placeholder="Question (e.g. When is the project deadline?)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2" />
+                <textarea v-model="newForm.answer" placeholder="Answer" rows="2" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2"></textarea>
+                <button type="submit" class="bg-[#003399] text-white text-xs font-medium px-4 py-2 rounded-lg">Add</button>
             </form>
 
             <!-- Section tabs -->
@@ -29,7 +29,7 @@
                     class="text-xs font-medium px-4 py-1.5 rounded-md transition"
                     :class="activeTab === 'all' ? 'bg-white text-[#003399] shadow-sm' : 'text-slate-500'"
                 >
-                    Lahat ng Section
+                    All Sections
                 </button>
                 <button
                     v-for="s in sections"
@@ -45,13 +45,13 @@
             <!-- Table -->
             <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                 <p v-if="filteredFaqs.length === 0" class="text-xs text-slate-400 px-4 py-6">
-                    Wala pang FAQ dito.
+                    No FAQs here yet.
                 </p>
                 <table v-else class="w-full text-sm">
                     <thead>
                         <tr class="bg-slate-50 text-left text-xs text-slate-500">
-                            <th class="px-4 py-2 w-2/5">Tanong</th>
-                            <th class="px-4 py-2">Sagot</th>
+                            <th class="px-4 py-2 w-2/5">Question</th>
+                            <th class="px-4 py-2">Answer</th>
                             <th class="px-4 py-2 text-center w-24">Action</th>
                         </tr>
                     </thead>
@@ -60,7 +60,7 @@
                             <template v-if="editingId === f.id">
                                 <td colspan="3" class="px-4 py-3">
                                     <select v-model="editForm.section_id" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 mb-2">
-                                        <option :value="null">Para sa lahat ng section</option>
+                                        <option :value="null">For all sections</option>
                                         <option v-for="s in sections" :key="s.id" :value="s.id">
                                             {{ s.subject ? `${s.subject} - ${s.name}` : s.name }}
                                         </option>
@@ -109,7 +109,7 @@
 
             <!-- Pagination -->
             <div v-if="totalPages > 1" class="flex items-center justify-between text-xs text-slate-500">
-                <span>Page {{ currentPage }} ng {{ totalPages }} ({{ filteredFaqs.length }} FAQ)</span>
+                <span>Page {{ currentPage }} of {{ totalPages }} ({{ filteredFaqs.length }} FAQs)</span>
                 <div class="flex gap-1">
                     <button
                         @click="currentPage--"
@@ -158,7 +158,7 @@ const saveEdit = (id) => {
 };
 
 const destroy = (id) => {
-    if (confirm('Sigurado ka bang i-delete ito?')) {
+    if (confirm('Are you sure you want to delete this?')) {
         router.delete(`/paulo/faqs/${id}`);
     }
 };

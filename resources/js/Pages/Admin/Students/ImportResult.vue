@@ -8,7 +8,7 @@
             </div>
 
             <div class="bg-[#FAEEDA] text-[#854F0B] text-xs rounded-lg px-4 py-3">
-                Nasave na yung passwords — makikita mo rin sila anytime sa master list ng section na ito (click "Show passwords").
+                Passwords have been saved — you can view them anytime in this section's master list (click "Show passwords").
             </div>
 
             <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -31,7 +31,7 @@
             </div>
 
             <Link :href="`/paulo/sections/${section.id}/students/import`" class="text-xs text-[#003399] font-medium hover:underline">
-                ← Mag-import ulit
+                ← Import again
             </Link>
         </main>
     </AdminLayout>

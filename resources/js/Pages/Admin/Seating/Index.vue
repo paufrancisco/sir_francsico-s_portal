@@ -5,7 +5,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <div class="text-lg font-semibold text-slate-800">Seating Arrangement</div>
-                    <div class="text-xs text-slate-400">I-click ang box para mag-assign o mag-adjust ng aura points.</div>
+                    <div class="text-xs text-slate-400">Click a box to assign or adjust aura points.</div>
                 </div>
 
                 <div class="relative">
@@ -43,12 +43,12 @@
             </div>
 
             <!--
-                FIX: tinanggal ang overflow-x-auto at min-width:max-content na siyang dahilan
-                ng horizontal scroll. Ang bawat group ngayon ay gumagamit ng CSS grid na "fr"
-                units (hindi fixed px), kaya awtomatikong bumabagay ang laki ng seat boxes
-                sa lapad ng screen — lumalaki sila pero hindi lalagpas sa container.
+                FIX: removed overflow-x-auto and min-width:max-content, which were causing
+                the horizontal scroll. Each group now uses CSS grid "fr" units (not fixed px),
+                so the seat boxes automatically resize to fit the screen width — they grow
+                but never overflow the container.
             -->
-            <!-- Lecture layout: 2 groups of 5 columns x 5 rows, may space sa pagitan (aisle) -->
+            <!-- Lecture layout: 2 groups of 5 columns x 5 rows, with space between them (aisle) -->
             <div v-if="layout === 'lecture'" class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
                 <div class="flex w-full gap-8">
                     <div
@@ -67,7 +67,7 @@
                 </div>
             </div>
 
-            <!-- Comlab layout: col 1 alone, col 2 alone, col 3-4 magkasama, may space sa pagitan ng bawat grupo -->
+            <!-- Comlab layout: col 1 alone, col 2 alone, cols 3-4 together, with space between each group -->
             <div v-else class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
                 <div class="flex w-full gap-8">
                     <div class="flex-1" :style="comlabGroupStyle(1)">
@@ -98,7 +98,7 @@
             </div>
 
             <div class="text-xs text-slate-400">
-                {{ unassignedStudents.length }} estudyante na hindi pa naka-assign sa layout na ito.
+                {{ unassignedStudents.length }} student(s) not yet assigned in this layout.
             </div>
         </main>
 
@@ -111,7 +111,7 @@
                     <button @click="closeModal" class="text-slate-400 hover:text-slate-600">✕</button>
                 </div>
 
-                <!-- Kung may laman na ang seat -->
+                <!-- If the seat already has an occupant -->
                 <template v-if="activeSeat?.student">
                     <div class="flex items-center gap-3 mb-4">
                         <div
@@ -124,7 +124,7 @@
                             </span>
                             <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
                                 <span class="text-white text-[9px] font-medium text-center leading-tight px-1">
-                                    {{ photoUploading ? '...' : 'Palitan' }}
+                                    {{ photoUploading ? '...' : 'Change' }}
                                 </span>
                             </div>
                             <input
@@ -152,32 +152,32 @@
 
                     <div class="flex gap-2">
                         <button @click="showReassign = true" class="flex-1 border border-slate-200 text-slate-600 text-xs font-medium py-2 rounded-lg">
-                            Palitan ng estudyante
+                            Change student
                         </button>
                         <button @click="unassignSeat" class="flex-1 bg-red-50 text-red-600 text-xs font-medium py-2 rounded-lg">
-                            Alisin sa seat
+                            Remove from seat
                         </button>
                     </div>
                 </template>
 
-                <!-- Blangko pa ang seat, o gustong palitan -->
+                <!-- Seat is still empty, or reassigning -->
                 <template v-if="!activeSeat?.student || showReassign">
                     <div class="mt-3 pt-3 border-t border-slate-100" v-if="activeSeat?.student">
-                        <div class="text-xs text-slate-500 mb-2">Piliin ang bagong estudyante:</div>
+                        <div class="text-xs text-slate-500 mb-2">Choose a new student:</div>
                     </div>
 
                     <input
                         v-model="studentSearch"
                         type="text"
-                        placeholder="Search student number o pangalan..."
+                        placeholder="Search student number or name..."
                         class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 mb-2 sticky top-0 bg-white z-10"
                     />
 
                     <!--
-                        FIX: pinaliit ang max-height (max-h-48 -> max-h-56 pero fixed na height talaga,
-                        hindi basta grumagrow), at overflow-y-scroll (hindi auto) para laging
-                        makikita ang scrollbar. Dinagdag din ang overscroll-contain para hindi
-                        mag-scroll ang buong modal/page pag naabot na ang dulo ng listahan.
+                        FIX: reduced max-height (max-h-48 -> max-h-56, but a real fixed height,
+                        not one that just grows), and overflow-y-scroll (not auto) so the
+                        scrollbar is always visible. Also added overscroll-contain so the
+                        whole modal/page doesn't scroll once the end of the list is reached.
                     -->
                     <div class="h-56 overflow-y-scroll divide-y divide-slate-100 border border-slate-100 rounded-lg overscroll-contain">
                         <button
@@ -198,7 +198,7 @@
                             </div>
                         </button>
                         <p v-if="filteredUnassigned.length === 0" class="text-xs text-slate-400 text-center py-4">
-                            Wala nang available na estudyante.
+                            No more available students.
                         </p>
                     </div>
                 </template>
@@ -239,20 +239,20 @@ const filteredUnassigned = computed(() => {
     );
 });
 
-// Buo ng listahan ng position indices para sa isang grid group.
-// groupIndex: pang-ilang group (1 o 2), cols/rows: laki ng group,
-// offsetOverride: dagdag base offset kung maraming groups na magkaibang laki (para sa comlab)
+// Builds the list of position indices for a grid group.
+// groupIndex: which group (1 or 2), cols/rows: group size,
+// offsetOverride: additional base offset when groups have different sizes (used for comlab)
 const groupPositions = (groupIndex, cols, rows, offsetOverride = null) => {
     const perGroup = cols * rows;
     const offset = offsetOverride !== null ? offsetOverride : (groupIndex - 1) * perGroup;
     return Array.from({ length: perGroup }, (_, i) => offset + i);
 };
 
-// FIX: gumagamit na ngayon ng "fr" units (hindi fixed px) para awtomatikong
-// bumagay ang laki ng bawat seat box sa available width — walang horizontal
-// scroll at mas malaki ang boxes sa malalapad na screen. Ang "aisle" ay hindi
-// na marginLeft; nasa gap-8 na ng parent flex container (tingnan sa template).
-// Grid style para sa Lecture layout — 5 columns x 5 rows bawat group.
+// FIX: now uses "fr" units (not fixed px) so each seat box automatically
+// resizes to the available width — no horizontal scroll, and boxes are
+// larger on wide screens. The "aisle" is no longer marginLeft; it now lives
+// in the parent flex container's gap-8 (see template).
+// Grid style for Lecture layout — 5 columns x 5 rows per group.
 const lectureGroupStyle = () => ({
     display: 'grid',
     gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
@@ -262,10 +262,10 @@ const lectureGroupStyle = () => ({
     justifyItems: 'stretch',
 });
 
-// Grid style para sa Comlab layout — column 1 mag-isa (1 col x 10 rows),
-// column 2 mag-isa rin, column 3 dalawang-column na grupo (2 cols x 10 rows).
-// Ang bawat group div ay may flex-1 (o flex:2 para sa group 3) sa template
-// para proportional ang lapad base sa bilang ng columns nito.
+// Grid style for Comlab layout — column 1 alone (1 col x 10 rows),
+// column 2 alone as well, column 3 a two-column group (2 cols x 10 rows).
+// Each group div has flex-1 (or flex:2 for group 3) in the template so
+// its width is proportional to its number of columns.
 const comlabGroupStyle = (groupIndex) => ({
     display: 'grid',
     gridTemplateColumns: groupIndex === 3 ? 'repeat(2, minmax(0, 1fr))' : 'repeat(1, minmax(0, 1fr))',
@@ -329,8 +329,8 @@ const triggerPhotoUpload = () => {
     photoInputRef.value?.click();
 };
 
-// URL pattern base sa routes/web.php: POST /paulo/sections/{section}/students/{student}/photo
-// (naka-prefix('paulo') ang buong admin route group, hindi '/admin')
+// URL pattern based on routes/web.php: POST /paulo/sections/{section}/students/{student}/photo
+// (the entire admin route group is prefixed with 'paulo', not '/admin')
 const onPhotoSelected = async (event) => {
     const file = event.target.files?.[0];
     if (!file || !activeSeat.value?.student) return;
@@ -360,5 +360,5 @@ const initials = (name) => {
     return name.split(' ').filter(Boolean).slice(0, 2).map((n) => n[0].toUpperCase()).join('');
 };
 
-const surnameFirst = (name) => name; // full_name mo ay naka-store na bilang "Apelido, Pangalan"
+const surnameFirst = (name) => name; // full_name is already stored as "Surname, First Name"
 </script>

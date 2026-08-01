@@ -1060,40 +1060,40 @@ const {
     --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, monospace;
 
-    /* GitHub Light tokens */
-    --navy: #24292f;        /* dark neutral panel (like GH header) */
-    --navy-deep: #1b1f24;
-    --gold: #0969da;        /* GH accent blue — links, primary CTAs */
-    --teal: #1a7f37;        /* GH success green */
-    --coral: #cf222e;       /* GH danger red */
+    /* Custom palette — Light mode */
+    --navy: #154D71;        /* deep navy ink panel */
+    --navy-deep: #0F3A56;   /* deeper shade for gradients */
+    --gold: #33A1E0;        /* accent — CTAs, highlights, links */
+    --teal: #1a7f37;        /* success green */
+    --coral: #cf222e;       /* danger red */
 
-    --page-bg: #f6f8fa;
+    --page-bg: #F3F8FC;
     --surface: #ffffff;
-    --surface-border: #d0d7de;
-    --surface-border-soft: #d8dee4;
-    --text-heading: #1f2328;
-    --text-body: #1f2328;
-    --text-secondary: #59636e;
-    --text-muted: #6e7781;
-    --chip-bg: #eaeef2;
+    --surface-border: #C9DCE8;
+    --surface-border-soft: #DAE8F0;
+    --text-heading: #154D71;
+    --text-body: #1C3A4D;
+    --text-secondary: #1C6EA4;   /* medium blue accent for secondary text */
+    --text-muted: #6E8A9C;
+    --chip-bg: #E4EFF6;
 }
 .portal-root.dark {
-    /* GitHub Dark tokens */
-    --navy: #21262d;
-    --navy-deep: #161b22;
-    --gold: #58a6ff;        /* GH accent blue, dark mode */
+    /* Custom palette — Dark mode */
+    --navy: #1C6EA4;
+    --navy-deep: #0D2B3D;
+    --gold: #FFF9AF;        /* pale yellow pops well on dark navy */
     --teal: #3fb950;
     --coral: #f85149;
 
-    --page-bg: #0d1117;
-    --surface: #161b22;
-    --surface-border: #30363d;
-    --surface-border-soft: #21262d;
-    --text-heading: #e6edf3;
-    --text-body: #c9d1d9;
-    --text-secondary: #8b949e;
-    --text-muted: #6e7681;
-    --chip-bg: #21262d;
+    --page-bg: #0B1F2C;
+    --surface: #12293A;
+    --surface-border: #234A61;
+    --surface-border-soft: #1B3A4E;
+    --text-heading: #EAF4FA;
+    --text-body: #CFE3EE;
+    --text-secondary: #7FBEDE;
+    --text-muted: #5E8AA0;
+    --chip-bg: #1B3A4E;
 }
 
 /* ---- background texture ---- */

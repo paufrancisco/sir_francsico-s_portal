@@ -69,16 +69,7 @@
                         <div class="text-[11px] text-white/40 tabular-nums" style="font-family:var(--font-mono);">{{ liveClock }}</div>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 relative">
-                        <div class="ledger-tile ledger-tile--white">
-                            <div class="ledger-tile__icon" style="background:rgba(244,114,182,0.14); color:#DB2777;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
-                            </div>
-                            <div class="text-[10px] uppercase tracking-wide" style="color:var(--text-secondary);">Next event</div>
-                            <div v-if="nextEvent" class="text-sm font-semibold mt-1 truncate" style="color:var(--text-heading);">{{ nextEvent.title }}</div>
-                            <div v-if="nextEvent" class="text-[11px] mt-0.5" style="font-family:var(--font-mono); color:var(--text-secondary);">{{ formatEventDate(nextEvent.event_date) }}</div>
-                            <div v-else class="text-sm font-medium mt-1" style="color:var(--text-muted);">No event scheduled yet</div>
-                        </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 relative">
                         <div class="ledger-tile ledger-tile--white">
                             <div class="ledger-tile__icon" style="background:rgba(247,177,37,0.18); color:#9A6B00;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -99,7 +90,24 @@
                         </div>
                     </div>
 
-                    <div class="mt-4 text-[10px] text-white/30" style="font-family:var(--font-mono);">Last updated: {{ formattedUpdate }}</div>
+                    <div class="mt-4 flex items-center gap-1.5 text-[10px] text-white/30" style="font-family:var(--font-mono);">
+                        <span>Last updated: {{ formattedUpdate }}</span>
+                        <button
+                            type="button"
+                            @click="syncNow"
+                            :disabled="isSyncing"
+                            title="Sync now"
+                            class="text-white/40 hover:text-white transition disabled:opacity-50"
+                        >
+                            <svg
+                                width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+                                :class="isSyncing ? 'animate-spin' : ''"
+                            >
+                                <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
+                                <path d="M21 3v6h-6"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Quick actions -->
@@ -112,7 +120,7 @@
                         <div class="text-[11px] text-white/50 mt-0.5">Password required</div>
                     </button>
 
-                    <button class="action-tile action-tile--surface">
+                    <button @click="openChangePasswordModal" class="action-tile action-tile--surface">
                     <span class="action-tile__icon" style="background:var(--chip-bg); color:var(--text-heading);">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     </span>
@@ -120,12 +128,12 @@
                         <div class="text-[11px] text-[var(--text-muted)] mt-0.5">Verify your current password first</div>
                     </button>
 
-                    <button class="action-tile action-tile--gold">
+                    <button @click="openAppointmentModal" class="action-tile action-tile--gold">
                         <span class="action-tile__icon" style="background:rgba(255,255,255,0.35); color:var(--navy-deep);">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4M16 16l4 4m0-4l-4 4"/></svg>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/><path d="M12 14v4M10 16h4"/></svg>
                         </span>
-                        <div class="text-sm font-semibold" style="color:var(--navy-deep); font-family:var(--font-display);">Inform sir absent</div>
-                        <div class="text-[11px] mt-0.5" style="color:var(--navy-deep); opacity:0.65;">Auto-fills your section</div>
+                        <div class="text-sm font-semibold" style="color:var(--navy-deep); font-family:var(--font-display);">Set an appointment</div>
+                        <div class="text-[11px] mt-0.5" style="color:var(--navy-deep); opacity:0.65;">Pick from sir's available times</div>
                     </button>
                 </div>
 
@@ -720,13 +728,264 @@
                     </template>
                 </div>
             </div>
+
+            <!-- Set an appointment modal -->
+            <div v-if="appointmentModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+                <div class="surface-card w-full max-w-sm shadow-xl p-5" style="border-radius: 1.5rem;">
+
+                    <!-- Force change password (first login) -->
+                    <template v-if="apptMustChangePassword">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">Change your password first</div>
+                            <button @click="closeAppointmentModal" class="text-[var(--text-muted)] hover:text-[var(--text-body)]">✕</button>
+                        </div>
+                        <p class="text-xs text-[var(--text-muted)] mb-3">This is your first login — you need to change your password before you can set an appointment.</p>
+                        <div class="space-y-3">
+                            <div class="relative">
+                                <input v-model="newPasswordForm.new_password" :type="showNewPassword ? 'text' : 'password'" placeholder="New password" class="portal-input pr-9" />
+                                <button type="button" @click="showNewPassword = !showNewPassword" tabindex="-1" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-body)]">
+                                    <svg v-if="showNewPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.77 21.77 0 0 1-3.22 4.53M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+                                    <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                </button>
+                            </div>
+                            <div class="relative">
+                                <input v-model="newPasswordForm.confirm_password" :type="showConfirmPassword ? 'text' : 'password'" placeholder="Confirm new password" class="portal-input pr-9" />
+                                <button type="button" @click="showConfirmPassword = !showConfirmPassword" tabindex="-1" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-body)]">
+                                    <svg v-if="showConfirmPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.77 21.77 0 0 1-3.22 4.53M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+                                    <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                </button>
+                            </div>
+                            <p v-if="passwordChangeError" class="text-xs text-red-500">{{ passwordChangeError }}</p>
+                            <div class="flex gap-2">
+                                <button
+                                    @click="submitPasswordChange"
+                                    :disabled="passwordChangeLoading"
+                                    class="flex-1 text-white text-sm font-semibold py-2 rounded-xl disabled:opacity-50"
+                                    style="background:var(--navy);"
+                                >
+                                    {{ passwordChangeLoading ? 'Updating...' : 'Update password' }}
+                                </button>
+                                <button @click="cancelPasswordChange" class="text-xs text-[var(--text-muted)] px-3">Cancel</button>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Sign-in form -->
+                    <template v-else-if="!apptStudent">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">Set an appointment</div>
+                            <button @click="closeAppointmentModal" class="text-[var(--text-muted)] hover:text-[var(--text-body)]">✕</button>
+                        </div>
+                        <form @submit.prevent="submitAppointmentLogin" class="space-y-3">
+                            <input
+                                v-model="apptForm.student_number"
+                                type="text"
+                                placeholder="Student number"
+                                class="portal-input"
+                            />
+                            <div class="relative">
+                                <input
+                                    v-model="apptForm.password"
+                                    :type="showApptLoginPassword ? 'text' : 'password'"
+                                    placeholder="Password"
+                                    class="portal-input pr-9"
+                                />
+                                <button type="button" @click="showApptLoginPassword = !showApptLoginPassword" tabindex="-1" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-body)]">
+                                    <svg v-if="showApptLoginPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.77 21.77 0 0 1-3.22 4.53M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+                                    <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                </button>
+                            </div>
+                            <p v-if="apptLoginError" class="text-xs text-red-500">{{ apptLoginError }}</p>
+                            <button
+                                type="submit"
+                                :disabled="apptLoginLoading"
+                                class="w-full text-white text-sm font-semibold py-2 rounded-xl disabled:opacity-50"
+                                style="background:var(--navy);"
+                            >
+                                {{ apptLoginLoading ? 'Checking...' : 'Sign in' }}
+                            </button>
+                        </form>
+                    </template>
+
+                    <!-- Signed in: pending appointment summary, or booking form -->
+                    <template v-else>
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <div class="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Set an appointment</div>
+                                <div class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">{{ apptStudent.name }}</div>
+                            </div>
+                            <button @click="closeAppointmentModal" class="text-[var(--text-muted)] hover:text-[var(--text-body)]">✕</button>
+                        </div>
+
+                        <!-- Existing pending/approved appointment -->
+                        <template v-if="apptExisting && !apptShowNewForm">
+                            <div class="p-3 rounded-xl text-xs mb-3" style="background: var(--chip-bg); border: 1px solid var(--surface-border);">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="font-semibold text-[var(--text-heading)]">{{ formatEventDate(apptExisting.appointment_date) }} · {{ apptExisting.start_time }}–{{ apptExisting.end_time }}</span>
+                                    <span
+                                        class="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide"
+                                        :class="apptExisting.status === 'approved' ? 'status-done' : apptExisting.status === 'declined' ? '' : 'status-ongoing'"
+                                        :style="apptExisting.status === 'declined' ? 'background: rgba(207,34,46,0.14); color: #cf222e;' : ''"
+                                    >{{ apptExisting.status }}</span>
+                                </div>
+                                <p v-if="apptExisting.reason" class="text-[var(--text-secondary)]">{{ apptExisting.reason }}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button
+                                    v-if="apptExisting.status === 'pending'"
+                                    @click="cancelAppointment"
+                                    :disabled="apptActionLoading"
+                                    class="flex-1 text-xs font-semibold py-2 rounded-xl disabled:opacity-50"
+                                    style="color:#cf222e; border:1px solid rgba(207,34,46,0.4);"
+                                >
+                                    {{ apptActionLoading ? 'Cancelling...' : 'Cancel appointment' }}
+                                </button>
+                                <button
+                                    v-else
+                                    @click="apptShowNewForm = true"
+                                    class="flex-1 text-white text-xs font-semibold py-2 rounded-xl"
+                                    style="background:var(--navy);"
+                                >
+                                    Set another appointment
+                                </button>
+                            </div>
+                        </template>
+
+                        <!-- Booking form: pick from available slots -->
+                        <template v-else>
+                            <p v-if="apptSlotsLoading" class="text-xs text-[var(--text-muted)] py-4 text-center">Loading available times...</p>
+                            <p v-else-if="apptError" class="text-xs text-red-500 py-4 text-center">{{ apptError }}</p>
+                            <p v-else-if="apptSlots.length === 0" class="text-xs text-[var(--text-muted)] py-4 text-center">
+                                No available slots have been set by sir yet. Please check back later.
+                            </p>
+                            <template v-else>
+                                <label class="text-xs text-[var(--text-secondary)] block mb-1.5">Pick an available time</label>
+                                <div class="space-y-1.5 mb-3" style="max-height: 220px; overflow-y: auto;">
+                                    <button
+                                        v-for="slot in apptSlots"
+                                        :key="slot.id"
+                                        type="button"
+                                        @click="selectedSlotId = slot.id"
+                                        class="w-full text-left text-xs px-3 py-2 rounded-xl border transition"
+                                        :style="selectedSlotId === slot.id
+                                            ? 'border-color: var(--gold); background: rgba(9,105,218,0.08);'
+                                            : 'border-color: var(--surface-border); background: var(--surface);'"
+                                    >
+                                        <span class="font-medium text-[var(--text-body)]">{{ formatEventDate(slot.date) }}</span>
+                                        <span class="text-[var(--text-muted)]"> · {{ slot.start_time }}–{{ slot.end_time }}</span>
+                                    </button>
+                                </div>
+                                <textarea
+                                    v-model="apptReason"
+                                    rows="2"
+                                    placeholder="Reason for the appointment"
+                                    class="portal-input text-xs mb-2"
+                                ></textarea>
+                                <p v-if="apptError" class="text-xs text-red-500 mb-2">{{ apptError }}</p>
+                                <div class="flex gap-2">
+                                    <button
+                                        @click="submitAppointment"
+                                        :disabled="apptActionLoading || !selectedSlotId"
+                                        class="flex-1 text-white text-xs font-semibold py-2 rounded-xl disabled:opacity-50"
+                                        style="background:var(--navy);"
+                                    >
+                                        {{ apptActionLoading ? 'Booking...' : 'Book appointment' }}
+                                    </button>
+                                    <button
+                                        v-if="apptExisting"
+                                        @click="apptShowNewForm = false"
+                                        class="text-xs text-[var(--text-muted)] px-3"
+                                    >
+                                        Back
+                                    </button>
+                                </div>
+                            </template>
+                        </template>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Change password modal -->
+            <div v-if="cpModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+                <div class="surface-card w-full max-w-sm shadow-xl p-5" style="border-radius: 1.5rem;">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">Change password</div>
+                        <button @click="closeChangePasswordModal" class="text-[var(--text-muted)] hover:text-[var(--text-body)]">✕</button>
+                    </div>
+
+                    <template v-if="cpSuccess">
+                        <p class="text-sm font-medium py-4 text-center" style="color: var(--teal, #1a7f37);">{{ cpSuccess }}</p>
+                        <button @click="closeChangePasswordModal" class="w-full text-white text-sm font-semibold py-2 rounded-xl" style="background:var(--navy);">
+                            Close
+                        </button>
+                    </template>
+
+                    <form v-else @submit.prevent="submitChangePassword" class="space-y-3">
+                        <input
+                            v-model="cpForm.student_number"
+                            type="text"
+                            placeholder="Student number"
+                            class="portal-input"
+                        />
+
+                        <div class="relative">
+                            <input
+                                v-model="cpForm.current_password"
+                                :type="showCpCurrentPassword ? 'text' : 'password'"
+                                placeholder="Current password"
+                                class="portal-input pr-9"
+                            />
+                            <button type="button" @click="showCpCurrentPassword = !showCpCurrentPassword" tabindex="-1" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-body)]">
+                                <svg v-if="showCpCurrentPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.77 21.77 0 0 1-3.22 4.53M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+                                <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
+                        </div>
+
+                        <div class="relative">
+                            <input
+                                v-model="cpForm.new_password"
+                                :type="showCpNewPassword ? 'text' : 'password'"
+                                placeholder="New password"
+                                class="portal-input pr-9"
+                            />
+                            <button type="button" @click="showCpNewPassword = !showCpNewPassword" tabindex="-1" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-body)]">
+                                <svg v-if="showCpNewPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.77 21.77 0 0 1-3.22 4.53M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+                                <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
+                        </div>
+
+                        <div class="relative">
+                            <input
+                                v-model="cpForm.confirm_password"
+                                :type="showCpConfirmPassword ? 'text' : 'password'"
+                                placeholder="Confirm new password"
+                                class="portal-input pr-9"
+                            />
+                            <button type="button" @click="showCpConfirmPassword = !showCpConfirmPassword" tabindex="-1" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-body)]">
+                                <svg v-if="showCpConfirmPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.77 21.77 0 0 1-3.22 4.53M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+                                <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
+                        </div>
+
+                        <p v-if="cpError" class="text-xs text-red-500">{{ cpError }}</p>
+
+                        <button
+                            type="submit"
+                            :disabled="cpLoading"
+                            class="w-full text-white text-sm font-semibold py-2 rounded-xl disabled:opacity-50"
+                            style="background:var(--navy);"
+                        >
+                            {{ cpLoading ? 'Updating...' : 'Update password' }}
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
-import axios from 'axios';
+import { useDashboardState } from '../../composables/useDashboardState';
 
 const props = defineProps({
     sections: { type: Array, default: () => [] },
@@ -738,564 +997,59 @@ const props = defineProps({
     lastCalendarUpdate: { type: String, default: null },
 });
 
-const showFullList = ref(false);
-const chatOpen = ref(false);
-const paused = ref(false);
-const currentIndex = ref(0);
-const slideDirection = ref('slide-next');
-
-// ---- Dark mode state ----
-const isDarkMode = ref(false);
-
-onMounted(() => {
-    const stored = localStorage.getItem('portalTheme');
-    if (stored) isDarkMode.value = stored === 'dark';
-    else isDarkMode.value = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
-});
-
-const toggleDarkMode = () => {
-    isDarkMode.value = !isDarkMode.value;
-    localStorage.setItem('portalTheme', isDarkMode.value ? 'dark' : 'light');
-};
-// ---- End dark mode state ----
-
-const activeSectionId = ref(props.sections[0]?.id ?? null);
-
-const activeSectionLabel = computed(() => {
-    const s = props.sections.find((sec) => sec.id === activeSectionId.value);
-    if (!s) return '';
-    return s.subject ? `${s.subject} - ${s.name}` : s.name;
-});
-
-const filteredAnnouncements = computed(() => props.announcementsBySection[activeSectionId.value] ?? []);
-const filteredTopics = computed(() => props.topicsBySection[activeSectionId.value] ?? []);
-const calendarEvents = computed(() => [
-    ...(props.globalCalendarEvents ?? []),
-    ...(props.calendarEventsBySection[activeSectionId.value] ?? []),
-]);
-const filteredStudents = computed(() => props.top10BySection[activeSectionId.value] ?? []);
-
-const currentStudent = computed(() => filteredStudents.value[currentIndex.value] ?? filteredStudents.value[0]);
-
-// ---- Snapshot stats (derived, no backend change needed) ----
-const nextEvent = computed(() => {
-    const now = new Date();
-    const upcoming = calendarEvents.value
-        .filter((e) => new Date(e.event_date) >= now)
-        .sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
-    return upcoming[0] ?? null;
-});
-
-const latestAnnouncement = computed(() => filteredAnnouncements.value[0] ?? null);
-
-watch(activeSectionId, () => { currentIndex.value = 0; });
-
-const goTo = (i) => {
-    slideDirection.value = i > currentIndex.value ? 'slide-next' : 'slide-prev';
-    currentIndex.value = i;
-};
-
-// ---- Chat widget state ----
-const chatStudent = ref(null);
-const chatLogin = ref({ student_number: '', password: '' });
-const chatLoginError = ref('');
-const chatLoginLoading = ref(false);
-const showChatLoginPassword = ref(false);
-const chatMustChangePassword = ref(false);
-const chatMessages = ref([]);
-const chatInput = ref('');
-const chatSending = ref(false);
-const chatScrollEl = ref(null);
-let chatPollTimer;
-
-const scrollChatToBottom = () => {
-    nextTick(() => {
-        if (chatScrollEl.value) chatScrollEl.value.scrollTop = chatScrollEl.value.scrollHeight;
-    });
-};
-
-const signInChat = async () => {
-    chatLoginLoading.value = true;
-    chatLoginError.value = '';
-    try {
-        const { data } = await axios.post('/portal/chat/verify', chatLogin.value);
-        if (data.must_change_password) {
-            chatMustChangePassword.value = true;
-            passwordChangeContext.value = 'chat';
-            return;
-        }
-        chatStudent.value = data;
-        await loadChatHistory();
-        chatPollTimer = setInterval(loadChatHistory, 6000);
-    } catch (err) {
-        chatLoginError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
-    } finally {
-        chatLoginLoading.value = false;
-    }
-};
-
-const loadChatHistory = async () => {
-    if (!chatStudent.value) return;
-    const { data } = await axios.get('/portal/chat/history', {
-        params: { student_id: chatStudent.value.student_id },
-    });
-    chatMessages.value = data.messages;
-    scrollChatToBottom();
-};
-
-const sendChatMessage = async () => {
-    if (!chatInput.value.trim()) return;
-    chatSending.value = true;
-    const body = chatInput.value;
-    chatInput.value = '';
-    scrollChatToBottom();
-    try {
-        const { data } = await axios.post('/portal/chat/send', {
-            student_id: chatStudent.value.student_id,
-            body,
-        });
-        chatMessages.value.push(...data.messages);
-        scrollChatToBottom();
-    } catch (err) {
-        chatMessages.value.push({ id: Date.now(), sender: 'ai', body: 'Something went wrong, please try again later.' });
-    } finally {
-        chatSending.value = false;
-    }
-};
-// ---- End chat widget state ----
-
-// ---- Grades modal state ----
-const gradesModalOpen = ref(false);
-const gradesForm = ref({ student_number: '', password: '' });
-const gradesError = ref('');
-const gradesLoading = ref(false);
-const showGradesLoginPassword = ref(false);
-const gradesResult = ref(null);
-const gradesPeriod = ref('prelim');
-const gradesMustChangePassword = ref(false);
-
-const periods = [
-    { value: 'prelim', label: 'Prelim' },
-    { value: 'midterm', label: 'Midterm' },
-    { value: 'prefinal', label: 'Pre-Final' },
-    { value: 'finals', label: 'Finals' },
-];
-
-const switchGradesPeriod = async (period) => {
-    if (period === gradesPeriod.value || gradesLoading.value) return;
-    gradesPeriod.value = period;
-    cancelEditingRecheckForm();
-    correctionSuccessMessage.value = '';
-    gradesLoading.value = true;
-    gradesError.value = '';
-    try {
-        const { data } = await axios.post('/portal/grades/verify', {
-            ...gradesForm.value,
-            period,
-        });
-        gradesResult.value = data;
-    } catch (err) {
-        gradesError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
-    } finally {
-        gradesLoading.value = false;
-    }
-};
-
-// ---- Grade correction state ----
-const showRecheckForm = ref(false);
-const recheckNotes = ref('');
-const correctionLoading = ref(false);
-const correctionError = ref('');
-const correctionSuccessMessage = ref('');
-
-// per-item edit state: key is `${category}|${title}`
-const editedItems = ref({});
-const editingItemKey = ref(null);
-const editDraftScore = ref('');
-
-// attachment (required proof, image only, max 10MB)
-const correctionAttachment = ref(null);
-const correctionAttachmentError = ref('');
-
-const hasExistingAttachment = computed(() => !!gradesResult.value?.pending_correction?.attachment_url);
-
-// idle | editing | pending
-const correctionUiState = computed(() => {
-    if (showRecheckForm.value) return 'editing';
-    return gradesResult.value?.pending_correction ? 'pending' : 'idle';
-});
-
-const itemKeyOf = (item) => item.category + '|' + item.title;
-
-const startEditItem = (item) => {
-    const key = itemKeyOf(item);
-    editingItemKey.value = key;
-    editDraftScore.value = editedItems.value[key]
-        ? editedItems.value[key].claimed_score
-        : (gradesResult.value.scores[key]?.score ?? '');
-};
-
-const confirmEditItem = (item) => {
-    const key = itemKeyOf(item);
-    const val = parseFloat(editDraftScore.value);
-    if (Number.isNaN(val) || val < 0) {
-        correctionError.value = 'Invalid score.';
-        return;
-    }
-    editedItems.value = {
-        ...editedItems.value,
-        [key]: { category: item.category, title: item.title, claimed_score: val },
-    };
-    editingItemKey.value = null;
-    editDraftScore.value = '';
-    correctionError.value = '';
-};
-
-const cancelEditItem = () => {
-    editingItemKey.value = null;
-    editDraftScore.value = '';
-};
-
-const removeEditedItem = (item) => {
-    const key = itemKeyOf(item);
-    const copy = { ...editedItems.value };
-    delete copy[key];
-    editedItems.value = copy;
-};
-
-const onAttachmentChange = (e) => {
-    correctionAttachmentError.value = '';
-    const file = e.target.files[0];
-    if (!file) {
-        correctionAttachment.value = null;
-        return;
-    }
-    if (!file.type.startsWith('image/')) {
-        correctionAttachmentError.value = 'Only images are accepted.';
-        e.target.value = '';
-        correctionAttachment.value = null;
-        return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-        correctionAttachmentError.value = 'The image must not exceed 10MB.';
-        e.target.value = '';
-        correctionAttachment.value = null;
-        return;
-    }
-    correctionAttachment.value = file;
-};
-
-const cancelEditingRecheckForm = () => {
-    showRecheckForm.value = false;
-    editedItems.value = {};
-    editingItemKey.value = null;
-    editDraftScore.value = '';
-    recheckNotes.value = '';
-    correctionAttachment.value = null;
-    correctionAttachmentError.value = '';
-    correctionError.value = '';
-};
-
-const startEditExistingCorrection = () => {
-    const c = gradesResult.value.pending_correction;
-    const map = {};
-    (c.edited_items ?? []).forEach((item) => {
-        const key = item.category + '|' + item.title;
-        map[key] = { category: item.category, title: item.title, claimed_score: item.claimed_score };
-    });
-    editedItems.value = map;
-    recheckNotes.value = c.notes ?? '';
-    correctionAttachment.value = null;
-    correctionAttachmentError.value = '';
-    correctionError.value = '';
-    correctionSuccessMessage.value = '';
-    showRecheckForm.value = true;
-};
-
-const refetchGradesResult = async () => {
-    try {
-        const { data } = await axios.post('/portal/grades/verify', {
-            ...gradesForm.value,
-            period: gradesPeriod.value,
-        });
-        if (!data.must_change_password) {
-            gradesResult.value = data;
-        }
-    } catch (err) {
-        // silent — keep the current view if refetch fails
-    }
-};
-
-const cancelCorrection = async () => {
-    const c = gradesResult.value?.pending_correction;
-    if (!c) return;
-    correctionLoading.value = true;
-    correctionError.value = '';
-    try {
-        await axios.delete(`/portal/grades/correction/${c.id}`, {
-            data: {
-                student_number: gradesForm.value.student_number,
-                password: gradesForm.value.password,
-            },
-        });
-        correctionSuccessMessage.value = 'Your recheck request has been cancelled.';
-        await refetchGradesResult();
-    } catch (err) {
-        correctionError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
-    } finally {
-        correctionLoading.value = false;
-    }
-};
-
-const submitCorrection = async (type) => {
-    correctionError.value = '';
-
-    if (type === 'recheck') {
-        if (Object.keys(editedItems.value).length === 0) {
-            correctionError.value = 'Edit the incorrect score first before submitting.';
-            return;
-        }
-        if (!correctionAttachment.value && !hasExistingAttachment.value) {
-            correctionError.value = 'Please attach an image as proof.';
-            return;
-        }
-    }
-
-    correctionLoading.value = true;
-    try {
-        const formData = new FormData();
-        formData.append('student_number', gradesForm.value.student_number);
-        formData.append('password', gradesForm.value.password);
-        formData.append('type', type);
-        formData.append('period', gradesPeriod.value);
-
-        if (type === 'recheck') {
-            formData.append('notes', recheckNotes.value);
-            formData.append('edited_items', JSON.stringify(
-                Object.values(editedItems.value).map((i) => ({
-                    category: i.category,
-                    title: i.title,
-                    claimed_score: i.claimed_score,
-                }))
-            ));
-            if (correctionAttachment.value) {
-                formData.append('attachment', correctionAttachment.value);
-            }
-        }
-
-        const { data } = await axios.post('/portal/grades/correction', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        });
-
-        correctionSuccessMessage.value = data.message;
-
-        if (type === 'recheck') {
-            cancelEditingRecheckForm();
-        }
-
-        await refetchGradesResult();
-    } catch (err) {
-        correctionError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
-    } finally {
-        correctionLoading.value = false;
-    }
-};
-
-const openGradesModal = () => {
-    gradesModalOpen.value = true;
-};
-
-const closeGradesModal = () => {
-    gradesModalOpen.value = false;
-    gradesResult.value = null;
-    gradesForm.value = { student_number: '', password: '' };
-    gradesError.value = '';
-    gradesPeriod.value = 'prelim';
-    showGradesLoginPassword.value = false;
-    gradesMustChangePassword.value = false;
-    cancelEditingRecheckForm();
-    correctionSuccessMessage.value = '';
-    if (passwordChangeContext.value === 'grades') resetPasswordChangeForm();
-};
-const submitGradesLogin = async () => {
-    gradesLoading.value = true;
-    gradesError.value = '';
-    gradesPeriod.value = 'prelim';
-    try {
-        const { data } = await axios.post('/portal/grades/verify', {
-            ...gradesForm.value,
-            period: 'prelim',
-        });
-        if (data.must_change_password) {
-            gradesMustChangePassword.value = true;
-            passwordChangeContext.value = 'grades';
-            return;
-        }
-        gradesResult.value = data;
-    } catch (err) {
-        gradesError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
-    } finally {
-        gradesLoading.value = false;
-    }
-};
-// ---- End grades modal state ----
-
-// ---- Force change password (first login) state ----
-// Shared by both the grades sign-in and chat sign-in flows.
-const passwordChangeContext = ref(null); // 'grades' | 'chat' | null
-const newPasswordForm = ref({ new_password: '', confirm_password: '' });
-const passwordChangeError = ref('');
-const passwordChangeLoading = ref(false);
-const showNewPassword = ref(false);
-const showConfirmPassword = ref(false);
-
-const resetPasswordChangeForm = () => {
-    passwordChangeContext.value = null;
-    newPasswordForm.value = { new_password: '', confirm_password: '' };
-    passwordChangeError.value = '';
-    showNewPassword.value = false;
-    showConfirmPassword.value = false;
-};
-
-const cancelPasswordChange = () => {
-    if (passwordChangeContext.value === 'grades') {
-        gradesMustChangePassword.value = false;
-    } else if (passwordChangeContext.value === 'chat') {
-        chatMustChangePassword.value = false;
-    }
-    resetPasswordChangeForm();
-};
-
-const submitPasswordChange = async () => {
-    passwordChangeError.value = '';
-
-    if (newPasswordForm.value.new_password.length < 8) {
-        passwordChangeError.value = 'The new password must be at least 8 characters.';
-        return;
-    }
-    if (newPasswordForm.value.new_password !== newPasswordForm.value.confirm_password) {
-        passwordChangeError.value = "The new passwords don't match.";
-        return;
-    }
-
-    const context = passwordChangeContext.value;
-    const studentNumber = context === 'chat' ? chatLogin.value.student_number : gradesForm.value.student_number;
-    const currentPassword = context === 'chat' ? chatLogin.value.password : gradesForm.value.password;
-
-    passwordChangeLoading.value = true;
-    try {
-        await axios.post('/portal/grades/change-password', {
-            student_number: studentNumber,
-            current_password: currentPassword,
-            new_password: newPasswordForm.value.new_password,
-            new_password_confirmation: newPasswordForm.value.confirm_password,
-        });
-
-        if (context === 'grades') {
-            gradesForm.value.password = newPasswordForm.value.new_password;
-            gradesMustChangePassword.value = false;
-            resetPasswordChangeForm();
-            await submitGradesLogin();
-        } else if (context === 'chat') {
-            chatLogin.value.password = newPasswordForm.value.new_password;
-            chatMustChangePassword.value = false;
-            resetPasswordChangeForm();
-            await signInChat();
-        }
-    } catch (err) {
-        passwordChangeError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
-    } finally {
-        passwordChangeLoading.value = false;
-    }
-};
-// ---- End force change password state ----
-
-// ---- Announcements table state ----
-const expandedAnnouncementId = ref(null);
-// ---- End announcements table state ----
-
-// ---- FAQ state ----
-const openFaqIndex = ref(null);
-
-const faqs = [
-    {
-        q: 'How do I view my grades?',
-        a: 'Click the "View my grades" button, then enter your student number and password. Both need to be correct before your grades show up.',
-    },
-    {
-        q: 'What if my grade is wrong?',
-        a: 'After viewing your grades, there\'s a "Something\'s wrong, recheck" button — click it, then enter the specific reason (e.g. which item, what the score should be).',
-    },
-    {
-        q: 'How do I let sir know he\'ll be absent?',
-        a: 'Click the "Inform sir absent" card on the dashboard. Your section is auto-filled in — you just need to submit the reason or details.',
-    },
-    {
-        q: 'How does the chat / Ask Sir Francisco feature work?',
-        a: 'Click the chat bubble at the bottom right. Sign in with your student number and password, then you can start asking questions — the AI assistant or sir himself will respond.',
-    },
-    {
-        q: 'Why can\'t I see my Top 10 ranking?',
-        a: 'You\'ll only appear in the Top 10 if there are recorded grades for your section. If it\'s empty, that means no grades have been entered yet.',
-    },
-];
-// ---- End FAQ state ----
-
-let autoTimer;
-let clockTimer;
-
-onMounted(() => {
-    autoTimer = setInterval(() => {
-        if (paused.value || filteredStudents.value.length === 0) return;
-        slideDirection.value = 'slide-next';
-        currentIndex.value = (currentIndex.value + 1) % filteredStudents.value.length;
-    }, 2200);
-
-    clockTimer = setInterval(() => {
-        liveClock.value = new Date().toLocaleString('en-PH', {
-            weekday: 'short', month: 'short', day: 'numeric',
-            hour: '2-digit', minute: '2-digit', second: '2-digit',
-        });
-    }, 1000);
-});
-onUnmounted(() => {
-    clearInterval(autoTimer);
-    clearInterval(clockTimer);
-    clearInterval(chatPollTimer);
-});
-
-const liveClock = ref(new Date().toLocaleString('en-PH', {
-    weekday: 'short', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-}));
-
-const initials = (name) =>
-    name.split(',')[0].trim().charAt(0) + (name.split(' ').pop()?.charAt(0) ?? '');
-
-const formattedUpdate = computed(() => {
-    if (!props.lastCalendarUpdate) return 'No update yet';
-    const d = new Date(props.lastCalendarUpdate);
-    return d.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
-});
-
-const formatEventDate = (dateStr) => {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
-};
-
-const todayFormatted = computed(() =>
-    new Date().toLocaleString('en-PH', {
-        month: 'long', day: 'numeric',
-        hour: '2-digit', minute: '2-digit',
-    })
-);
-
-const formatPostedDate = (dateStr) => {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleString('en-PH', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-};
+const {
+    // dark mode
+    isDarkMode, toggleDarkMode,
+
+    // sections / snapshot
+    activeSectionId, activeSectionLabel,
+    filteredAnnouncements, filteredTopics, filteredStudents,
+    latestAnnouncement, formattedUpdate, todayFormatted,
+    isSyncing, syncNow,
+
+    // class ledger carousel
+    showFullList, paused, currentIndex, slideDirection, currentStudent, goTo,
+
+    // chat widget
+    chatOpen, chatStudent, chatLogin, chatLoginError, chatLoginLoading,
+    showChatLoginPassword, chatMustChangePassword, chatMessages, chatInput,
+    chatSending, chatScrollEl, signInChat, sendChatMessage,
+
+    // grades modal
+    gradesModalOpen, gradesForm, gradesError, gradesLoading,
+    showGradesLoginPassword, gradesResult, gradesPeriod, gradesMustChangePassword,
+    periods, switchGradesPeriod, openGradesModal, closeGradesModal, submitGradesLogin,
+
+    // grade correction / recheck
+    showRecheckForm, recheckNotes, correctionLoading, correctionError, correctionSuccessMessage,
+    editedItems, editingItemKey, editDraftScore, startEditItem, confirmEditItem, cancelEditItem, removeEditedItem,
+    correctionAttachment, correctionAttachmentError, onAttachmentChange, hasExistingAttachment,
+    correctionUiState, cancelEditingRecheckForm, startEditExistingCorrection, cancelCorrection, submitCorrection,
+
+    // set an appointment
+    appointmentModalOpen, apptForm, apptLoginError, apptLoginLoading, showApptLoginPassword,
+    apptMustChangePassword, apptStudent, apptSlots, apptSlotsLoading, selectedSlotId, apptReason,
+    apptExisting, apptShowNewForm, apptError, apptActionLoading,
+    openAppointmentModal, closeAppointmentModal, submitAppointmentLogin, submitAppointment, cancelAppointment,
+
+    // standalone change password
+    cpModalOpen, cpForm, cpError, cpSuccess, cpLoading,
+    showCpCurrentPassword, showCpNewPassword, showCpConfirmPassword,
+    openChangePasswordModal, closeChangePasswordModal, submitChangePassword,
+
+    // forced password change
+    passwordChangeContext, newPasswordForm, passwordChangeError, passwordChangeLoading,
+    showNewPassword, showConfirmPassword, cancelPasswordChange, submitPasswordChange,
+
+    // announcements
+    expandedAnnouncementId,
+
+    // FAQ
+    openFaqIndex, faqs,
+
+    // misc
+    liveClock, initials, formatEventDate, formatPostedDate,
+} = useDashboardState(props);
 </script>
 
 <style scoped>

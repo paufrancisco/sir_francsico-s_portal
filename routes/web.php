@@ -18,7 +18,9 @@ use App\Http\Controllers\Admin\GradeController;
 use App\Models\Section;
 use App\Http\Controllers\SeatingController;
 use App\Http\Controllers\TopicController;
- 
+use App\Http\Controllers\PortalAppointmentController;
+use App\Http\Controllers\Admin\AdminFacultyAvailabilityController;
+
 Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () {
 
     Route::post('sections/{section}/topics', [TopicController::class, 'store']);
@@ -83,6 +85,13 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
     Route::post('seating/assign', [SeatingController::class, 'assign'])->name('seating.assign');
     Route::post('seating/unassign', [SeatingController::class, 'unassign'])->name('seating.unassign');
     Route::patch('students/{student}/aura', [SeatingController::class, 'adjustAura'])->name('students.aura');
+
+    // Faculty availability (Set an appointment feature) — dito mo ina-admin yung available times mo
+    Route::get('availability', [AdminFacultyAvailabilityController::class, 'index'])->name('availability.index');
+    Route::post('availability', [AdminFacultyAvailabilityController::class, 'store'])->name('availability.store');
+    Route::patch('availability/{availability}', [AdminFacultyAvailabilityController::class, 'update'])->name('availability.update');
+    Route::delete('availability/{availability}', [AdminFacultyAvailabilityController::class, 'destroy'])->name('availability.destroy');
+    Route::patch('appointments/{appointment}/resolve', [AdminFacultyAvailabilityController::class, 'resolve'])->name('appointments.resolve');
 });
 
 Route::post('/portal/chat/verify', [ChatController::class, 'verify'])->middleware('throttle:6,1');
@@ -99,6 +108,16 @@ Route::post('/portal/grades/change-password', [StudentDashboardController::class
 // Student-facing grade correction (public, verified via student_number+password sa request body)
 Route::post('/portal/grades/correction', [GradeCorrectionController::class, 'store']);
 Route::delete('/portal/grades/correction/{gradeCorrection}', [GradeCorrectionController::class, 'cancel'])
+    ->middleware('throttle:10,1');
+
+// Student-facing "Set an appointment" (public, verified via student_number+password sa request body)
+Route::post('/portal/appointments/verify', [PortalAppointmentController::class, 'verify'])
+    ->middleware('throttle:6,1');
+Route::post('/portal/appointments/available', [PortalAppointmentController::class, 'available'])
+    ->middleware('throttle:10,1');
+Route::post('/portal/appointments/book', [PortalAppointmentController::class, 'book'])
+    ->middleware('throttle:6,1');
+Route::delete('/portal/appointments/{appointment}', [PortalAppointmentController::class, 'destroy'])
     ->middleware('throttle:10,1');
 
 

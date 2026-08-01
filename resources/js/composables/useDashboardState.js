@@ -1,10 +1,12 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { router } from '@inertiajs/vue3';
 import axios from 'axios';
 
 /**
  * All reactive state + logic for the Student Dashboard portal
  * (dark mode, class ledger carousel, chat widget, grades modal,
- * grade correction/recheck flow, forced password change, FAQ).
+ * grade correction/recheck flow, appointment booking, standalone
+ * change-password, forced password change, FAQ).
  *
  * @param {object} props - the props object from Dashboard.vue (defineProps(...))
  */
@@ -40,23 +42,11 @@ export function useDashboardState(props) {
 
     const filteredAnnouncements = computed(() => props.announcementsBySection[activeSectionId.value] ?? []);
     const filteredTopics = computed(() => props.topicsBySection[activeSectionId.value] ?? []);
-    const calendarEvents = computed(() => [
-        ...(props.globalCalendarEvents ?? []),
-        ...(props.calendarEventsBySection[activeSectionId.value] ?? []),
-    ]);
     const filteredStudents = computed(() => props.top10BySection[activeSectionId.value] ?? []);
 
     const currentStudent = computed(() => filteredStudents.value[currentIndex.value] ?? filteredStudents.value[0]);
 
     // ---- Snapshot stats (derived, no backend change needed) ----
-    const nextEvent = computed(() => {
-        const now = new Date();
-        const upcoming = calendarEvents.value
-            .filter((e) => new Date(e.event_date) >= now)
-            .sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
-        return upcoming[0] ?? null;
-    });
-
     const latestAnnouncement = computed(() => filteredAnnouncements.value[0] ?? null);
 
     watch(activeSectionId, () => { currentIndex.value = 0; });
@@ -99,7 +89,7 @@ export function useDashboardState(props) {
             await loadChatHistory();
             chatPollTimer = setInterval(loadChatHistory, 6000);
         } catch (err) {
-            chatLoginError.value = err.response?.data?.message ?? 'May error, subukan ulit.';
+            chatLoginError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
         } finally {
             chatLoginLoading.value = false;
         }
@@ -128,7 +118,7 @@ export function useDashboardState(props) {
             chatMessages.value.push(...data.messages);
             scrollChatToBottom();
         } catch (err) {
-            chatMessages.value.push({ id: Date.now(), sender: 'ai', body: 'May error, subukan ulit mamaya.' });
+            chatMessages.value.push({ id: Date.now(), sender: 'ai', body: 'Something went wrong, please try again later.' });
         } finally {
             chatSending.value = false;
         }
@@ -166,7 +156,7 @@ export function useDashboardState(props) {
             });
             gradesResult.value = data;
         } catch (err) {
-            gradesError.value = err.response?.data?.message ?? 'May error, subukan ulit.';
+            gradesError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
         } finally {
             gradesLoading.value = false;
         }
@@ -210,7 +200,7 @@ export function useDashboardState(props) {
         const key = itemKeyOf(item);
         const val = parseFloat(editDraftScore.value);
         if (Number.isNaN(val) || val < 0) {
-            correctionError.value = 'Hindi valid na score.';
+            correctionError.value = 'Invalid score.';
             return;
         }
         editedItems.value = {
@@ -242,13 +232,13 @@ export function useDashboardState(props) {
             return;
         }
         if (!file.type.startsWith('image/')) {
-            correctionAttachmentError.value = 'Larawan lang ang tinatanggap.';
+            correctionAttachmentError.value = 'Only images are accepted.';
             e.target.value = '';
             correctionAttachment.value = null;
             return;
         }
         if (file.size > 10 * 1024 * 1024) {
-            correctionAttachmentError.value = 'Dapat hindi hihigit sa 10MB ang larawan.';
+            correctionAttachmentError.value = 'The image must not exceed 10MB.';
             e.target.value = '';
             correctionAttachment.value = null;
             return;
@@ -309,10 +299,10 @@ export function useDashboardState(props) {
                     password: gradesForm.value.password,
                 },
             });
-            correctionSuccessMessage.value = 'Nakansela na ang recheck request mo.';
+            correctionSuccessMessage.value = 'Your recheck request has been cancelled.';
             await refetchGradesResult();
         } catch (err) {
-            correctionError.value = err.response?.data?.message ?? 'May error, subukan ulit.';
+            correctionError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
         } finally {
             correctionLoading.value = false;
         }
@@ -323,11 +313,11 @@ export function useDashboardState(props) {
 
         if (type === 'recheck') {
             if (Object.keys(editedItems.value).length === 0) {
-                correctionError.value = 'Mag-edit muna ng score na mali bago mag-submit.';
+                correctionError.value = 'Edit the incorrect score first before submitting.';
                 return;
             }
             if (!correctionAttachment.value && !hasExistingAttachment.value) {
-                correctionError.value = 'Maglagay ng larawan bilang patunay (attachment).';
+                correctionError.value = 'Please attach an image as proof.';
                 return;
             }
         }
@@ -366,7 +356,7 @@ export function useDashboardState(props) {
 
             await refetchGradesResult();
         } catch (err) {
-            correctionError.value = err.response?.data?.message ?? 'May error, subukan ulit.';
+            correctionError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
         } finally {
             correctionLoading.value = false;
         }
@@ -405,16 +395,193 @@ export function useDashboardState(props) {
             }
             gradesResult.value = data;
         } catch (err) {
-            gradesError.value = err.response?.data?.message ?? 'May error, subukan ulit.';
+            gradesError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
         } finally {
             gradesLoading.value = false;
         }
     };
     // ---- End grades modal state ----
 
+    // ---- Set an appointment modal state ----
+    const appointmentModalOpen = ref(false);
+    const apptForm = ref({ student_number: '', password: '' });
+    const apptLoginError = ref('');
+    const apptLoginLoading = ref(false);
+    const showApptLoginPassword = ref(false);
+    const apptMustChangePassword = ref(false);
+    const apptStudent = ref(null);
+
+    const apptSlots = ref([]);
+    const apptSlotsLoading = ref(false);
+    const selectedSlotId = ref(null);
+    const apptReason = ref('');
+    const apptExisting = ref(null); // student's current pending/approved appointment, if any
+    const apptShowNewForm = ref(false);
+    const apptError = ref('');
+    const apptActionLoading = ref(false);
+
+    const openAppointmentModal = () => {
+        appointmentModalOpen.value = true;
+    };
+
+    const closeAppointmentModal = () => {
+        appointmentModalOpen.value = false;
+        apptStudent.value = null;
+        apptForm.value = { student_number: '', password: '' };
+        apptLoginError.value = '';
+        showApptLoginPassword.value = false;
+        apptMustChangePassword.value = false;
+        apptSlots.value = [];
+        selectedSlotId.value = null;
+        apptReason.value = '';
+        apptExisting.value = null;
+        apptShowNewForm.value = false;
+        apptError.value = '';
+        if (passwordChangeContext.value === 'appointment') resetPasswordChangeForm();
+    };
+
+    const loadAppointmentData = async () => {
+        apptSlotsLoading.value = true;
+        apptError.value = '';
+        try {
+            const { data } = await axios.post('/portal/appointments/available', {
+                student_number: apptForm.value.student_number,
+                password: apptForm.value.password,
+            });
+            apptSlots.value = data.slots;
+            apptExisting.value = data.existing_appointment ?? null;
+            apptShowNewForm.value = !apptExisting.value;
+        } catch (err) {
+            apptError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
+        } finally {
+            apptSlotsLoading.value = false;
+        }
+    };
+
+    const submitAppointmentLogin = async () => {
+        apptLoginLoading.value = true;
+        apptLoginError.value = '';
+        try {
+            const { data } = await axios.post('/portal/appointments/verify', apptForm.value);
+            if (data.must_change_password) {
+                apptMustChangePassword.value = true;
+                passwordChangeContext.value = 'appointment';
+                return;
+            }
+            apptStudent.value = data;
+            await loadAppointmentData();
+        } catch (err) {
+            apptLoginError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
+        } finally {
+            apptLoginLoading.value = false;
+        }
+    };
+
+    const submitAppointment = async () => {
+        apptError.value = '';
+        if (!selectedSlotId.value) {
+            apptError.value = 'Please pick an available time slot.';
+            return;
+        }
+        apptActionLoading.value = true;
+        try {
+            const { data } = await axios.post('/portal/appointments/book', {
+                student_number: apptForm.value.student_number,
+                password: apptForm.value.password,
+                faculty_availability_id: selectedSlotId.value,
+                reason: apptReason.value,
+            });
+            apptExisting.value = data.appointment;
+            apptShowNewForm.value = false;
+            selectedSlotId.value = null;
+            apptReason.value = '';
+        } catch (err) {
+            apptError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
+        } finally {
+            apptActionLoading.value = false;
+        }
+    };
+
+    const cancelAppointment = async () => {
+        if (!apptExisting.value) return;
+        apptActionLoading.value = true;
+        apptError.value = '';
+        try {
+            await axios.delete(`/portal/appointments/${apptExisting.value.id}`, {
+                data: {
+                    student_number: apptForm.value.student_number,
+                    password: apptForm.value.password,
+                },
+            });
+            await loadAppointmentData();
+        } catch (err) {
+            apptError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
+        } finally {
+            apptActionLoading.value = false;
+        }
+    };
+    // ---- End set an appointment modal state ----
+
+    // ---- Standalone "Change password" modal state (voluntary, not forced) ----
+    const cpModalOpen = ref(false);
+    const cpForm = ref({ student_number: '', current_password: '', new_password: '', confirm_password: '' });
+    const cpError = ref('');
+    const cpSuccess = ref('');
+    const cpLoading = ref(false);
+    const showCpCurrentPassword = ref(false);
+    const showCpNewPassword = ref(false);
+    const showCpConfirmPassword = ref(false);
+
+    const openChangePasswordModal = () => {
+        cpModalOpen.value = true;
+    };
+
+    const closeChangePasswordModal = () => {
+        cpModalOpen.value = false;
+        cpForm.value = { student_number: '', current_password: '', new_password: '', confirm_password: '' };
+        cpError.value = '';
+        cpSuccess.value = '';
+        showCpCurrentPassword.value = false;
+        showCpNewPassword.value = false;
+        showCpConfirmPassword.value = false;
+    };
+
+    const submitChangePassword = async () => {
+        cpError.value = '';
+
+        if (!cpForm.value.student_number.trim() || !cpForm.value.current_password) {
+            cpError.value = 'Please fill in your student number and current password.';
+            return;
+        }
+        if (cpForm.value.new_password.length < 8) {
+            cpError.value = 'The new password must be at least 8 characters.';
+            return;
+        }
+        if (cpForm.value.new_password !== cpForm.value.confirm_password) {
+            cpError.value = "The new passwords don't match.";
+            return;
+        }
+
+        cpLoading.value = true;
+        try {
+            await axios.post('/portal/grades/change-password', {
+                student_number: cpForm.value.student_number,
+                current_password: cpForm.value.current_password,
+                new_password: cpForm.value.new_password,
+                new_password_confirmation: cpForm.value.confirm_password,
+            });
+            cpSuccess.value = 'Your password has been updated.';
+        } catch (err) {
+            cpError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
+        } finally {
+            cpLoading.value = false;
+        }
+    };
+    // ---- End standalone change password modal state ----
+
     // ---- Force change password (first login) state ----
-    // Shared by both the grades sign-in and chat sign-in flows.
-    const passwordChangeContext = ref(null); // 'grades' | 'chat' | null
+    // Shared by the grades, chat, and appointment sign-in flows.
+    const passwordChangeContext = ref(null); // 'grades' | 'chat' | 'appointment' | null
     const newPasswordForm = ref({ new_password: '', confirm_password: '' });
     const passwordChangeError = ref('');
     const passwordChangeLoading = ref(false);
@@ -434,6 +601,8 @@ export function useDashboardState(props) {
             gradesMustChangePassword.value = false;
         } else if (passwordChangeContext.value === 'chat') {
             chatMustChangePassword.value = false;
+        } else if (passwordChangeContext.value === 'appointment') {
+            apptMustChangePassword.value = false;
         }
         resetPasswordChangeForm();
     };
@@ -442,17 +611,25 @@ export function useDashboardState(props) {
         passwordChangeError.value = '';
 
         if (newPasswordForm.value.new_password.length < 8) {
-            passwordChangeError.value = 'Dapat at least 8 characters ang bagong password.';
+            passwordChangeError.value = 'The new password must be at least 8 characters.';
             return;
         }
         if (newPasswordForm.value.new_password !== newPasswordForm.value.confirm_password) {
-            passwordChangeError.value = 'Hindi magkatugma ang bagong password.';
+            passwordChangeError.value = "The new passwords don't match.";
             return;
         }
 
         const context = passwordChangeContext.value;
-        const studentNumber = context === 'chat' ? chatLogin.value.student_number : gradesForm.value.student_number;
-        const currentPassword = context === 'chat' ? chatLogin.value.password : gradesForm.value.password;
+        const studentNumber = context === 'chat'
+            ? chatLogin.value.student_number
+            : context === 'appointment'
+                ? apptForm.value.student_number
+                : gradesForm.value.student_number;
+        const currentPassword = context === 'chat'
+            ? chatLogin.value.password
+            : context === 'appointment'
+                ? apptForm.value.password
+                : gradesForm.value.password;
 
         passwordChangeLoading.value = true;
         try {
@@ -473,9 +650,14 @@ export function useDashboardState(props) {
                 chatMustChangePassword.value = false;
                 resetPasswordChangeForm();
                 await signInChat();
+            } else if (context === 'appointment') {
+                apptForm.value.password = newPasswordForm.value.new_password;
+                apptMustChangePassword.value = false;
+                resetPasswordChangeForm();
+                await submitAppointmentLogin();
             }
         } catch (err) {
-            passwordChangeError.value = err.response?.data?.message ?? 'May error, subukan ulit.';
+            passwordChangeError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
         } finally {
             passwordChangeLoading.value = false;
         }
@@ -491,24 +673,24 @@ export function useDashboardState(props) {
 
     const faqs = [
         {
-            q: 'Paano ako makakita ng grades ko?',
-            a: 'I-click yung "View my grades" button, tapos ilagay yung student number at password mo. Kailangan tama yung dalawa bago lumabas ang grades mo.',
+            q: 'How do I view my grades?',
+            a: 'Click the "View my grades" button, then enter your student number and password. Both need to be correct before your grades show up.',
         },
         {
-            q: 'Paano kung mali yung grade ko?',
-            a: 'Pagkatapos mong tingnan yung grades mo, may button na "May mali, i-recheck" — pindutin mo yun tapos ilagay yung specific na dahilan (hal. anong item, dapat ilan yung score).',
+            q: 'What if my grade is wrong?',
+            a: 'After viewing your grades, there\'s a "Something\'s wrong, recheck" button — click it, then enter the specific reason (e.g. which item, what the score should be).',
         },
         {
-            q: 'Paano ako mag-inform na absent si sir?',
-            a: 'I-click yung "Inform sir absent" card sa dashboard. Awtomatikong naka-fill na ang section mo, ikaw na lang mag-submit ng dahilan o detalye.',
+            q: 'How do I set an appointment with sir?',
+            a: 'Click the "Set an appointment" card, sign in with your student number and password, then pick one of sir\'s available time slots and add your reason for the appointment.',
         },
         {
-            q: 'Paano gumagana ang chat / Ask Sir Francisco?',
-            a: 'I-click yung chat bubble sa ibaba kanan. Mag-sign in ka gamit ang student number at password, tapos pwede ka nang magtanong — sasagutin ka ng AI assistant o ni sir mismo.',
+            q: 'How does the chat / Ask Sir Francisco feature work?',
+            a: 'Click the chat bubble at the bottom right. Sign in with your student number and password, then you can start asking questions — the AI assistant or sir himself will respond.',
         },
         {
-            q: 'Bakit hindi ko makita yung Top 10 ranking ko?',
-            a: 'Lalabas lang sa Top 10 kung may naka-record nang grades sa section mo. Kung wala pang laman, ibig sabihin wala pa nailalagay na grades para dyan.',
+            q: 'Why can\'t I see my Top 10 ranking?',
+            a: 'You\'ll only appear in the Top 10 if there are recorded grades for your section. If it\'s empty, that means no grades have been entered yet.',
         },
     ];
     // ---- End FAQ state ----
@@ -544,11 +726,33 @@ export function useDashboardState(props) {
     const initials = (name) =>
         name.split(',')[0].trim().charAt(0) + (name.split(' ').pop()?.charAt(0) ?? '');
 
+    // ---- Sync / last updated state ----
+    // No auto-populated "last updated" from the backend — this only reflects
+    // the moment the user actually pressed the sync/refresh icon.
+    const isSyncing = ref(false);
+    const lastSyncedAt = ref(null);
+
     const formattedUpdate = computed(() => {
-        if (!props.lastCalendarUpdate) return 'Wala pang update';
-        const d = new Date(props.lastCalendarUpdate);
-        return d.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
+        if (!lastSyncedAt.value) return 'Not synced yet';
+        return lastSyncedAt.value.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
     });
+
+    const syncNow = () => {
+        if (isSyncing.value) return;
+        isSyncing.value = true;
+        // Re-fetches this page's props (sections, announcements, topics,
+        // top10, etc.) from the server in the background — no full
+        // browser reload — then updates the "Last updated" timestamp.
+        router.reload({
+            preserveScroll: true,
+            preserveState: true,
+            onFinish: () => {
+                lastSyncedAt.value = new Date();
+                isSyncing.value = false;
+            },
+        });
+    };
+    // ---- End sync / last updated state ----
 
     const formatEventDate = (dateStr) => {
         if (!dateStr) return '';
@@ -576,7 +780,8 @@ export function useDashboardState(props) {
         // sections / snapshot
         activeSectionId, activeSectionLabel,
         filteredAnnouncements, filteredTopics, filteredStudents,
-        nextEvent, latestAnnouncement, formattedUpdate, todayFormatted,
+        latestAnnouncement, formattedUpdate, todayFormatted,
+        isSyncing, syncNow,
 
         // class ledger carousel
         showFullList, paused, currentIndex, slideDirection, currentStudent, goTo,
@@ -596,6 +801,17 @@ export function useDashboardState(props) {
         editedItems, editingItemKey, editDraftScore, startEditItem, confirmEditItem, cancelEditItem, removeEditedItem,
         correctionAttachment, correctionAttachmentError, onAttachmentChange, hasExistingAttachment,
         correctionUiState, cancelEditingRecheckForm, startEditExistingCorrection, cancelCorrection, submitCorrection,
+
+        // set an appointment
+        appointmentModalOpen, apptForm, apptLoginError, apptLoginLoading, showApptLoginPassword,
+        apptMustChangePassword, apptStudent, apptSlots, apptSlotsLoading, selectedSlotId, apptReason,
+        apptExisting, apptShowNewForm, apptError, apptActionLoading,
+        openAppointmentModal, closeAppointmentModal, submitAppointmentLogin, submitAppointment, cancelAppointment,
+
+        // standalone change password
+        cpModalOpen, cpForm, cpError, cpSuccess, cpLoading,
+        showCpCurrentPassword, showCpNewPassword, showCpConfirmPassword,
+        openChangePasswordModal, closeChangePasswordModal, submitChangePassword,
 
         // forced password change
         passwordChangeContext, newPasswordForm, passwordChangeError, passwordChangeLoading,

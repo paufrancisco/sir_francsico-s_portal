@@ -15,6 +15,10 @@ FROM node:20-alpine AS node_builder
 
 WORKDIR /app
 
+# Accept the build-time variable from Render
+ARG VITE_APP_NAME
+ENV VITE_APP_NAME=$VITE_APP_NAME
+
 COPY package*.json ./
 RUN npm install
 

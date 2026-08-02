@@ -6,10 +6,10 @@
         >
             <div class="flex items-center justify-between px-4 py-4 border-b border-slate-100">
                 <div v-if="!collapsed">
-                    <div class="text-sm font-semibold text-[#003399]">Sir Francisco</div>
+                    <div class="text-sm font-semibold text-[var(--navy)]">Sir Francisco</div>
                     <div class="text-xs text-slate-400">Admin panel</div>
                 </div>
-                <button @click="toggle" class="text-slate-400 hover:text-[#003399] p-1 shrink-0">
+                <button @click="toggle" class="text-slate-400 hover:text-[var(--navy)] p-1 shrink-0">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path v-if="collapsed" d="M9 18l6-6-6-6" />
                         <path v-else d="M15 18l-6-6 6-6" />
@@ -23,7 +23,7 @@
                     :key="item.href"
                     :href="item.href"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition"
-                    :class="isActive(item.href) ? 'bg-[#E6F1FB] text-[#003399] font-medium' : 'text-slate-500 hover:bg-slate-50'"
+                    :class="isActive(item.href) ? 'bg-[var(--chip-bg)] text-[var(--navy)] font-medium' : 'text-slate-500 hover:bg-slate-50'"
                     :title="collapsed ? item.label : ''"
                 >
                     <span class="shrink-0 w-4 h-4" v-html="item.icon"></span>
@@ -38,9 +38,9 @@
                     <div class="relative">
                         <button
                             @click="profileOpen = !profileOpen"
-                            class="flex items-center gap-2 text-sm text-slate-600 hover:text-[#003399] transition"
+                            class="flex items-center gap-2 text-sm text-slate-600 hover:text-[var(--navy)] transition"
                         >
-                            <span class="w-9 h-9 rounded-full bg-[#E6F1FB] text-[#003399] flex items-center justify-center text-xs font-semibold overflow-hidden border border-slate-200">
+                            <span class="w-9 h-9 rounded-full bg-[var(--chip-bg)] text-[var(--navy)] flex items-center justify-center text-xs font-semibold overflow-hidden border border-slate-200">
                                 {{ userInitials }}
                             </span>
                             <span class="font-medium">{{ userName }}</span>

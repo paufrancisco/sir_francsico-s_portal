@@ -1,0 +1,22 @@
+/*
+  Sir Francisco's Admin Panel — global color palette.
+
+  This is the ONLY file you need to edit when you want to change the
+  admin panel's colors. Every .vue file under resources/js/Pages/Admin
+  (and AdminLayout.vue) reads colors from these variables using
+  Tailwind's arbitrary-value syntax, e.g. bg-[var(--navy)].
+
+  Because these are plain CSS custom properties defined on :root, they
+  are available everywhere automatically once this file is loaded —
+  you do NOT need to import this file inside individual .vue components.
+*/
+
+:root {
+    --navy: #154D71;        /* primary brand color — buttons, active nav, links */
+    --navy-deep: #0F3A56;   /* darker shade, for hover/pressed states */
+    --gold: #33A1E0;        /* secondary accent */
+    --chip-bg: #E4EFF6;     /* light tint — badges, active nav background */
+    --teal: #1a7f37;        /* success green (text) */
+    --teal-bg: #EAF3DE;     /* success green (background) */
+    --coral: #cf222e;       /* danger red */
+}

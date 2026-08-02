@@ -10,28 +10,28 @@
                 </div>
                 <button
                     @click="openAddModal"
-                    class="bg-[#003399] text-white text-sm font-medium px-4 py-2 rounded-lg hover:opacity-90 transition"
+                    class="bg-[var(--navy)] text-white text-sm font-medium px-4 py-2 rounded-lg hover:opacity-90 transition"
                 >
                     + Add Announcement
                 </button>
             </div>
 
-            <div v-if="$page.props.flash?.success" class="bg-[#EAF3DE] text-[#3B6D11] text-sm rounded-lg px-4 py-2">
+            <div v-if="$page.props.flash?.success" class="bg-[var(--teal-bg)] text-[var(--teal)] text-sm rounded-lg px-4 py-2">
                 {{ $page.props.flash.success }}
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
                     <div class="text-xs text-slate-400">Total sections</div>
-                    <div class="text-2xl font-semibold text-[#003399] mt-1">{{ sections.length }}</div>
+                    <div class="text-2xl font-semibold text-[var(--navy)] mt-1">{{ sections.length }}</div>
                 </div>
                 <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
                     <div class="text-xs text-slate-400">Total students</div>
-                    <div class="text-2xl font-semibold text-[#003399] mt-1">{{ totalStudents }}</div>
+                    <div class="text-2xl font-semibold text-[var(--navy)] mt-1">{{ totalStudents }}</div>
                 </div>
                 <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
                     <div class="text-xs text-slate-400">Grades computed</div>
-                    <div class="text-2xl font-semibold text-[#003399] mt-1">{{ computedCount }} / {{ sections.length }}</div>
+                    <div class="text-2xl font-semibold text-[var(--navy)] mt-1">{{ computedCount }} / {{ sections.length }}</div>
                 </div>
             </div>
 
@@ -45,7 +45,7 @@
                     </div>
                     <span
                         class="text-[11px] font-medium px-2 py-0.5 rounded-full"
-                        :class="s.grades_computed ? 'bg-[#EAF3DE] text-[#3B6D11]' : 'bg-slate-100 text-slate-500'"
+                        :class="s.grades_computed ? 'bg-[var(--teal-bg)] text-[var(--teal)]' : 'bg-slate-100 text-slate-500'"
                     >
                         {{ s.grades_computed ? 'Top 10 computed' : 'Not yet computed' }}
                     </span>
@@ -68,7 +68,7 @@
                     <tbody>
                         <tr v-for="a in announcements" :key="a.id" class="border-t border-slate-100 align-top">
                             <td class="px-5 py-3">
-                                <span class="inline-block text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#E6F1FB] text-[#003399] whitespace-nowrap">
+                                <span class="inline-block text-[11px] font-medium px-2 py-0.5 rounded-full bg-[var(--chip-bg)] text-[var(--navy)] whitespace-nowrap">
                                     {{ a.target }}
                                 </span>
                             </td>
@@ -151,7 +151,7 @@
 
                     <div class="flex justify-end gap-2 pt-2">
                         <button type="button" @click="closeModal" class="text-sm text-slate-500 px-4 py-2">Cancel</button>
-                        <button type="submit" :disabled="form.processing" class="bg-[#003399] text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50">
+                        <button type="submit" :disabled="form.processing" class="bg-[var(--navy)] text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50">
                             {{ editingId ? 'Save changes' : 'Post' }}
                         </button>
                     </div>

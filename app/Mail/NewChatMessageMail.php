@@ -16,15 +16,30 @@ class NewChatMessageMail extends Mailable
         public Student $student,
         public Collection $transcript,
         public bool $needsReview,
+        public array $studentContext = [],
     ) {
     }
 
     public function build()
     {
-        $subject = $this->needsReview
-            ? 'Kakaibang tanong — ' . $this->student->full_name
-            : 'Bagong tanong sa chat — ' . $this->student->full_name;
+        $subject = $this->subjectLine();
 
-        return $this->subject($subject)->markdown('mail.new-chat-message');
+        return $this->subject($subject)->markdown('mail.new-chat-message', [
+            'studentContext' => $this->studentContext,
+        ]);
+    }
+
+    private function subjectLine(): string
+    {
+        $label = $this->needsReview ? 'Kakaibang tanong' : 'Bagong tanong sa chat';
+
+        $subjectName = $this->studentContext['subject'] ?? null;
+        $sectionName = $this->studentContext['section'] ?? null;
+
+        $classTag = ($subjectName && $subjectName !== '—')
+            ? " ({$subjectName}" . ($sectionName && $sectionName !== '—' ? " / {$sectionName}" : '') . ')'
+            : '';
+
+        return "{$label} — {$this->student->full_name}{$classTag}";
     }
 }

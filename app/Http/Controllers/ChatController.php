@@ -16,6 +16,15 @@ class ChatController extends Controller
     private const MAX_CONCURRENT_CHATTERS = 3;
     private const SESSION_WINDOW_MINUTES = 15;
 
+    // Sinusubukan sa pagkakasunod-sunod na ito — kapag na-fail o walang laman
+    // ang response ng isa, susubukan ang susunod bago mag-give up.
+    private const GEMINI_MODEL_FALLBACK_CHAIN = [
+        'gemini-3.6-flash',
+        'gemini-3.5-flash-lite',
+        'gemini-2.5-flash',
+        'gemini-flash-latest',
+    ];
+
     public function verify(Request $request)
     {
         $request->validate([
@@ -97,13 +106,32 @@ class ChatController extends Controller
             'needs_review' => $needsReview,
         ]);
 
-        if (config('services.admin_notify_email')) {
+        // Mag-e-email lang kay Sir Francisco kapag hindi nasagot nang maayos ng AI
+        // (error sa lahat ng models, o walang matching FAQ) — hindi na sa bawat
+        // ordinaryong tanong na nasagot naman nang tama.
+        if ($needsReview && config('services.admin_notify_email')) {
             $transcript = Message::where('student_id', $student->id)
                 ->orderBy('created_at')
                 ->get(['sender', 'body', 'created_at']);
 
-            Mail::to(config('services.admin_notify_email'))
-                ->send(new NewChatMessageMail($student, $transcript, $needsReview));
+            // Malinaw na context para agad makilala ni Sir Francisco kung sino
+            // at anong klase ang nagtatanong, kahit hindi niya buksan ang portal.
+            $studentContext = [
+                'name' => $student->full_name,
+                'student_number' => $student->student_number,
+                'subject' => optional($student->section)->subject ?? '—',
+                'section' => optional($student->section)->name ?? '—',
+            ];
+
+            try {
+                Mail::to(config('services.admin_notify_email'))
+                    ->send(new NewChatMessageMail($student, $transcript, $needsReview, $studentContext));
+            } catch (\Throwable $e) {
+                // Huwag hayaang mag-fail ang buong chat response kapag nag-error
+                // lang ang pag-send ng notification email — log na lang, itutuloy
+                // pa rin ang response papunta sa student.
+                \Log::error('Admin notify email failed', ['message' => $e->getMessage()]);
+            }
         }
 
         return response()->json([
@@ -170,32 +198,57 @@ class ChatController extends Controller
         AI:
         PROMPT;
 
-        try {
-            $response = Http::timeout(15)
-                ->withHeaders(['x-goog-api-key' => $apiKey])
-                ->post(
-                    'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent',
-                    ['contents' => [['parts' => [['text' => $prompt]]]]]
-                );
+        $lastError = null;
 
-            if ($response->failed()) {
-                \Log::error('Gemini API error', [
-                    'status' => $response->status(),
-                    'body' => $response->body(),
+        foreach (self::GEMINI_MODEL_FALLBACK_CHAIN as $model) {
+            try {
+                $response = Http::timeout(15)
+                    ->withHeaders(['x-goog-api-key' => $apiKey])
+                    ->post(
+                        "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent",
+                        ['contents' => [['parts' => [['text' => $prompt]]]]]
+                    );
+
+                if ($response->failed()) {
+                    $lastError = "HTTP {$response->status()}: {$response->body()}";
+                    \Log::warning('Gemini model failed, trying next fallback', [
+                        'model' => $model,
+                        'status' => $response->status(),
+                        'body' => $response->body(),
+                    ]);
+                    continue; // subukan ang susunod na model sa chain
+                }
+
+                $text = trim($response->json('candidates.0.content.parts.0.text') ?? '');
+
+                if ($text === '') {
+                    $lastError = "Empty response body from {$model}";
+                    \Log::warning('Gemini returned empty text, trying next fallback', ['model' => $model]);
+                    continue;
+                }
+
+                // May gumana — log kung anong model talaga ang sumagot, useful
+                // para malaman mo kung kailan mag-shi-shift sa fallback.
+                \Log::info('Gemini model succeeded', ['model' => $model]);
+
+                if (str_starts_with($text, 'UNSURE_NOTIFY:')) {
+                    return [trim(str_replace('UNSURE_NOTIFY:', '', $text)), true];
+                }
+
+                return [$text, false];
+            } catch (\Throwable $e) {
+                $lastError = $e->getMessage();
+                \Log::warning('Gemini model threw exception, trying next fallback', [
+                    'model' => $model,
+                    'message' => $e->getMessage(),
                 ]);
-                return ['Pasensya, may error sa AI assistant. Titingnan na lang ni Sir Francisco ang tanong mo.', true];
+                continue;
             }
-
-            $text = trim($response->json('candidates.0.content.parts.0.text') ?? '');
-
-            if (str_starts_with($text, 'UNSURE_NOTIFY:')) {
-                return [trim(str_replace('UNSURE_NOTIFY:', '', $text)), true];
-            }
-
-            return [$text ?: 'Titingnan na lang ni Sir Francisco ang tanong mo.', $text === ''];
-        } catch (\Throwable $e) {
-            \Log::error('Gemini exception', ['message' => $e->getMessage()]);
-            return ['Pasensya, may error sa AI assistant. Titingnan na lang ni Sir Francisco ang tanong mo.', true];
         }
+
+        // Naubos na ang buong fallback chain, wala talagang gumana.
+        \Log::error('All Gemini models failed', ['last_error' => $lastError]);
+
+        return ['Pasensya, may error sa AI assistant. Titingnan na lang ni Sir Francisco ang tanong mo.', true];
     }
 }

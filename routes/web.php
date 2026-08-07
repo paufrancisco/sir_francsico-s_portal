@@ -84,7 +84,14 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
     Route::get('seating', [SeatingController::class, 'index'])->name('seating.index');
     Route::post('seating/assign', [SeatingController::class, 'assign'])->name('seating.assign');
     Route::post('seating/unassign', [SeatingController::class, 'unassign'])->name('seating.unassign');
+    Route::post('seating/aura/bulk', [SeatingController::class, 'bulkAdjustAura'])->name('seating.aura.bulk');
+    Route::get('seating/aura/summary', [SeatingController::class, 'auraSummary'])->name('seating.aura.summary');
+    Route::post('seating/aura/reset', [SeatingController::class, 'resetAura'])->name('seating.aura.reset');
+    
     Route::patch('students/{student}/aura', [SeatingController::class, 'adjustAura'])->name('students.aura');
+
+
+
 
     // Faculty availability (Set an appointment feature) — dito mo ina-admin yung available times mo
     Route::get('availability', [AdminFacultyAvailabilityController::class, 'index'])->name('availability.index');

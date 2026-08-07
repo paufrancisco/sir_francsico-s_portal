@@ -5,7 +5,9 @@
             <div class="flex items-center justify-between">
                 <div>
                     <div class="text-lg font-semibold text-slate-800">Seating Arrangement</div>
-                    <div class="text-xs text-slate-400">Click a box to assign or adjust aura points.</div>
+                    <div class="text-xs text-slate-400">
+                        {{ viewMode === 'summary' ? 'History ng aura points per date.' : 'Click a box to assign, o i-select para bulk-award ng points.' }}
+                    </div>
                 </div>
 
                 <div class="relative">
@@ -25,31 +27,80 @@
                 </div>
             </div>
 
-            <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-1 w-fit">
-                <button
-                    @click="switchLayout('lecture')"
-                    class="text-xs font-medium px-4 py-1.5 rounded-md transition"
-                    :class="layout === 'lecture' ? 'bg-white text-[#003399] shadow-sm' : 'text-slate-500'"
-                >
-                    Lecture Room
-                </button>
-                <button
-                    @click="switchLayout('comlab')"
-                    class="text-xs font-medium px-4 py-1.5 rounded-md transition"
-                    :class="layout === 'comlab' ? 'bg-white text-[#003399] shadow-sm' : 'text-slate-500'"
-                >
-                    Comlab
-                </button>
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+                    <button
+                        @click="switchTab('lecture')"
+                        class="text-xs font-medium px-4 py-1.5 rounded-md transition"
+                        :class="viewMode === 'lecture' ? 'bg-white text-[#003399] shadow-sm' : 'text-slate-500'"
+                    >
+                        Lecture Room
+                    </button>
+                    <button
+                        @click="switchTab('comlab')"
+                        class="text-xs font-medium px-4 py-1.5 rounded-md transition"
+                        :class="viewMode === 'comlab' ? 'bg-white text-[#003399] shadow-sm' : 'text-slate-500'"
+                    >
+                        Comlab
+                    </button>
+                    <button
+                        @click="switchTab('summary')"
+                        class="text-xs font-medium px-4 py-1.5 rounded-md transition"
+                        :class="viewMode === 'summary' ? 'bg-white text-[#003399] shadow-sm' : 'text-slate-500'"
+                    >
+                        Lec Lab Summary
+                    </button>
+                </div>
+
+                <!-- Selection controls, seating tabs lang -->
+                <div v-if="viewMode !== 'summary'" class="flex items-center gap-2">
+                    <button
+                        @click="toggleSelectMode"
+                        class="text-xs font-medium px-3 py-1.5 rounded-lg border transition"
+                        :class="selectMode ? 'bg-[#003399] text-white border-[#003399]' : 'border-slate-200 text-slate-600'"
+                    >
+                        {{ selectMode ? 'Done selecting' : 'Select students' }}
+                    </button>
+                    <button
+                        v-if="selectMode"
+                        @click="selectAll"
+                        class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600"
+                    >
+                        Select all
+                    </button>
+                    <button
+                        v-if="selectMode && selectedIds.size > 0"
+                        @click="clearSelection"
+                        class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600"
+                    >
+                        Clear ({{ selectedIds.size }})
+                    </button>
+                </div>
             </div>
 
-            <!--
-                FIX: removed overflow-x-auto and min-width:max-content, which were causing
-                the horizontal scroll. Each group now uses CSS grid "fr" units (not fixed px),
-                so the seat boxes automatically resize to fit the screen width — they grow
-                but never overflow the container.
-            -->
-            <!-- Lecture layout: 2 groups of 5 columns x 5 rows, with space between them (aisle) -->
-            <div v-if="layout === 'lecture'" class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+            <!-- Floating bulk-action bar -->
+            <div
+                v-if="viewMode !== 'summary' && selectMode && selectedIds.size > 0"
+                class="sticky top-2 z-20 bg-white border border-[#003399]/20 rounded-xl shadow-lg px-4 py-3 flex items-center justify-between flex-wrap gap-3"
+            >
+                <div class="text-sm font-medium text-slate-700">
+                    {{ selectedIds.size }} student(s) selected
+                </div>
+                <div class="flex items-center gap-2">
+                    <button @click="bulkApply(1)" :disabled="bulkApplying" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#EAF3DE] text-[#3B6D11] disabled:opacity-50">
+                        +1 pt
+                    </button>
+                    <button @click="bulkApply(5)" :disabled="bulkApplying" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#EAF3DE] text-[#3B6D11] disabled:opacity-50">
+                        +5 pts
+                    </button>
+                    <button @click="bulkApply(-1)" :disabled="bulkApplying" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-50 text-red-600 disabled:opacity-50">
+                        -1 pt
+                    </button>
+                </div>
+            </div>
+
+            <!-- Lecture layout -->
+            <div v-if="viewMode === 'lecture'" class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
                 <div class="flex w-full gap-8">
                     <div
                         v-for="groupIndex in 2"
@@ -61,21 +112,27 @@
                             v-for="pos in groupPositions(groupIndex, 5, 5)"
                             :key="pos"
                             :seat="seats[pos]"
+                            :select-mode="selectMode"
+                            :selected="seats[pos]?.student ? selectedIds.has(seats[pos].student.id) : false"
                             @click="openSeatModal(pos)"
+                            @toggle-select="toggleSelect(seats[pos].student.id)"
                         />
                     </div>
                 </div>
             </div>
 
-            <!-- Comlab layout: col 1 alone, col 2 alone, cols 3-4 together, with space between each group -->
-            <div v-else class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+            <!-- Comlab layout -->
+            <div v-else-if="viewMode === 'comlab'" class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
                 <div class="flex w-full gap-8">
                     <div class="flex-1" :style="comlabGroupStyle(1)">
                         <SeatBox
                             v-for="pos in groupPositions(1, 1, 10, 0)"
                             :key="pos"
                             :seat="seats[pos]"
+                            :select-mode="selectMode"
+                            :selected="seats[pos]?.student ? selectedIds.has(seats[pos].student.id) : false"
                             @click="openSeatModal(pos)"
+                            @toggle-select="toggleSelect(seats[pos].student.id)"
                         />
                     </div>
                     <div class="flex-1" :style="comlabGroupStyle(2)">
@@ -83,7 +140,10 @@
                             v-for="pos in groupPositions(2, 1, 10, 10)"
                             :key="pos"
                             :seat="seats[pos]"
+                            :select-mode="selectMode"
+                            :selected="seats[pos]?.student ? selectedIds.has(seats[pos].student.id) : false"
                             @click="openSeatModal(pos)"
+                            @toggle-select="toggleSelect(seats[pos].student.id)"
                         />
                     </div>
                     <div style="flex: 2 1 0%;" :style="comlabGroupStyle(3)">
@@ -91,13 +151,69 @@
                             v-for="pos in groupPositions(3, 2, 10, 20)"
                             :key="pos"
                             :seat="seats[pos]"
+                            :select-mode="selectMode"
+                            :selected="seats[pos]?.student ? selectedIds.has(seats[pos].student.id) : false"
                             @click="openSeatModal(pos)"
+                            @toggle-select="toggleSelect(seats[pos].student.id)"
                         />
                     </div>
                 </div>
             </div>
 
-            <div class="text-xs text-slate-400">
+            <!-- Lec Lab Summary -->
+            <div v-else class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+                    <div class="text-sm font-semibold text-slate-700">Aura points history</div>
+                    <button
+                        @click="confirmReset"
+                        :disabled="resetting"
+                        class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200 text-red-600 disabled:opacity-50"
+                    >
+                        {{ resetting ? 'Nagre-reset...' : 'Reset all' }}
+                    </button>
+                </div>
+
+                <p v-if="summaryLoading" class="text-xs text-slate-400 text-center py-8">Naglo-load...</p>
+
+                <p v-else-if="summaryRows.length === 0" class="text-xs text-slate-400 text-center py-8">
+                    Wala pang na-record na aura points sa section na ito.
+                </p>
+
+                <div v-else class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-50 text-slate-500 text-xs">
+                            <tr>
+                                <th class="text-left px-4 py-3 sticky left-0 bg-slate-50">Student</th>
+                                <th v-for="d in summaryDates" :key="d" class="text-center px-3 py-3 whitespace-nowrap">
+                                    {{ formatDateHeader(d) }}
+                                </th>
+                                <th class="text-center px-4 py-3 font-semibold">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr v-for="row in summaryRows" :key="row.id">
+                                <td class="px-4 py-2.5 sticky left-0 bg-white">
+                                    <div class="font-medium text-slate-700">{{ row.name }}</div>
+                                    <div class="text-xs text-slate-400">{{ row.student_number }}</div>
+                                </td>
+                                <td
+                                    v-for="d in summaryDates"
+                                    :key="d"
+                                    class="text-center px-3 py-2.5 tabular-nums"
+                                    :class="pointsColor(row.by_date[d])"
+                                >
+                                    {{ row.by_date[d] !== null && row.by_date[d] !== undefined ? formatDelta(row.by_date[d]) : '—' }}
+                                </td>
+                                <td class="text-center px-4 py-2.5 font-semibold text-[#003399] tabular-nums">
+                                    {{ row.total }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div v-if="viewMode !== 'summary'" class="text-xs text-slate-400">
                 {{ unassignedStudents.length }} student(s) not yet assigned in this layout.
             </div>
         </main>
@@ -111,7 +227,6 @@
                     <button @click="closeModal" class="text-slate-400 hover:text-slate-600">✕</button>
                 </div>
 
-                <!-- If the seat already has an occupant -->
                 <template v-if="activeSeat?.student">
                     <div class="flex items-center gap-3 mb-4">
                         <div
@@ -141,12 +256,22 @@
                         </div>
                     </div>
 
-                    <div class="flex items-center justify-between bg-slate-50 rounded-lg px-4 py-3 mb-4">
-                        <span class="text-xs text-slate-500">Aura Points</span>
-                        <div class="flex items-center gap-3">
-                            <button @click="adjustAura(-1)" class="w-7 h-7 rounded-full border border-slate-200 text-slate-500 hover:bg-white transition">−</button>
-                            <span class="text-sm font-bold text-[#003399] w-8 text-center">{{ activeSeat.student.aura_points }}</span>
-                            <button @click="adjustAura(1)" class="w-7 h-7 rounded-full border border-slate-200 text-slate-500 hover:bg-white transition">+</button>
+                    <div class="bg-slate-50 rounded-lg px-4 py-3 mb-4">
+                        <div class="flex items-center justify-between mb-2.5">
+                            <span class="text-xs text-slate-500">Aura Points</span>
+                            <div class="flex items-center gap-3">
+                                <button @click="adjustAura(-1)" class="w-7 h-7 rounded-full border border-slate-200 text-slate-500 hover:bg-white transition">−</button>
+                                <span class="text-sm font-bold text-[#003399] w-8 text-center">{{ activeSeat.student.aura_points }}</span>
+                                <button @click="adjustAura(1)" class="w-7 h-7 rounded-full border border-slate-200 text-slate-500 hover:bg-white transition">+</button>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button @click="adjustAura(1)" class="flex-1 text-xs font-semibold py-1.5 rounded-lg bg-[#EAF3DE] text-[#3B6D11]">
+                                +1 quick
+                            </button>
+                            <button @click="adjustAura(5)" class="flex-1 text-xs font-semibold py-1.5 rounded-lg bg-[#EAF3DE] text-[#3B6D11]">
+                                +5 quick
+                            </button>
                         </div>
                     </div>
 
@@ -160,7 +285,6 @@
                     </div>
                 </template>
 
-                <!-- Seat is still empty, or reassigning -->
                 <template v-if="!activeSeat?.student || showReassign">
                     <div class="mt-3 pt-3 border-t border-slate-100" v-if="activeSeat?.student">
                         <div class="text-xs text-slate-500 mb-2">Choose a new student:</div>
@@ -173,12 +297,6 @@
                         class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 mb-2 sticky top-0 bg-white z-10"
                     />
 
-                    <!--
-                        FIX: reduced max-height (max-h-48 -> max-h-56, but a real fixed height,
-                        not one that just grows), and overflow-y-scroll (not auto) so the
-                        scrollbar is always visible. Also added overscroll-contain so the
-                        whole modal/page doesn't scroll once the end of the list is reached.
-                    -->
                     <div class="h-56 overflow-y-scroll divide-y divide-slate-100 border border-slate-100 rounded-lg overscroll-contain">
                         <button
                             v-for="s in filteredUnassigned"
@@ -208,7 +326,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import SeatBox from '@/Components/SeatBox.vue';
@@ -221,6 +339,128 @@ const props = defineProps({
     seats: Object,
     unassignedStudents: Array,
 });
+
+// ---- View tabs (lecture / comlab / summary) ----
+const viewMode = ref(props.layout === 'comlab' ? 'comlab' : 'lecture');
+
+const switchTab = (tab) => {
+    viewMode.value = tab;
+    selectMode.value = false;
+    selectedIds.value = new Set();
+
+    if (tab === 'summary') {
+        loadSummary();
+        return;
+    }
+
+    router.get('/paulo/seating', { section_id: props.activeSectionId, layout: tab }, { preserveState: true });
+};
+// ---- End view tabs ----
+
+// ---- Selection mode (bulk aura points) ----
+const selectMode = ref(false);
+const selectedIds = ref(new Set());
+const bulkApplying = ref(false);
+
+const toggleSelectMode = () => {
+    selectMode.value = !selectMode.value;
+    if (!selectMode.value) selectedIds.value = new Set();
+};
+
+const toggleSelect = (studentId) => {
+    const next = new Set(selectedIds.value);
+    if (next.has(studentId)) next.delete(studentId);
+    else next.add(studentId);
+    selectedIds.value = next;
+};
+
+const selectAll = () => {
+    const ids = Object.values(props.seats)
+        .filter((s) => s?.student)
+        .map((s) => s.student.id);
+    selectedIds.value = new Set(ids);
+};
+
+const clearSelection = () => {
+    selectedIds.value = new Set();
+};
+
+const bulkApply = async (delta) => {
+    if (selectedIds.value.size === 0) return;
+    bulkApplying.value = true;
+    try {
+        const { data } = await axios.post('/paulo/seating/aura/bulk', {
+            student_ids: Array.from(selectedIds.value),
+            delta,
+        });
+        // I-update ang local seats object para makita agad ang bagong points
+        Object.values(props.seats).forEach((seat) => {
+            if (seat?.student && data.updated[seat.student.id] !== undefined) {
+                seat.student.aura_points = data.updated[seat.student.id];
+            }
+        });
+    } catch (e) {
+        alert(e.response?.data?.message ?? 'May error, subukan ulit.');
+    } finally {
+        bulkApplying.value = false;
+    }
+};
+// ---- End selection mode ----
+
+// ---- Lec Lab Summary ----
+const summaryLoading = ref(false);
+const summaryDates = ref([]);
+const summaryRows = ref([]);
+const resetting = ref(false);
+
+const loadSummary = async () => {
+    summaryLoading.value = true;
+    try {
+        const { data } = await axios.get('/paulo/seating/aura/summary', {
+            params: { section_id: props.activeSectionId },
+        });
+        summaryDates.value = data.dates;
+        summaryRows.value = data.rows;
+    } catch (e) {
+        alert('Hindi na-load ang summary.');
+    } finally {
+        summaryLoading.value = false;
+    }
+};
+
+const formatDateHeader = (dateStr) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+};
+
+const formatDelta = (n) => (n > 0 ? `+${n}` : `${n}`);
+
+const pointsColor = (n) => {
+    if (n === null || n === undefined) return 'text-slate-300';
+    if (n > 0) return 'text-[#3B6D11] font-medium';
+    if (n < 0) return 'text-red-600 font-medium';
+    return 'text-slate-400';
+};
+
+const confirmReset = () => {
+    const confirmed = confirm('Sigurado ka bang gusto mong i-reset ang LAHAT ng aura points sa section na ito? Hindi na ito mababawi (pero mananatili ang history).');
+    if (!confirmed) return;
+    resetAll();
+};
+
+const resetAll = async () => {
+    resetting.value = true;
+    try {
+        await axios.post('/paulo/seating/aura/reset', { section_id: props.activeSectionId });
+        await loadSummary();
+        router.reload({ only: ['seats', 'unassignedStudents'] });
+    } catch (e) {
+        alert('Hindi na-reset, subukan ulit.');
+    } finally {
+        resetting.value = false;
+    }
+};
+// ---- End Lec Lab Summary ----
 
 const modalOpen = ref(false);
 const activePosition = ref(null);
@@ -239,20 +479,12 @@ const filteredUnassigned = computed(() => {
     );
 });
 
-// Builds the list of position indices for a grid group.
-// groupIndex: which group (1 or 2), cols/rows: group size,
-// offsetOverride: additional base offset when groups have different sizes (used for comlab)
 const groupPositions = (groupIndex, cols, rows, offsetOverride = null) => {
     const perGroup = cols * rows;
     const offset = offsetOverride !== null ? offsetOverride : (groupIndex - 1) * perGroup;
     return Array.from({ length: perGroup }, (_, i) => offset + i);
 };
 
-// FIX: now uses "fr" units (not fixed px) so each seat box automatically
-// resizes to the available width — no horizontal scroll, and boxes are
-// larger on wide screens. The "aisle" is no longer marginLeft; it now lives
-// in the parent flex container's gap-8 (see template).
-// Grid style for Lecture layout — 5 columns x 5 rows per group.
 const lectureGroupStyle = () => ({
     display: 'grid',
     gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
@@ -262,10 +494,6 @@ const lectureGroupStyle = () => ({
     justifyItems: 'stretch',
 });
 
-// Grid style for Comlab layout — column 1 alone (1 col x 10 rows),
-// column 2 alone as well, column 3 a two-column group (2 cols x 10 rows).
-// Each group div has flex-1 (or flex:2 for group 3) in the template so
-// its width is proportional to its number of columns.
 const comlabGroupStyle = (groupIndex) => ({
     display: 'grid',
     gridTemplateColumns: groupIndex === 3 ? 'repeat(2, minmax(0, 1fr))' : 'repeat(1, minmax(0, 1fr))',
@@ -276,14 +504,11 @@ const comlabGroupStyle = (groupIndex) => ({
 });
 
 const switchSection = (sectionId) => {
-    router.get('/paulo/seating', { section_id: sectionId, layout: props.layout }, { preserveState: true });
-};
-
-const switchLayout = (newLayout) => {
-    router.get('/paulo/seating', { section_id: props.activeSectionId, layout: newLayout }, { preserveState: true });
+    router.get('/paulo/seating', { section_id: sectionId, layout: viewMode.value === 'summary' ? 'lecture' : viewMode.value }, { preserveState: true });
 };
 
 const openSeatModal = (position) => {
+    if (selectMode.value) return;
     activePosition.value = position;
     showReassign.value = false;
     studentSearch.value = '';
@@ -298,7 +523,7 @@ const closeModal = () => {
 const assignSeat = (studentId) => {
     router.post('/paulo/seating/assign', {
         section_id: props.activeSectionId,
-        layout: props.layout,
+        layout: viewMode.value,
         position: activePosition.value,
         student_id: studentId,
     }, {
@@ -310,7 +535,7 @@ const assignSeat = (studentId) => {
 const unassignSeat = () => {
     router.post('/paulo/seating/unassign', {
         section_id: props.activeSectionId,
-        layout: props.layout,
+        layout: viewMode.value,
         position: activePosition.value,
     }, {
         preserveScroll: true,
@@ -329,8 +554,6 @@ const triggerPhotoUpload = () => {
     photoInputRef.value?.click();
 };
 
-// URL pattern based on routes/web.php: POST /paulo/sections/{section}/students/{student}/photo
-// (the entire admin route group is prefixed with 'paulo', not '/admin')
 const onPhotoSelected = async (event) => {
     const file = event.target.files?.[0];
     if (!file || !activeSeat.value?.student) return;
@@ -360,5 +583,5 @@ const initials = (name) => {
     return name.split(' ').filter(Boolean).slice(0, 2).map((n) => n[0].toUpperCase()).join('');
 };
 
-const surnameFirst = (name) => name; // full_name is already stored as "Surname, First Name"
+const surnameFirst = (name) => name;
 </script>

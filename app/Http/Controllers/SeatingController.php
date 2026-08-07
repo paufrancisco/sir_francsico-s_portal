@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuraPointLog;
 use App\Models\Seat;
 use App\Models\Section;
 use App\Models\Student;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class SeatingController extends Controller
@@ -42,10 +45,6 @@ class SeatingController extends Controller
                     'student_number' => $seat->student->student_number,
                     'full_name' => $seat->student->full_name,
                     'aura_points' => $seat->student->aura_points,
-                    // FIX: dating asset('storage/' . $seat->student->photo_path) — nagbubuo ito ng
-                    // LOCAL Laravel storage URL (127.0.0.1:8000/storage/...) na hindi valid dahil
-                    // Supabase na ang totoong pinag-uupload-an ng photos. Ang $student->photo_url
-                    // accessor sa Model ang gumagawa ng tamang Supabase URL.
                     'photo_url' => $seat->student->photo_url,
                 ] : null,
             ]]),
@@ -54,7 +53,6 @@ class SeatingController extends Controller
                 'student_number' => $s->student_number,
                 'full_name' => $s->full_name,
                 'aura_points' => $s->aura_points,
-                // FIX: parehong dahilan — gamitin ang accessor imbes na manual na asset() build.
                 'photo_url' => $s->photo_url,
             ]),
         ]);
@@ -69,7 +67,6 @@ class SeatingController extends Controller
             'student_id' => 'required|exists:students,id',
         ]);
 
-        // Alisin muna kung may existing seat na ang estudyante sa parehong layout+section
         Seat::where('section_id', $request->section_id)
             ->where('layout', $request->layout)
             ->where('student_id', $request->student_id)
@@ -107,13 +104,131 @@ class SeatingController extends Controller
         return back();
     }
 
+    // ---- Single-student aura adjustment (existing, now also logs) ----
     public function adjustAura(Request $request, Student $student)
     {
         $request->validate(['delta' => 'required|integer']);
 
         $newValue = max(0, $student->aura_points + $request->delta);
+        $actualDelta = $newValue - $student->aura_points;
+
         $student->update(['aura_points' => $newValue]);
 
+        if ($actualDelta !== 0) {
+            AuraPointLog::create([
+                'student_id' => $student->id,
+                'section_id' => $student->section_id,
+                'points' => $actualDelta,
+                'recorded_by' => Auth::id(),
+            ]);
+        }
+
         return response()->json(['aura_points' => $newValue]);
+    }
+
+    // ---- Bulk aura adjustment (Select All + Quick +5/+1) ----
+    public function bulkAdjustAura(Request $request)
+    {
+        $request->validate([
+            'student_ids' => 'required|array|min:1',
+            'student_ids.*' => 'exists:students,id',
+            'delta' => 'required|integer',
+        ]);
+
+        $students = Student::whereIn('id', $request->student_ids)->get();
+        $updated = [];
+
+        DB::transaction(function () use ($students, $request, &$updated) {
+            foreach ($students as $student) {
+                $newValue = max(0, $student->aura_points + $request->delta);
+                $actualDelta = $newValue - $student->aura_points;
+
+                $student->update(['aura_points' => $newValue]);
+
+                if ($actualDelta !== 0) {
+                    AuraPointLog::create([
+                        'student_id' => $student->id,
+                        'section_id' => $student->section_id,
+                        'points' => $actualDelta,
+                        'recorded_by' => Auth::id(),
+                    ]);
+                }
+
+                $updated[$student->id] = $newValue;
+            }
+        });
+
+        return response()->json(['updated' => $updated]);
+    }
+
+    // ---- Lec Lab Summary tab: student x date pivot ----
+    public function auraSummary(Request $request)
+    {
+        $request->validate(['section_id' => 'required|exists:sections,id']);
+
+        $students = Student::where('section_id', $request->section_id)
+            ->orderBy('full_name')
+            ->get(['id', 'student_number', 'full_name', 'aura_points']);
+
+        $logs = AuraPointLog::where('section_id', $request->section_id)
+            ->orderBy('created_at')
+            ->get(['student_id', 'points', 'note', 'created_at']);
+
+        // Distinct dates (Y-m-d) na may activity, pinagsunod-sunod
+        $dates = $logs->map(fn ($l) => $l->created_at->format('Y-m-d'))
+            ->unique()
+            ->sort()
+            ->values();
+
+        $rows = $students->map(function ($student) use ($logs, $dates) {
+            $studentLogs = $logs->where('student_id', $student->id);
+
+            $byDate = $dates->mapWithKeys(function ($date) use ($studentLogs) {
+                $sum = $studentLogs->filter(fn ($l) => $l->created_at->format('Y-m-d') === $date)
+                    ->sum('points');
+                return [$date => $sum === 0 && $studentLogs->where(fn ($l) => $l->created_at->format('Y-m-d') === $date)->isEmpty() ? null : $sum];
+            });
+
+            return [
+                'id' => $student->id,
+                'name' => $student->full_name,
+                'student_number' => $student->student_number,
+                'by_date' => $byDate,
+                'total' => $student->aura_points,
+            ];
+        });
+
+        return response()->json([
+            'dates' => $dates,
+            'rows' => $rows,
+        ]);
+    }
+
+    // ---- Reset all aura points sa isang section ----
+    public function resetAura(Request $request)
+    {
+        $request->validate(['section_id' => 'required|exists:sections,id']);
+
+        $students = Student::where('section_id', $request->section_id)
+            ->where('aura_points', '>', 0)
+            ->get();
+
+        DB::transaction(function () use ($students) {
+            foreach ($students as $student) {
+                // Offsetting log entry — para tumugma pa rin ang sum ng logs sa
+                // bagong total (0) kahit hindi natin binubura ang history.
+                AuraPointLog::create([
+                    'student_id' => $student->id,
+                    'section_id' => $student->section_id,
+                    'points' => -$student->aura_points,
+                    'note' => 'Reset',
+                    'recorded_by' => Auth::id(),
+                ]);
+
+                $student->update(['aura_points' => 0]);
+            }
+        });
+
+        return back();
     }
 }

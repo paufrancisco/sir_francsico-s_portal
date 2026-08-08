@@ -106,10 +106,9 @@ class ChatController extends Controller
             'needs_review' => $needsReview,
         ]);
 
-        // Mag-e-email lang kay Sir Francisco kapag hindi nasagot nang maayos ng AI
-        // (error sa lahat ng models, o walang matching FAQ) — hindi na sa bawat
-        // ordinaryong tanong na nasagot naman nang tama.
-        if ($needsReview && config('services.admin_notify_email')) {
+        // Mag-e-email kay Sir Francisco sa BAWAT bagong tanong ng estudyante,
+        // nasagot man nang maayos ng AI o hindi.
+        if (config('services.admin_notify_email')) {
             $transcript = Message::where('student_id', $student->id)
                 ->orderBy('created_at')
                 ->get(['sender', 'body', 'created_at']);

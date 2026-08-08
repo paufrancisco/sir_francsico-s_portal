@@ -1,10 +1,9 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Imports\GradesImport;
-use App\Models\Grade;
 use App\Models\Section;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -21,19 +20,18 @@ class GradeImportController extends Controller
     {
         $request->validate([
             'file' => 'required|file|mimes:xlsx,xls,csv',
-            'period' => 'required|in:prelim,midterm,prefinal,finals',
+            // Hindi na kailangan pumili ng period - basahin natin ang buong
+            // "Input" sheet ng STI P60 template, na naglalaman na ng lahat
+            // ng 4 na period (Prelim, Midterm, Pre-Final, Finals) sabay-sabay.
+            'period' => 'nullable|in:prelim,midterm,prefinal,finals',
         ]);
 
-        Grade::where('section_id', $section->id)
-            ->where('period', $request->period)
-            ->delete();
-
-        $import = new GradesImport($section->id, $request->input('period'));
+        $import = new GradesImport($section->id);
         Excel::import($import, $request->file('file'));
 
         $section->update(['grades_computed_at' => now()]);
 
-        $message = "{$import->importedCount} estudyante ang na-import ang grades para sa " . ucfirst($request->period) . ".";
+        $message = "{$import->importedCount} estudyante ang na-import ang grades (Prelim, Midterm, Pre-Final, Finals).";
 
         if (! empty($import->skipped)) {
             $message .= " May " . count($import->skipped) . " na hindi na-match sa Masterlist: " . implode(', ', $import->skipped) . ".";
@@ -44,7 +42,7 @@ class GradeImportController extends Controller
         }
 
         return redirect()
-            ->route('admin.sections.show', ['section' => $section, 'period' => $request->period])
+            ->route('admin.sections.show', ['section' => $section])
             ->with('success', $message);
     }
 }

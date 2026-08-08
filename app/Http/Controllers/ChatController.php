@@ -122,14 +122,24 @@ class ChatController extends Controller
                 'section' => optional($student->section)->name ?? '—',
             ];
 
+            \Log::info('Admin notify email: attempting send', [
+                'to' => config('services.admin_notify_email'),
+                'student' => $student->full_name,
+            ]);
+
             try {
                 Mail::to(config('services.admin_notify_email'))
                     ->send(new NewChatMessageMail($student, $transcript, $needsReview, $studentContext));
+
+                \Log::info('Admin notify email: sent successfully');
             } catch (\Throwable $e) {
                 // Huwag hayaang mag-fail ang buong chat response kapag nag-error
                 // lang ang pag-send ng notification email — log na lang, itutuloy
                 // pa rin ang response papunta sa student.
-                \Log::error('Admin notify email failed', ['message' => $e->getMessage()]);
+                \Log::error('Admin notify email failed', [
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
             }
         }
 

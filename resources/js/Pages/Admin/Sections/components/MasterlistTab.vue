@@ -26,7 +26,13 @@
             >
                 Delete selected ({{ selectedStudents.length }})
             </button>
-            <Link :href="`/paulo/sections/${section.id}/students/import`" class="bg-[#003399] text-white text-xs font-medium px-4 py-2 rounded-lg">
+            <button
+                @click="openAddStudent"
+                class="bg-[#003399] text-white text-xs font-medium px-4 py-2 rounded-lg"
+            >
+                + Add student
+            </button>
+            <Link :href="`/paulo/sections/${section.id}/students/import`" class="border border-slate-200 text-xs font-medium px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-50 transition">
                 Import students
             </Link>
             <label class="border border-slate-200 text-xs font-medium px-4 py-2 rounded-lg text-slate-600 cursor-pointer hover:bg-slate-50 transition">
@@ -44,7 +50,7 @@
 
         <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
             <p v-if="students.length === 0" class="text-xs text-slate-400 px-4 py-6">
-                No students here yet. Click "Import students" to add some.
+                No students here yet. Click "Import students" or "+ Add student" to add some.
             </p>
             <table v-else class="w-full text-sm">
                 <thead>
@@ -140,6 +146,36 @@
                         <button type="submit" class="bg-[#003399] text-white text-sm font-medium px-4 py-2 rounded-lg flex-1">Confirm</button>
                         <button type="button" @click="showModal = false" class="text-sm text-slate-500 px-3 py-2">Cancel</button>
                     </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Add Student modal -->
+        <div v-if="addStudentModalOpen" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 px-4" @click.self="closeAddStudent">
+            <div class="bg-white rounded-xl p-5 w-full max-w-xs shadow-xl">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-sm font-semibold text-slate-700">Add student</div>
+                    <button @click="closeAddStudent" class="text-slate-400 hover:text-slate-600">✕</button>
+                </div>
+                <form @submit.prevent="submitAddStudent" class="space-y-3">
+                    <div>
+                        <label class="text-xs text-slate-500">Student number</label>
+                        <input v-model="addStudentForm.student_number" type="text" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 mt-1" />
+                        <p v-if="addStudentForm.errors.student_number" class="text-xs text-red-500 mt-1">{{ addStudentForm.errors.student_number }}</p>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-500">Full name</label>
+                        <input v-model="addStudentForm.full_name" type="text" placeholder="Last name, First name" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 mt-1" />
+                        <p v-if="addStudentForm.errors.full_name" class="text-xs text-red-500 mt-1">{{ addStudentForm.errors.full_name }}</p>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-500">Password</label>
+                        <input v-model="addStudentForm.password" type="text" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 mt-1" />
+                        <p v-if="addStudentForm.errors.password" class="text-xs text-red-500 mt-1">{{ addStudentForm.errors.password }}</p>
+                    </div>
+                    <button type="submit" :disabled="addStudentForm.processing" class="w-full bg-[#003399] text-white text-sm font-medium py-2 rounded-lg disabled:opacity-50">
+                        {{ addStudentForm.processing ? 'Adding...' : 'Add student' }}
+                    </button>
                 </form>
             </div>
         </div>
@@ -268,6 +304,11 @@ const {
     toggleSelectAllStudents,
     deleteSelectedStudents,
     deleteStudent,
+    addStudentModalOpen,
+    addStudentForm,
+    openAddStudent,
+    closeAddStudent,
+    submitAddStudent,
     editStudentModalOpen,
     editStudentForm,
     openEditStudent,

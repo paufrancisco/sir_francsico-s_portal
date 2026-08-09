@@ -67,7 +67,7 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
 
     Route::delete('sections/{section}/students/{student}/grades', [GradeController::class, 'destroyForStudent'])
     ->name('sections.students.grades.destroy');
-
+    Route::post('sections/{section}/students', [SectionController::class, 'storeStudent'])->name('sections.students.store');
     Route::patch('sections/{section}/students/{student}', [SectionController::class, 'updateStudent'])->name('sections.students.update');
     Route::delete('sections/{section}/students/{student}', [SectionController::class, 'destroyStudent'])->name('sections.students.destroy');
     Route::delete('sections/{section}/students', [SectionController::class, 'destroyStudents'])->name('sections.students.destroyMany');

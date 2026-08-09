@@ -262,6 +262,19 @@ class SectionController extends Controller
         ]);
     }
 
+    public function storeStudent(Request $request, Section $section)
+    {
+        $validated = $request->validate([
+            'student_number' => 'required|string|max:255|unique:students,student_number',
+            'full_name' => 'required|string|max:255',
+            'password' => 'required|string|min:4',
+        ]);
+
+        $section->students()->create($validated);
+
+        return back()->with('success', 'Naidagdag ang estudyante.');
+    }
+
     public function updateStudent(Request $request, Section $section, Student $student)
     {
         $validated = $request->validate([

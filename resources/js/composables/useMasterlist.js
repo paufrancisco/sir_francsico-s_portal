@@ -59,6 +59,31 @@ export function useMasterlist(sectionId, students) {
         });
     };
 
+    // ---- Add student modal ----
+    const addStudentModalOpen = ref(false);
+    const addStudentForm = useForm({
+        student_number: '',
+        full_name: '',
+        password: '',
+    });
+
+    const openAddStudent = () => {
+        addStudentForm.reset();
+        addStudentForm.clearErrors();
+        addStudentModalOpen.value = true;
+    };
+
+    const closeAddStudent = () => {
+        addStudentModalOpen.value = false;
+    };
+
+    const submitAddStudent = () => {
+        addStudentForm.post(`/paulo/sections/${sectionId}/students`, {
+            preserveScroll: true,
+            onSuccess: () => { addStudentModalOpen.value = false; },
+        });
+    };
+
     // ---- Edit student modal ----
     const editStudentModalOpen = ref(false);
     const editingStudentId = ref(null);
@@ -109,6 +134,11 @@ export function useMasterlist(sectionId, students) {
         toggleSelectAllStudents,
         deleteSelectedStudents,
         deleteStudent,
+        addStudentModalOpen,
+        addStudentForm,
+        openAddStudent,
+        closeAddStudent,
+        submitAddStudent,
         editStudentModalOpen,
         editStudentForm,
         openEditStudent,

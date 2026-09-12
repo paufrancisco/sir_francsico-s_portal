@@ -20,12 +20,11 @@ class GradeImportController extends Controller
     {
         $request->validate([
             'file' => 'required|file|mimes:xlsx,xls,csv',
-            // Hindi na kailangan pumili ng period - basahin natin ang buong
-            // "Input" sheet ng STI P60 template, na naglalaman na ng lahat
-            // ng 4 na period (Prelim, Midterm, Pre-Final, Finals) sabay-sabay.
-            'period' => 'nullable|in:prelim,midterm,prefinal,finals',
         ]);
 
+        // Hindi na kailangan pumili ng period - basahin natin ang buong
+        // "Input" sheet ng STI P60 template, na naglalaman na ng lahat
+        // ng 4 na period (Prelim, Midterm, Pre-Final, Finals) sabay-sabay.
         $import = new GradesImport($section->id);
         Excel::import($import, $request->file('file'));
 

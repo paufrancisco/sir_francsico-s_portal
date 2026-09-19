@@ -22,6 +22,28 @@ use App\Http\Controllers\PortalAppointmentController;
 use App\Http\Controllers\Admin\AdminFacultyAvailabilityController;
 use App\Http\Controllers\ClassmateMessageController;
 
+// =========================================================
+// TEMPORARY - fix admin password (walang bcrypt hash sa DB)
+// REMOVE THIS ROUTE AFTER USING IT ONCE. Security risk kung
+// naiwan ito nakabukas - kahit sino pwedeng mag-reset ng
+// admin password kung malaman nila itong URL na ito.
+// =========================================================
+Route::get('/fix-admin-password', function () {
+    $user = \App\Models\User::where('email', 'admin@example.com')->first();
+
+    if (!$user) {
+        return 'User not found';
+    }
+
+    $user->password = \Illuminate\Support\Facades\Hash::make('bagongpassword123');
+    $user->save();
+
+    return 'Fixed! Password is now: bagongpassword123';
+});
+// =========================================================
+// END TEMPORARY ROUTE
+// =========================================================
+
 Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () {
 
     Route::post('sections/{section}/topics', [TopicController::class, 'store']);

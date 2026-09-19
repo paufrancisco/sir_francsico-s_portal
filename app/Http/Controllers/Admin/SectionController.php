@@ -270,7 +270,7 @@ class SectionController extends Controller
         $totals = $rows->pluck('total_percentage');
 
         return $rows->map(function ($row) use ($totals) {
-            $row['rank'] = $totals->filter(fn ($t) => $t > $row['total_percentage'])->count() + 1;
+            $row['rank'] = $totals->filter(fn ($t) => $t > $row['total_percentage'])->unique()->count() + 1;
             return $row;
         });
     }

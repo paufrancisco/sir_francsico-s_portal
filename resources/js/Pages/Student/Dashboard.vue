@@ -135,8 +135,7 @@
                     <div v-else class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-5 gap-8">
                         <!-- Photo slideshow: top 10 -->
                         <div class="md:col-span-2 flex flex-col items-center text-center min-h-0">
-                            <div class="rank-ribbon" :class="rankRibbonClass(slideIndex)">TOP {{ slideIndex + 1 }}</div>
-
+                            <div class="rank-ribbon" :class="rankRibbonClass(slideIndex)">TOP {{ currentSlide.rank }}</div>
                             <div
                                 class="relative w-full flex-1 min-h-[12rem] rounded-2xl overflow-hidden ring-4 ring-[var(--gold)] shadow-lg"
                                 @mouseenter="slidePaused = true"
@@ -208,9 +207,65 @@
                                     <p v-if="(currentMessages.status === 'loading' || currentMessages.status === 'idle') && !currentMessages.items.length" class="text-xs text-white/55">Loading messages...</p>
                                     <p v-else-if="currentMessages.status === 'error' && !currentMessages.items.length" class="text-xs text-white/55">Couldn't load messages. Switch photos to retry.</p>
                                     <p v-else-if="!currentMessages.items.length" class="text-xs text-white/55">No messages yet. Tap the pencil to post one.</p>
+
                                     <div v-for="m in currentMessages.items" :key="m.id" class="msg-bubble">
-                                        <div class="text-[11px] font-semibold mb-1" style="color:var(--gold);">{{ m.sender_name }}</div>
-                                        <div class="text-sm text-white/90 leading-relaxed italic quote-text">{{ m.body }}</div>
+                                        <div class="flex items-start justify-between gap-2">
+                                            <div class="text-[11px] font-semibold mb-1" style="color:var(--gold);">{{ m.sender_name }}</div>
+                                            <div v-if="editingMessageId !== m.id" class="msg-actions shrink-0">
+                                                <button
+                                                    type="button"
+                                                    @click="openEditForm(m)"
+                                                    class="msg-action-btn"
+                                                    title="Edit"
+                                                    aria-label="Edit message"
+                                                >
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    @click="openDeleteForm(m)"
+                                                    class="msg-action-btn"
+                                                    title="Delete"
+                                                    aria-label="Delete message"
+                                                >
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Normal display -->
+                                        <div v-if="editingMessageId !== m.id" class="text-sm text-white/90 leading-relaxed italic quote-text">{{ m.body }}</div>
+
+                                        <!-- Inline edit/delete confirm form -->
+                                        <div v-else class="mt-1 space-y-1.5">
+                                            <textarea
+                                                v-if="editAction === 'edit'"
+                                                v-model="editForm.body"
+                                                rows="2"
+                                                :maxlength="MESSAGE_MAX_LENGTH"
+                                                class="portal-input text-xs"
+                                                style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #fff;"
+                                            ></textarea>
+                                            <p v-else class="text-xs text-white/70">Delete this message? Confirm your login to proceed.</p>
+
+                                            <input v-model="editForm.student_number" type="text" placeholder="Student number" class="portal-input text-xs" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #fff;" />
+                                            <input v-model="editForm.password" type="password" placeholder="Password" class="portal-input text-xs" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #fff;" />
+
+                                            <p v-if="editError" class="text-xs text-red-400">{{ editError }}</p>
+
+                                            <div class="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    @click="editAction === 'edit' ? submitEditMessage(m, currentSlide) : submitDeleteMessage(m, currentSlide)"
+                                                    :disabled="editLoading"
+                                                    class="flex-1 text-xs font-semibold py-1.5 rounded-lg disabled:opacity-50"
+                                                    :style="editAction === 'delete' ? 'background:#cf222e; color:#fff;' : 'background:var(--gold); color:var(--navy-deep);'"
+                                                >
+                                                    {{ editLoading ? 'Processing...' : (editAction === 'edit' ? 'Save' : 'Delete') }}
+                                                </button>
+                                                <button type="button" @click="cancelEditForm" class="text-xs text-white/60 px-2">Cancel</button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -225,7 +280,7 @@
                                     class="ledger-row ledger-row--btn w-full py-2 px-2 rounded-lg text-left"
                                     :class="i === slideIndex ? 'ledger-row--current' : ''"
                                 >
-                                    <span class="rank-num">{{ i + 1 }}</span>
+                                    <span class="rank-num">{{ s.rank }}</span>
                                     <div class="w-6 h-6 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-[10px] font-semibold" :style="!s.photo_url ? { background: 'var(--gold)', color: 'var(--navy-deep)' } : {}">
                                         <img v-if="s.photo_url" :src="s.photo_url" :alt="s.name" class="w-full h-full object-cover" />
                                         <span v-else>{{ initials(s.name) }}</span>
@@ -872,10 +927,14 @@ const {
     lastPostedSender,
     openMessageModal, closeMessageModal, submitMessage,
     messageState, loadMessages,
+
+    // edit / delete
+    editingMessageId, editAction, editForm, editError, editLoading,
+    openEditForm, openDeleteForm, cancelEditForm, submitEditMessage, submitDeleteMessage,
 } = useClassmateMessages();
 
 // Photo slideshow (top 10 of the active section)
-const slides = computed(() => filteredStudents.value.slice(0, 10));
+const slides = computed(() => filteredStudents.value);
 const slideIndex = computed(() =>
     slides.value.length ? Math.min(currentIndex.value, slides.value.length - 1) : 0
 );
@@ -1017,9 +1076,8 @@ onBeforeUnmount(() => {
 .nav-item:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
 .nav-item:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .nav-item--active {
-    background: rgba(255, 255, 255, 0.12);
+    background: var(--navy);
     color: #fff;
-    box-shadow: inset 3px 0 0 var(--gold);
 }
 .nav-item--sub { font-size: 0.8rem; padding: 0.5rem 0.65rem; }
 
@@ -1105,10 +1163,35 @@ onBeforeUnmount(() => {
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 .msg-bubble {
+    position: relative;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 0.75rem;
     padding: 0.75rem 1rem;
+}
+.msg-actions {
+    display: flex;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+.msg-bubble:hover .msg-actions {
+    opacity: 1;
+}
+.msg-action-btn {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.08);
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.msg-action-btn:hover {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
 }
 
 /* Quote-styled message body: bigger, italic, with curly quotation marks */

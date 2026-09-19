@@ -46,7 +46,7 @@ class StudentDashboardController extends Controller
         foreach ($sections as $section) {
             $students = Student::where('section_id', $section->id)->with('grades')->get();
 
-            $ranked = $students->map(function ($student) use ($weights) {
+            $allRanked = $students->map(function ($student) use ($weights) {
                 $weighted = 0;
 
                 foreach ($weights as $category => $weight) {
@@ -67,8 +67,17 @@ class StudentDashboardController extends Controller
                 ];
             })
             ->sortByDesc('grade')
-            ->take(10)
             ->values();
+
+            // I-compute muna ang rank base sa BUONG listahan (hindi pa nakatop-10)
+            $grades = $allRanked->pluck('grade');
+            $allRanked = $allRanked->map(function ($row) use ($grades) {
+                $row['rank'] = $grades->filter(fn ($g) => $g > $row['grade'])->unique()->count() + 1;
+                return $row;
+            });
+
+            // Kunin lahat ng estudyanteng rank 1-10 (kahit lumagpas sa 10 rows dahil sa ties)
+            $ranked = $allRanked->filter(fn ($row) => $row['rank'] <= 10)->values();
 
             $top10BySection[$section->id] = $ranked;
         }

@@ -20,6 +20,7 @@ use App\Http\Controllers\SeatingController;
 use App\Http\Controllers\TopicController;
 use App\Http\Controllers\PortalAppointmentController;
 use App\Http\Controllers\Admin\AdminFacultyAvailabilityController;
+use App\Http\Controllers\ClassmateMessageController;
 
 Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () {
 
@@ -126,6 +127,12 @@ Route::post('/portal/appointments/book', [PortalAppointmentController::class, 'b
     ->middleware('throttle:6,1');
 Route::delete('/portal/appointments/{appointment}', [PortalAppointmentController::class, 'destroy'])
     ->middleware('throttle:10,1');
+
+// Classmate messages under the photo slideshow (GET public list, POST verified via student_number+password sa request body)
+Route::get('/portal/classmate-messages', [ClassmateMessageController::class, 'index'])
+    ->middleware('throttle:60,1');
+Route::post('/portal/classmate-messages', [ClassmateMessageController::class, 'store'])
+    ->middleware('throttle:6,1');
 
 
 

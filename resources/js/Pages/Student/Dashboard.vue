@@ -10,290 +10,233 @@
             <div class="absolute w-[26rem] h-[26rem] rounded-full blur-3xl opacity-[0.18] blob-b" style="background:var(--gold);"></div>
         </div>
 
-        <header class="relative z-10">
-            <div class="max-w-[1440px] mx-auto px-6 lg:px-10 pt-6 flex flex-wrap items-center justify-between gap-4">
+        <!-- Mobile top bar (hidden on lg, sidebar takes over) -->
+        <header class="lg:hidden relative z-20 flex items-center justify-between px-5 pt-5">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style="background:var(--gold); color:var(--navy-deep); font-family:var(--font-display);">SF</div>
+                <div class="leading-tight">
+                    <div class="text-[15px] font-semibold tracking-tight text-[var(--text-heading)]" style="font-family:var(--font-display);">Sir Francisco</div>
+                    <div class="text-[10px] text-[var(--text-muted)]">Class portal</div>
+                </div>
+            </div>
+            <button
+                @click="sidebarOpen = true"
+                class="w-9 h-9 rounded-full flex items-center justify-center border text-[var(--text-heading)]"
+                style="background:var(--surface); border-color:var(--surface-border);"
+                aria-label="Open menu"
+            >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+            </button>
+        </header>
 
+        <!-- Backdrop for mobile drawer -->
+        <div v-if="sidebarOpen" @click="sidebarOpen = false" class="lg:hidden fixed inset-0 bg-black/40 z-30"></div>
+
+        <!-- Sidebar -->
+        <aside
+            class="sidebar fixed inset-y-0 left-0 w-64 z-40 flex flex-col p-5 transition-transform duration-200 lg:translate-x-0"
+            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+        >
+            <div class="flex items-center justify-between mb-8">
                 <div class="flex items-center gap-2.5">
                     <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style="background:var(--gold); color:var(--navy-deep); font-family:var(--font-display);">SF</div>
                     <div class="leading-tight">
-                        <div class="text-[15px] font-semibold tracking-tight text-[var(--text-heading)]" style="font-family:var(--font-display);">Sir Francisco</div>
-                        <div class="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Class portal</div>
+                        <div class="text-[15px] font-semibold tracking-tight text-white" style="font-family:var(--font-display);">Sir Francisco</div>
+                        <div class="text-[10px] text-white/45">Class portal</div>
                     </div>
                 </div>
-
-                <!-- Folder-tab section switcher -->
-                <nav class="flex items-end gap-0.5 overflow-x-auto max-w-full">
-                    <button
-                        v-for="s in sections"
-                        :key="s.id"
-                        @click="activeSectionId = s.id; currentIndex = 0"
-                        class="folder-tab shrink-0 text-[11px] font-semibold px-4 pt-2 pb-2 transition-all whitespace-nowrap"
-                        :class="activeSectionId === s.id ? 'folder-tab--active' : 'folder-tab--idle'"
-                        style="font-family:var(--font-display);"
-                    >
-                        {{ s.subject ? `${s.subject} · ${s.name}` : s.name }}
-                    </button>
-                </nav>
-
-                <div class="flex items-center gap-3">
-                    <div
-                        class="text-[11px] font-semibold tabular-nums rounded-full px-3 py-1.5 border"
-                        style="font-family:var(--font-mono); background:var(--chip-bg); color:var(--text-secondary); border-color:var(--surface-border);"
-                    >{{ liveClock }}</div>
-                    <button
-                        @click="toggleDarkMode"
-                        class="w-9 h-9 rounded-full flex items-center justify-center transition border"
-                        :class="isDarkMode ? 'text-[var(--gold)]' : 'text-[var(--text-heading)]'"
-                        style="background:var(--surface); border-color:var(--surface-border);"
-                        aria-label="Toggle dark mode"
-                    >
-                        <svg v-if="isDarkMode" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-                        <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
-                    </button> 
-                </div>
+                <button @click="sidebarOpen = false" class="lg:hidden text-white/60 hover:text-white" aria-label="Close menu">✕</button>
             </div>
-        </header>
 
-        <main class="max-w-[1440px] mx-auto px-6 lg:px-10 py-8 grid grid-cols-1 lg:grid-cols-3 gap-5 relative z-10 items-start">
+            <nav class="flex-1 space-y-1.5">
 
-            <div class="lg:col-span-2 space-y-5">
+                <!-- View rankings + section dropdown -->
+                <div>
+                    <button
+                        @click="activeView = 'rankings'; sidebarOpen = false"
+                        class="nav-item"
+                        :class="activeView === 'rankings' ? 'nav-item--active' : ''"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>
+                        <span>View rankings</span>
+                    </button>
 
-                <!-- Snapshot ledger -->
-                <div class="ink-panel rounded-[1.75rem] p-6 lg:p-7 relative overflow-hidden">
-                    <div class="absolute -top-16 -right-16 w-64 h-64 rounded-full blur-2xl opacity-20" style="background:var(--gold);"></div>
-                    <div class="flex items-center justify-between mb-6 relative">
-                        <div>
-                            <div class="text-[10px] uppercase tracking-[0.16em] text-white/40 mb-1">Today's snapshot</div>
-                            <div class="text-lg font-semibold text-white" style="font-family:var(--font-display);">{{ activeSectionLabel }}</div>
-                        </div>
-                        <div class="text-[11px] text-white/40 tabular-nums" style="font-family:var(--font-mono);">{{ liveClock }}</div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 relative">
-                        <div class="ledger-tile ledger-tile--white">
-                            <div class="ledger-tile__icon" style="background:rgba(247,177,37,0.18); color:#9A6B00;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                            </div>
-                            <div class="text-[10px] uppercase tracking-wide" style="color:var(--text-secondary);">Latest announcement</div>
-                            <div v-if="latestAnnouncement" class="text-sm font-semibold mt-1 truncate" style="color:var(--text-heading);">{{ latestAnnouncement.title }}</div>
-                            <div v-if="latestAnnouncement" class="text-[11px] mt-0.5" style="font-family:var(--font-mono); color:var(--text-secondary);">{{ formatPostedDate(latestAnnouncement.created_at) }}</div>
-                            <div v-else class="text-sm font-medium mt-1" style="color:var(--text-muted);">No announcements yet</div>
-                        </div>
-                        <div class="ledger-tile ledger-tile--white">
-                            <div class="ledger-tile__icon" style="background:rgba(49,162,76,0.16); color:#227A38;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.9 6.3L21 9l-4.6 4.5L17.8 20 12 16.8 6.2 20l1.4-6.5L3 9l6.1-.7z"/></svg>
-                            </div>
-                            <div class="text-[10px] uppercase tracking-wide" style="color:var(--text-secondary);">Top student</div>
-                            <div v-if="filteredStudents.length" class="text-sm font-semibold mt-1 truncate" style="color:var(--text-heading);">{{ filteredStudents[0].name }}</div>
-                            <div v-if="filteredStudents.length" class="text-[11px] mt-0.5" style="font-family:var(--font-mono); color:var(--text-secondary);">Grade: {{ filteredStudents[0].grade }}</div>
-                            <div v-else class="text-sm font-medium mt-1" style="color:var(--text-muted);">No grades yet</div>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 flex items-center gap-1.5 text-[10px] text-white/30" style="font-family:var(--font-mono);">
-                        <span>Last updated: {{ formattedUpdate }}</span>
-                        <button
-                            type="button"
-                            @click="syncNow"
-                            :disabled="isSyncing"
-                            title="Sync now"
-                            class="text-white/40 hover:text-white transition disabled:opacity-50"
-                        >
-                            <svg
-                                width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
-                                :class="isSyncing ? 'animate-spin' : ''"
+                    <div class="mt-2 px-1">
+                        <label class="block text-[11px] text-white/45 mb-1" for="section-select">Section</label>
+                        <div class="relative">
+                            <select
+                                id="section-select"
+                                v-model="activeSectionId"
+                                @change="currentIndex = 0; activeView = 'rankings'"
+                                class="sidebar-select"
                             >
-                                <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
-                                <path d="M21 3v6h-6"/>
-                            </svg>
+                                <option v-for="s in sections" :key="s.id" :value="s.id">
+                                    {{ s.subject ? `${s.subject} · ${s.name}` : s.name }}
+                                </option>
+                            </select>
+                            <svg class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/60" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View grades (opens modal) -->
+                <button @click="openGradesModal(); sidebarOpen = false" class="nav-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>
+                    <span>View grades</span>
+                </button>
+
+                <!-- Settings -> Change password (modal) -->
+                <div>
+                    <button @click="settingsOpen = !settingsOpen" class="nav-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+                        <span class="flex-1 text-left">Settings</span>
+                        <svg
+                            width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            class="transition-transform"
+                            :class="settingsOpen ? 'rotate-180' : ''"
+                        ><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div v-if="settingsOpen" class="mt-1 ml-3 pl-3 border-l border-white/10">
+                        <button @click="openChangePasswordModal(); sidebarOpen = false" class="nav-item nav-item--sub">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <span>Change password</span>
                         </button>
                     </div>
                 </div>
+            </nav>
 
-                <!-- Quick actions -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <button @click="openGradesModal" class="action-tile action-tile--ink">
-                        <span class="action-tile__icon" style="background:rgba(255,255,255,0.14);">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-                        </span>
-                        <div class="text-sm font-semibold" style="font-family:var(--font-display);">View my grades</div>
-                        <div class="text-[11px] text-white/50 mt-0.5">Password required</div>
-                    </button>
-
-                    <button @click="openChangePasswordModal" class="action-tile action-tile--surface">
-                    <span class="action-tile__icon" style="background:var(--chip-bg); color:var(--text-heading);">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    </span>
-                        <div class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">Change password</div>
-                        <div class="text-[11px] text-[var(--text-muted)] mt-0.5">Verify your current password first</div>
-                    </button>
-
-                    <button @click="openAppointmentModal" class="action-tile action-tile--gold">
-                        <span class="action-tile__icon" style="background:rgba(255,255,255,0.35); color:var(--navy-deep);">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/><path d="M12 14v4M10 16h4"/></svg>
-                        </span>
-                        <div class="text-sm font-semibold" style="color:var(--navy-deep); font-family:var(--font-display);">Set an appointment</div>
-                        <div class="text-[11px] mt-0.5" style="color:var(--navy-deep); opacity:0.65;">Pick from sir's available times</div>
-                    </button>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-5 gap-4">
-                    <div class="sm:col-span-3 surface-card p-5">
-                        <div class="card-heading">Recent announcements</div>
-                        <p v-if="filteredAnnouncements.length === 0" class="text-xs text-[var(--text-muted)] mt-1">
-                            No announcements yet as of {{ todayFormatted }}.
-                        </p>
-                        <div v-else class="mt-2 divide-y divide-[var(--surface-border-soft)]">
-                            <div
-                                v-for="a in filteredAnnouncements"
-                                :key="a.id"
-                                class="py-2 flex items-center gap-2 flex-wrap"
-                            >
-                                <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background:var(--gold);"></span>
-                                <span class="text-sm font-medium text-[var(--text-body)] shrink-0">{{ a.title }}</span>
-                                <span v-if="a.body" class="text-xs text-[var(--text-secondary)] truncate">{{ a.body }}</span>
-                                <span class="flex-1"></span>
-                                <span class="text-[10px] text-[var(--text-muted)] whitespace-nowrap shrink-0" style="font-family:var(--font-mono);">{{ formatPostedDate(a.created_at) }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="sm:col-span-2 surface-card p-5">
-                        <div class="card-heading">This week's topics</div>
-                        <p v-if="filteredTopics.length === 0" class="text-xs text-[var(--text-muted)] mt-1">
-                            No topics posted yet this week.
-                        </p>
-                        <div v-for="t in filteredTopics" :key="t.id" class="flex items-center justify-between py-2.5 border-b border-[var(--surface-border-soft)] last:border-0">
-                            <div>
-                                <div class="text-sm text-[var(--text-body)]">{{ t.title }}</div>
-                                <div class="text-[11px] text-[var(--text-muted)]" style="font-family:var(--font-mono);">{{ formatEventDate(t.date_covered) }}</div>
-                            </div>
-                            <span
-                                class="text-[10px] font-semibold px-2.5 py-1 rounded-full shrink-0 ml-2 uppercase tracking-wide"
-                                :class="t.status === 'done' ? 'status-done' : t.status === 'ongoing' ? 'status-ongoing' : 'status-pending'"
-                            >
-                                {{ t.status }}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- FAQ -->
-                <div class="surface-card p-5">
-                    <div class="card-heading">Frequently Asked Questions</div>
-                    <div class="divide-y divide-[var(--surface-border-soft)] mt-2">
-                        <div v-for="(faq, i) in faqs" :key="i" class="py-2.5">
-                            <button
-                                @click="openFaqIndex = openFaqIndex === i ? null : i"
-                                class="w-full flex items-center justify-between text-left"
-                            >
-                                <span class="text-sm text-[var(--text-body)] font-medium pr-3">{{ faq.q }}</span>
-                                <svg
-                                    width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                    class="shrink-0 transition-transform text-[var(--text-muted)]"
-                                    :class="openFaqIndex === i ? 'rotate-180' : ''"
-                                >
-                                    <path d="M6 9l6 6 6-6"/>
-                                </svg>
-                            </button>
-                            <div v-if="openFaqIndex === i" class="text-xs text-[var(--text-secondary)] mt-2 pr-6 leading-relaxed">
-                                {{ faq.a }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right column: class ledger -->
-            <div class="space-y-5">
-
-                <div
-                    class="ink-panel rounded-[1.75rem] p-5"
-                    @mouseenter="paused = true"
-                    @mouseleave="paused = false"
+            <!-- Sidebar footer: clock + dark mode -->
+            <div class="pt-4 mt-4 border-t border-white/10 flex items-center justify-between">
+                <div class="text-[11px] font-semibold tabular-nums text-white/60" style="font-family:var(--font-mono);">{{ liveClock }}</div>
+                <button
+                    @click="toggleDarkMode"
+                    class="w-9 h-9 rounded-full flex items-center justify-center transition hover:bg-white/10"
+                    style="color:var(--gold);"
+                    aria-label="Toggle dark mode"
                 >
-                    <div class="text-[10px] uppercase tracking-[0.16em] text-white/40 mb-3">Class ledger — {{ activeSectionLabel }}</div>
+                    <svg v-if="isDarkMode" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                    <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main content (offset for sidebar on lg) -->
+        <main class="lg:pl-64 relative z-10">
+            <div class="max-w-[1200px] mx-auto px-5 lg:px-10 py-6 lg:h-screen">
+
+                <!-- Class ledger: top 1 (left) + top 10 (right) -->
+                <div class="ink-panel rounded-[1.75rem] p-5 lg:p-7 h-full flex flex-col">
+                    <div class="text-sm font-semibold text-white mb-5" style="font-family:var(--font-display);">Class ledger · {{ activeSectionLabel }}</div>
 
                     <p v-if="filteredStudents.length === 0" class="text-xs text-white/35 text-center py-8">
                         No grades have been recorded yet for this section.
                     </p>
 
-                    <template v-else>
-                        <div
-                            class="rounded-3xl p-5 text-center cursor-pointer transition overflow-hidden relative"
-                            style="background:rgba(255,255,255,0.03);"
-                            @click="showFullList = true"
-                        >
-                            <!-- ribbon banner for rank 1-3 -->
-                            <Transition :name="slideDirection" mode="out-in">
-                                <div :key="currentIndex">
-                                    <div
-                                        v-if="currentIndex < 3"
-                                        class="rank-ribbon"
-                                        :class="{
-                                            'rank-ribbon--gold': currentIndex === 0,
-                                            'rank-ribbon--silver': currentIndex === 1,
-                                            'rank-ribbon--bronze': currentIndex === 2,
-                                        }"
-                                    >
-                                        {{ currentIndex === 0 ? 'TOP 1' : currentIndex === 1 ? 'TOP 2' : 'TOP 3' }}
-                                    </div>
+                    <div v-else class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-5 gap-8">
+                        <!-- Photo slideshow: top 10 -->
+                        <div class="md:col-span-2 flex flex-col items-center text-center min-h-0">
+                            <div class="rank-ribbon" :class="rankRibbonClass(slideIndex)">TOP {{ slideIndex + 1 }}</div>
 
+                            <div
+                                class="relative w-full flex-1 min-h-[12rem] rounded-2xl overflow-hidden ring-4 ring-[var(--gold)] shadow-lg"
+                                @mouseenter="slidePaused = true"
+                                @mouseleave="slidePaused = false"
+                            >
+                                <Transition name="slide">
                                     <div
-                                        class="w-36 h-36 rounded-2xl overflow-hidden flex items-center justify-center text-4xl font-bold mx-auto ring-4"
+                                        :key="slideIndex"
+                                        class="absolute inset-0 flex items-center justify-center text-[8rem] font-bold"
                                         style="font-family:var(--font-display);"
-                                        :class="{
-                                            'ring-[var(--gold)] shadow-lg': currentIndex === 0,
-                                            'ring-slate-300 shadow-md': currentIndex === 1,
-                                            'ring-[#C08A4E] shadow-md': currentIndex === 2,
-                                            'ring-white/15': currentIndex > 2,
-                                        }"
-                                        :style="!currentStudent.photo_url ? { background: 'var(--gold)', color: 'var(--navy-deep)' } : {}"
+                                        :style="!currentSlide.photo_url ? { background: 'var(--gold)', color: 'var(--navy-deep)' } : {}"
                                     >
                                         <img
-                                            v-if="currentStudent.photo_url"
-                                            :src="currentStudent.photo_url"
-                                            :alt="currentStudent.name"
+                                            v-if="currentSlide.photo_url"
+                                            :src="currentSlide.photo_url"
+                                            :alt="currentSlide.name"
                                             class="w-full h-full object-cover"
                                         />
-                                        <span v-else>{{ initials(currentStudent.name) }}</span>
+                                        <span v-else>{{ initials(currentSlide.name) }}</span>
                                     </div>
+                                </Transition>
 
-                                    <div class="text-[10px] uppercase tracking-wide mt-4" style="color:var(--gold);">Rank {{ currentIndex + 1 }}</div>
-                                    <div class="text-base font-semibold mt-1 text-white" style="font-family:var(--font-display);">{{ currentStudent.name }}</div>
-                                    <div class="text-2xl font-semibold mt-1 text-white tabular-nums" style="font-family:var(--font-mono); color:var(--gold);">{{ currentStudent.grade }}</div>
+                                <button type="button" @click="step(-1)" class="slide-btn absolute left-3 top-1/2 -translate-y-1/2" aria-label="Previous photo">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg>
+                                </button>
+                                <button type="button" @click="step(1)" class="slide-btn absolute right-3 top-1/2 -translate-y-1/2" aria-label="Next photo">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 18l6-6-6-6"/></svg>
+                                </button>
+
+                                <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1.5">
+                                    <button
+                                        v-for="(s, i) in slides"
+                                        :key="s.name"
+                                        type="button"
+                                        @click="goToSlide(i)"
+                                        class="h-1.5 rounded-full transition-all"
+                                        :class="i === slideIndex ? 'w-4 bg-white' : 'w-1.5 bg-white/50 hover:bg-white/80'"
+                                        :aria-label="'Show rank ' + (i + 1)"
+                                    ></button>
                                 </div>
-                            </Transition>
+                            </div>
 
-                            <div class="flex items-center justify-center gap-1.5 mt-4">
+                            <div class="text-base font-semibold mt-3 text-white" style="font-family:var(--font-display);">{{ currentSlide.name }}</div>
+                            <div class="text-2xl font-semibold mt-1 tabular-nums" style="font-family:var(--font-mono); color:var(--gold);">{{ currentSlide.grade }}</div>
+                        </div>
+
+                        <!-- Right column: post wall for the current top, then the top 10 list -->
+                        <div class="md:col-span-3 w-full flex flex-col gap-4 min-h-0">
+
+                            <!-- Messages for the current top (changes with each slide) -->
+                            <div class="msg-panel shrink-0 rounded-2xl p-4">
+                                <div class="flex items-center justify-between gap-3 mb-3">
+                                    <div class="min-w-0">
+                                        <div class="text-sm font-semibold text-white truncate" style="font-family:var(--font-display);">Messages from {{ currentSlide.name }}</div>
+                                        <div class="text-[11px] text-white/55">Only shown once they sign in and post it themselves</div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        @click="openMessageModal()"
+                                        class="slide-btn shrink-0"
+                                        title="Post a message"
+                                        aria-label="Post a message for this classmate"
+                                    >
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                    </button>
+                                </div>
+
+                                <div class="max-h-56 overflow-y-auto space-y-3 pr-1">
+                                    <p v-if="(currentMessages.status === 'loading' || currentMessages.status === 'idle') && !currentMessages.items.length" class="text-xs text-white/55">Loading messages...</p>
+                                    <p v-else-if="currentMessages.status === 'error' && !currentMessages.items.length" class="text-xs text-white/55">Couldn't load messages. Switch photos to retry.</p>
+                                    <p v-else-if="!currentMessages.items.length" class="text-xs text-white/55">No messages yet. Tap the pencil to post one.</p>
+                                    <div v-for="m in currentMessages.items" :key="m.id" class="msg-bubble">
+                                        <div class="text-[11px] font-semibold mb-1" style="color:var(--gold);">{{ m.sender_name }}</div>
+                                        <div class="text-sm text-white/90 leading-relaxed italic quote-text">{{ m.body }}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Top 10 list (click a row to jump to that photo) -->
+                            <div class="flex-1 min-h-0 flex flex-col justify-between overflow-y-auto">
                                 <button
-                                    v-for="(s, i) in filteredStudents"
+                                    v-for="(s, i) in slides"
                                     :key="s.name"
-                                    @click.stop="goTo(i)"
-                                    class="rounded-full transition"
-                                    :class="i === currentIndex ? 'w-2.5 h-2.5' : 'w-2 h-2 bg-white/20'"
-                                    :style="i === currentIndex ? { background: 'var(--gold)' } : {}"
-                                ></button>
+                                    type="button"
+                                    @click="goToSlide(i)"
+                                    class="ledger-row ledger-row--btn w-full py-2 px-2 rounded-lg text-left"
+                                    :class="i === slideIndex ? 'ledger-row--current' : ''"
+                                >
+                                    <span class="rank-num">{{ i + 1 }}</span>
+                                    <div class="w-6 h-6 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-[10px] font-semibold" :style="!s.photo_url ? { background: 'var(--gold)', color: 'var(--navy-deep)' } : {}">
+                                        <img v-if="s.photo_url" :src="s.photo_url" :alt="s.name" class="w-full h-full object-cover" />
+                                        <span v-else>{{ initials(s.name) }}</span>
+                                    </div>
+                                    <div class="text-sm text-white/90 shrink-0">{{ s.name }}</div>
+                                    <span class="leader"></span>
+                                    <div class="text-xs font-semibold shrink-0 tabular-nums" style="font-family:var(--font-mono); color:var(--gold);">{{ s.grade }}</div>
+                                </button>
                             </div>
                         </div>
-
-                        <button @click="showFullList = !showFullList" class="w-full text-xs font-semibold mt-4 hover:underline" style="color:var(--gold);">
-                            {{ showFullList ? 'Hide full list' : 'View full list' }}
-                        </button>
-
-                        <div v-if="showFullList" class="mt-2 border-t border-white/10">
-                            <div v-for="(s, i) in filteredStudents" :key="s.name" class="ledger-row py-2">
-                                <span class="text-[11px] text-white/35 w-5 shrink-0" style="font-family:var(--font-mono);">{{ i + 1 }}</span>
-                                <div class="w-6 h-6 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-[10px] font-semibold" :style="!s.photo_url ? { background: 'var(--gold)', color: 'var(--navy-deep)' } : {}">
-                                    <img v-if="s.photo_url" :src="s.photo_url" :alt="s.name" class="w-full h-full object-cover" />
-                                    <span v-else>{{ initials(s.name) }}</span>
-                                </div>
-                                <div class="text-sm text-white/80 shrink-0">{{ s.name }}</div>
-                                <span class="leader"></span>
-                                <div class="text-xs font-semibold shrink-0 tabular-nums" style="font-family:var(--font-mono); color:var(--gold);">{{ s.grade }}</div>
-                            </div>
-                        </div>
-                    </template>
+                    </div>
                 </div>
             </div>
         </main>
@@ -729,179 +672,55 @@
                 </div>
             </div>
 
-            <!-- Set an appointment modal -->
-            <div v-if="appointmentModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+            <!-- Message a classmate modal (sign-in required) -->
+            <div v-if="msgModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
                 <div class="surface-card w-full max-w-sm shadow-xl p-5" style="border-radius: 1.5rem;">
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">Post a message</div>
+                        <button @click="closeMessageModal" class="text-[var(--text-muted)] hover:text-[var(--text-body)]" aria-label="Close">✕</button>
+                    </div>
+                    <p class="text-xs text-[var(--text-muted)] mb-3">Sign in first — your post will appear on your own photo card, tagged with your name.</p>
 
-                    <!-- Force change password (first login) -->
-                    <template v-if="apptMustChangePassword">
-                        <div class="flex items-center justify-between mb-3">
-                            <div class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">Change your password first</div>
-                            <button @click="closeAppointmentModal" class="text-[var(--text-muted)] hover:text-[var(--text-body)]">✕</button>
-                        </div>
-                        <p class="text-xs text-[var(--text-muted)] mb-3">This is your first login — you need to change your password before you can set an appointment.</p>
-                        <div class="space-y-3">
-                            <div class="relative">
-                                <input v-model="newPasswordForm.new_password" :type="showNewPassword ? 'text' : 'password'" placeholder="New password" class="portal-input pr-9" />
-                                <button type="button" @click="showNewPassword = !showNewPassword" tabindex="-1" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-body)]">
-                                    <svg v-if="showNewPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.77 21.77 0 0 1-3.22 4.53M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
-                                    <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
-                                </button>
-                            </div>
-                            <div class="relative">
-                                <input v-model="newPasswordForm.confirm_password" :type="showConfirmPassword ? 'text' : 'password'" placeholder="Confirm new password" class="portal-input pr-9" />
-                                <button type="button" @click="showConfirmPassword = !showConfirmPassword" tabindex="-1" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-body)]">
-                                    <svg v-if="showConfirmPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.77 21.77 0 0 1-3.22 4.53M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
-                                    <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
-                                </button>
-                            </div>
-                            <p v-if="passwordChangeError" class="text-xs text-red-500">{{ passwordChangeError }}</p>
-                            <div class="flex gap-2">
-                                <button
-                                    @click="submitPasswordChange"
-                                    :disabled="passwordChangeLoading"
-                                    class="flex-1 text-white text-sm font-semibold py-2 rounded-xl disabled:opacity-50"
-                                    style="background:var(--navy);"
-                                >
-                                    {{ passwordChangeLoading ? 'Updating...' : 'Update password' }}
-                                </button>
-                                <button @click="cancelPasswordChange" class="text-xs text-[var(--text-muted)] px-3">Cancel</button>
-                            </div>
-                        </div>
+                    <template v-if="msgSuccess">
+                        <p class="text-sm font-medium py-4 text-center" style="color: var(--teal, #1a7f37);">{{ msgSuccess }}</p>
+                        <button @click="closeMessageModal" class="w-full text-white text-sm font-semibold py-2 rounded-xl" style="background:var(--navy);">
+                            Close
+                        </button>
                     </template>
 
-                    <!-- Sign-in form -->
-                    <template v-else-if="!apptStudent">
-                        <div class="flex items-center justify-between mb-3">
-                            <div class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">Set an appointment</div>
-                            <button @click="closeAppointmentModal" class="text-[var(--text-muted)] hover:text-[var(--text-body)]">✕</button>
-                        </div>
-                        <form @submit.prevent="submitAppointmentLogin" class="space-y-3">
-                            <input
-                                v-model="apptForm.student_number"
-                                type="text"
-                                placeholder="Student number"
-                                class="portal-input"
-                            />
-                            <div class="relative">
-                                <input
-                                    v-model="apptForm.password"
-                                    :type="showApptLoginPassword ? 'text' : 'password'"
-                                    placeholder="Password"
-                                    class="portal-input pr-9"
-                                />
-                                <button type="button" @click="showApptLoginPassword = !showApptLoginPassword" tabindex="-1" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-body)]">
-                                    <svg v-if="showApptLoginPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.77 21.77 0 0 1-3.22 4.53M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
-                                    <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
-                                </button>
-                            </div>
-                            <p v-if="apptLoginError" class="text-xs text-red-500">{{ apptLoginError }}</p>
-                            <button
-                                type="submit"
-                                :disabled="apptLoginLoading"
-                                class="w-full text-white text-sm font-semibold py-2 rounded-xl disabled:opacity-50"
-                                style="background:var(--navy);"
-                            >
-                                {{ apptLoginLoading ? 'Checking...' : 'Sign in' }}
+                    <form v-else @submit.prevent="submitMessage" class="space-y-3">
+                        <input v-model="msgForm.student_number" type="text" placeholder="Student number" class="portal-input" />
+
+                        <div class="relative">
+                            <input v-model="msgForm.password" :type="showMsgPassword ? 'text' : 'password'" placeholder="Password" class="portal-input pr-9" />
+                            <button type="button" @click="showMsgPassword = !showMsgPassword" tabindex="-1" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-body)]">
+                                <svg v-if="showMsgPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.77 21.77 0 0 1-3.22 4.53M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+                                <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
                             </button>
-                        </form>
-                    </template>
-
-                    <!-- Signed in: pending appointment summary, or booking form -->
-                    <template v-else>
-                        <div class="flex items-center justify-between mb-3">
-                            <div>
-                                <div class="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Set an appointment</div>
-                                <div class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">{{ apptStudent.name }}</div>
-                            </div>
-                            <button @click="closeAppointmentModal" class="text-[var(--text-muted)] hover:text-[var(--text-body)]">✕</button>
                         </div>
 
-                        <!-- Existing pending/approved appointment -->
-                        <template v-if="apptExisting && !apptShowNewForm">
-                            <div class="p-3 rounded-xl text-xs mb-3" style="background: var(--chip-bg); border: 1px solid var(--surface-border);">
-                                <div class="flex items-center justify-between mb-1">
-                                    <span class="font-semibold text-[var(--text-heading)]">{{ formatEventDate(apptExisting.appointment_date) }} · {{ apptExisting.start_time }}–{{ apptExisting.end_time }}</span>
-                                    <span
-                                        class="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide"
-                                        :class="apptExisting.status === 'approved' ? 'status-done' : apptExisting.status === 'declined' ? '' : 'status-ongoing'"
-                                        :style="apptExisting.status === 'declined' ? 'background: rgba(207,34,46,0.14); color: #cf222e;' : ''"
-                                    >{{ apptExisting.status }}</span>
-                                </div>
-                                <p v-if="apptExisting.reason" class="text-[var(--text-secondary)]">{{ apptExisting.reason }}</p>
-                            </div>
-                            <div class="flex gap-2">
-                                <button
-                                    v-if="apptExisting.status === 'pending'"
-                                    @click="cancelAppointment"
-                                    :disabled="apptActionLoading"
-                                    class="flex-1 text-xs font-semibold py-2 rounded-xl disabled:opacity-50"
-                                    style="color:#cf222e; border:1px solid rgba(207,34,46,0.4);"
-                                >
-                                    {{ apptActionLoading ? 'Cancelling...' : 'Cancel appointment' }}
-                                </button>
-                                <button
-                                    v-else
-                                    @click="apptShowNewForm = true"
-                                    class="flex-1 text-white text-xs font-semibold py-2 rounded-xl"
-                                    style="background:var(--navy);"
-                                >
-                                    Set another appointment
-                                </button>
-                            </div>
-                        </template>
+                        <div>
+                            <textarea
+                                v-model="msgForm.body"
+                                rows="4"
+                                :maxlength="MESSAGE_MAX_LENGTH"
+                                placeholder="Write your post..."
+                                class="portal-input"
+                            ></textarea>
+                            <div class="text-[11px] text-right text-[var(--text-muted)] mt-1 tabular-nums">{{ msgForm.body.length }}/{{ MESSAGE_MAX_LENGTH }}</div>
+                        </div>
 
-                        <!-- Booking form: pick from available slots -->
-                        <template v-else>
-                            <p v-if="apptSlotsLoading" class="text-xs text-[var(--text-muted)] py-4 text-center">Loading available times...</p>
-                            <p v-else-if="apptError" class="text-xs text-red-500 py-4 text-center">{{ apptError }}</p>
-                            <p v-else-if="apptSlots.length === 0" class="text-xs text-[var(--text-muted)] py-4 text-center">
-                                No available slots have been set by sir yet. Please check back later.
-                            </p>
-                            <template v-else>
-                                <label class="text-xs text-[var(--text-secondary)] block mb-1.5">Pick an available time</label>
-                                <div class="space-y-1.5 mb-3" style="max-height: 220px; overflow-y: auto;">
-                                    <button
-                                        v-for="slot in apptSlots"
-                                        :key="slot.id"
-                                        type="button"
-                                        @click="selectedSlotId = slot.id"
-                                        class="w-full text-left text-xs px-3 py-2 rounded-xl border transition"
-                                        :style="selectedSlotId === slot.id
-                                            ? 'border-color: var(--gold); background: rgba(9,105,218,0.08);'
-                                            : 'border-color: var(--surface-border); background: var(--surface);'"
-                                    >
-                                        <span class="font-medium text-[var(--text-body)]">{{ formatEventDate(slot.date) }}</span>
-                                        <span class="text-[var(--text-muted)]"> · {{ slot.start_time }}–{{ slot.end_time }}</span>
-                                    </button>
-                                </div>
-                                <textarea
-                                    v-model="apptReason"
-                                    rows="2"
-                                    placeholder="Reason for the appointment"
-                                    class="portal-input text-xs mb-2"
-                                ></textarea>
-                                <p v-if="apptError" class="text-xs text-red-500 mb-2">{{ apptError }}</p>
-                                <div class="flex gap-2">
-                                    <button
-                                        @click="submitAppointment"
-                                        :disabled="apptActionLoading || !selectedSlotId"
-                                        class="flex-1 text-white text-xs font-semibold py-2 rounded-xl disabled:opacity-50"
-                                        style="background:var(--navy);"
-                                    >
-                                        {{ apptActionLoading ? 'Booking...' : 'Book appointment' }}
-                                    </button>
-                                    <button
-                                        v-if="apptExisting"
-                                        @click="apptShowNewForm = false"
-                                        class="text-xs text-[var(--text-muted)] px-3"
-                                    >
-                                        Back
-                                    </button>
-                                </div>
-                            </template>
-                        </template>
-                    </template>
+                        <p v-if="msgError" class="text-xs text-red-500">{{ msgError }}</p>
+
+                        <button
+                            type="submit"
+                            :disabled="msgLoading"
+                            class="w-full text-white text-sm font-semibold py-2 rounded-xl disabled:opacity-50"
+                            style="background:var(--navy);"
+                        >
+                            {{ msgLoading ? 'Posting...' : 'Post message' }}
+                        </button>
+                    </form>
                 </div>
             </div>
 
@@ -985,7 +804,9 @@
 </template>
 
 <script setup>
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useDashboardState } from '../../composables/useDashboardState';
+import { useClassmateMessages, MESSAGE_MAX_LENGTH } from '../../composables/useClassmateMessages';
 
 const props = defineProps({
     sections: { type: Array, default: () => [] },
@@ -997,18 +818,23 @@ const props = defineProps({
     lastCalendarUpdate: { type: String, default: null },
 });
 
+// Sidebar-only UI state (local, not in the composable)
+const sidebarOpen = ref(false);   // mobile drawer
+const settingsOpen = ref(false);  // Settings submenu
+const activeView = ref('rankings'); // TODO: add more views here if needed
+
 const {
     // dark mode
     isDarkMode, toggleDarkMode,
 
     // sections / snapshot
     activeSectionId, activeSectionLabel,
-    filteredAnnouncements, filteredTopics, filteredStudents,
+    filteredStudents,
     latestAnnouncement, formattedUpdate, todayFormatted,
     isSyncing, syncNow,
 
-    // class ledger carousel
-    showFullList, paused, currentIndex, slideDirection, currentStudent, goTo,
+    // class ledger
+    currentIndex, initials,
 
     // chat widget
     chatOpen, chatStudent, chatLogin, chatLoginError, chatLoginLoading,
@@ -1026,12 +852,6 @@ const {
     correctionAttachment, correctionAttachmentError, onAttachmentChange, hasExistingAttachment,
     correctionUiState, cancelEditingRecheckForm, startEditExistingCorrection, cancelCorrection, submitCorrection,
 
-    // set an appointment
-    appointmentModalOpen, apptForm, apptLoginError, apptLoginLoading, showApptLoginPassword,
-    apptMustChangePassword, apptStudent, apptSlots, apptSlotsLoading, selectedSlotId, apptReason,
-    apptExisting, apptShowNewForm, apptError, apptActionLoading,
-    openAppointmentModal, closeAppointmentModal, submitAppointmentLogin, submitAppointment, cancelAppointment,
-
     // standalone change password
     cpModalOpen, cpForm, cpError, cpSuccess, cpLoading,
     showCpCurrentPassword, showCpNewPassword, showCpConfirmPassword,
@@ -1041,15 +861,83 @@ const {
     passwordChangeContext, newPasswordForm, passwordChangeError, passwordChangeLoading,
     showNewPassword, showConfirmPassword, cancelPasswordChange, submitPasswordChange,
 
-    // announcements
-    expandedAnnouncementId,
-
-    // FAQ
-    openFaqIndex, faqs,
 
     // misc
-    liveClock, initials, formatEventDate, formatPostedDate,
+    liveClock, formatEventDate, formatPostedDate,
 } = useDashboardState(props);
+
+// Message-a-classmate modal
+const {
+    msgModalOpen, msgForm, msgError, msgSuccess, msgLoading, showMsgPassword,
+    lastPostedSender,
+    openMessageModal, closeMessageModal, submitMessage,
+    messageState, loadMessages,
+} = useClassmateMessages();
+
+// Photo slideshow (top 10 of the active section)
+const slides = computed(() => filteredStudents.value.slice(0, 10));
+const slideIndex = computed(() =>
+    slides.value.length ? Math.min(currentIndex.value, slides.value.length - 1) : 0
+);
+const currentSlide = computed(() => slides.value[slideIndex.value] ?? null);
+
+// Messages under the photo: load whenever the slide changes
+const currentMessages = computed(() => messageState(currentSlide.value));
+// Debounced so quick slide changes don't queue up requests (php artisan serve is single-threaded)
+let messagesTimer = null;
+watch(currentSlide, (student) => {
+    clearTimeout(messagesTimer);
+    if (!student) return;
+    messagesTimer = setTimeout(() => loadMessages(student), 400);
+}, { immediate: true });
+const slidePaused = ref(false);
+let slideTimer = null;
+
+function nextSlide() {
+    if (!slides.value.length) return;
+    currentIndex.value = (slideIndex.value + 1) % slides.value.length;
+}
+
+function stopSlideshow() {
+    clearInterval(slideTimer);
+    slideTimer = null;
+}
+
+function startSlideshow() {
+    stopSlideshow();
+    // Skip auto-advance if the user prefers reduced motion
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    slideTimer = setInterval(() => {
+        // Don't move on while hovering or while any modal is open
+        if (slidePaused.value || msgModalOpen.value || gradesModalOpen.value || cpModalOpen.value) return;
+        nextSlide();
+    }, 8000); // pinabagal mula 5000 -> 8000ms
+}
+
+function step(dir) {
+    const n = slides.value.length;
+    if (!n) return;
+    currentIndex.value = (slideIndex.value + dir + n) % n;
+    startSlideshow(); // restart the timer after a manual change
+}
+
+function goToSlide(i) {
+    currentIndex.value = i;
+    startSlideshow();
+}
+
+function rankRibbonClass(i) {
+    if (i === 0) return 'rank-ribbon--gold';
+    if (i === 1) return 'rank-ribbon--silver';
+    if (i === 2) return 'rank-ribbon--bronze';
+    return 'rank-ribbon--plain';
+}
+
+onMounted(startSlideshow);
+onBeforeUnmount(() => {
+    stopSlideshow();
+    clearTimeout(messagesTimer);
+});
 </script>
 
 <style scoped>
@@ -1109,22 +997,44 @@ const {
 @keyframes float-a { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(50px, 35px); } }
 @keyframes float-b { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-40px, -25px); } }
 
-/* ---- folder tabs ---- */
-.folder-tab {
-    clip-path: polygon(10% 0, 90% 0, 100% 100%, 0% 100%);
-    border-radius: 0.35rem 0.35rem 0 0;
+/* ---- sidebar ---- */
+.sidebar {
+    background: linear-gradient(180deg, var(--navy), var(--navy-deep));
+    box-shadow: 8px 0 30px -18px rgba(10, 18, 48, 0.5);
 }
-.folder-tab--active {
-    background: var(--gold);
-    color: var(--navy-deep);
-    transform: translateY(-2px);
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
+.nav-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.72);
+    transition: background 0.15s ease, color 0.15s ease;
 }
-.folder-tab--idle {
-    background: var(--chip-bg);
-    color: var(--text-muted);
+.nav-item:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.nav-item:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.nav-item--active {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    box-shadow: inset 3px 0 0 var(--gold);
 }
-.folder-tab--idle:hover { color: var(--text-body); }
+.nav-item--sub { font-size: 0.8rem; padding: 0.5rem 0.65rem; }
+
+.sidebar-select {
+    width: 100%;
+    appearance: none;
+    font-size: 0.8rem;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0.65rem;
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+}
+.sidebar-select:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.sidebar-select option { background: var(--navy-deep); color: #fff; }
 
 /* ---- panels & cards ---- */
 .ink-panel {
@@ -1163,30 +1073,6 @@ const {
     margin-bottom: 0.75rem;
 }
 
-/* ---- action tiles ---- */
-.action-tile {
-    border-radius: 1.5rem;
-    padding: 1.25rem;
-    text-align: left;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.action-tile:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -14px rgba(20,33,61,0.25); }
-.action-tile--ink { background: linear-gradient(135deg, var(--navy), var(--navy-deep)); color: #fff; }
-.action-tile--surface { background: var(--surface); border: 1px solid var(--surface-border); }
-.action-tile--gold { background: linear-gradient(135deg, #d4a72c, #9a6700); }
-.action-tile__icon {
-    width: 2.25rem; height: 2.25rem;
-    border-radius: 0.75rem;
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 1rem;
-}
-
-/* ---- status chips ---- */
-.status-done { background: rgba(46,158,134,0.14); color: var(--teal); }
-.status-ongoing { background: rgba(247,177,37,0.22); color: #8A6100; }
-.status-pending { background: var(--chip-bg); color: var(--text-secondary); }
-.portal-root.dark .status-ongoing { color: var(--gold); }
-
 /* ---- ledger leader-line rows ---- */
 .ledger-row { display: flex; align-items: baseline; gap: 0.5rem; }
 .leader {
@@ -1197,6 +1083,75 @@ const {
     min-width: 0.5rem;
 }
 .leader--light { border-bottom-color: var(--surface-border); }
+
+/* ---- ledger rows (clickable) ---- */
+.rank-num {
+    width: 1.5rem;
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.85);
+}
+.ledger-row--btn { transition: background 0.15s ease; }
+.ledger-row--btn:hover { background: rgba(255, 255, 255, 0.06); }
+.ledger-row--btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.ledger-row--current { background: rgba(255, 255, 255, 0.1); }
+.ledger-row--current .rank-num { color: var(--gold); }
+
+/* ---- message panel above the top 10 ---- */
+.msg-panel {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.msg-bubble {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+}
+
+/* Quote-styled message body: bigger, italic, with curly quotation marks */
+.quote-text {
+    position: relative;
+    padding-left: 1.1rem;
+}
+.quote-text::before {
+    content: '\201C';
+    position: absolute;
+    left: -0.15rem;
+    top: -0.2rem;
+    font-size: 1.4em;
+    font-style: normal;
+    color: var(--gold);
+    opacity: 0.7;
+}
+.quote-text::after {
+    content: '\201D';
+    font-style: normal;
+    color: var(--gold);
+    opacity: 0.7;
+    margin-left: 0.1rem;
+}
+
+/* ---- slideshow ---- */
+.slide-btn {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.3);
+    color: #fff;
+    transition: background 0.15s ease;
+}
+.slide-btn:hover { background: rgba(0, 0, 0, 0.5); }
+.slide-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.slide-enter-active,
+.slide-leave-active { transition: opacity 0.35s ease, transform 0.35s ease; }
+.slide-enter-from { opacity: 0; transform: translateX(24px); }
+.slide-leave-to { opacity: 0; transform: translateX(-24px); }
 
 /* ---- rank ribbon ---- */
 .rank-ribbon {
@@ -1212,6 +1167,7 @@ const {
 .rank-ribbon--gold { background: var(--gold); color: var(--navy-deep); }
 .rank-ribbon--silver { background: #C7CEDA; color: #2B3550; }
 .rank-ribbon--bronze { background: #C08A4E; color: #2E1B08; }
+.rank-ribbon--plain { background: rgba(255, 255, 255, 0.18); color: #fff; }
 
 /* ---- inputs ---- */
 .portal-input {
@@ -1227,16 +1183,6 @@ const {
     outline: 2px solid var(--gold);
     outline-offset: 1px;
 }
-
-/* ---- carousel transition ---- */
-.slide-next-enter-active, .slide-next-leave-active,
-.slide-prev-enter-active, .slide-prev-leave-active {
-    transition: all 0.35s ease;
-}
-.slide-next-enter-from { opacity: 0; transform: translateX(24px); }
-.slide-next-leave-to { opacity: 0; transform: translateX(-24px); }
-.slide-prev-enter-from { opacity: 0; transform: translateX(-24px); }
-.slide-prev-leave-to { opacity: 0; transform: translateX(24px); }
 
 /* ---- typing dots ---- */
 .typing-dot {
@@ -1254,6 +1200,7 @@ const {
 
 @media (prefers-reduced-motion: reduce) {
     .blob-a, .blob-b { animation: none; }
-    .action-tile:hover { transform: none; }
+    .slide-enter-active, .slide-leave-active { transition: none; }
+    .sidebar { transition: none; }
 }
 </style>

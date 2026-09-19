@@ -37,39 +37,42 @@ class GradesInputSheetImport implements ToCollection, WithCalculatedFormulas, Ha
     {
     }
 
-    public function collection(Collection $rows)
+   public function collection(Collection $rows)
     {
         \Log::info('import START', ['rows' => $rows->count(), 'section' => $this->sectionId]);
 
         $maxScoreRow = $rows->get(self::MAX_SCORE_ROW_INDEX);
 
-        \Log::info('import maxScoreRow', $maxScoreRow ? $maxScoreRow->toArray() : ['NULL']);
-
         if (! $maxScoreRow) {
             return;
         }
 
-        $students = Student::where('section_id', $this->sectionId)
-            ->get()
-            ->keyBy(fn ($s) => $this->normalizeStudentNumber($s->student_number));
+        $allStudents = Student::where('section_id', $this->sectionId)->get();
 
-        \Log::info('import students loaded', ['count' => $students->count(), 'keys' => $students->keys()->take(5)->all()]);
+        // Primary index: normal na normalize (minus offset kung numeric)
+        $students = $allStudents->keyBy(fn ($s) => $this->normalizeStudentNumber($s->student_number));
+
+        // Fallback index: para sa mga student_number na naka-CG style sa system
+        // (hal. "CG234") — i-key gamit ang last 3 digits lang: "234" => Student
+        $studentsByCg = $allStudents
+            ->filter(fn ($s) => preg_match('/^cg\d+$/i', trim((string) $s->student_number)))
+            ->keyBy(fn ($s) => substr(preg_replace('/\D/', '', $s->student_number), -3));
+
+        \Log::info('import students loaded', [
+            'count' => $students->count(),
+            'cg_fallback_count' => $studentsByCg->count(),
+        ]);
 
         $now = now();
         $userId = auth()->id();
         $toInsert = [];
 
         $dataRows = $rows->slice(self::DATA_START_ROW_INDEX);
-
-        // Alamin kung aling period ang may aktwal na score sa file.
         $activePeriods = $this->periodsWithScores($dataRows);
-
-        \Log::info('import activePeriods', $activePeriods);
-        \Log::info('import first row', $dataRows->first() ? $dataRows->first()->toArray() : []);
 
         if (empty($activePeriods)) {
             $this->result->importedCount = 0;
-            return; // walang nabasang score, huwag galawin ang existing grades
+            return;
         }
 
         foreach ($dataRows as $row) {
@@ -89,7 +92,14 @@ class GradesInputSheetImport implements ToCollection, WithCalculatedFormulas, Ha
                 $this->seenStudentNumbers[$lookupKey] = true;
             }
 
+            // 1st try: normal na match (parehong numeric, minus offset)
             $student = $students->get($lookupKey);
+
+            // 2nd try: CG-style fallback — last 3 digits ng Excel number
+            if (! $student) {
+                $lastThree = substr(preg_replace('/\D/', '', $studentNumberRaw), -3);
+                $student = $studentsByCg->get($lastThree);
+            }
 
             if (! $student) {
                 if (! in_array($studentNumberRaw, $this->result->skipped, true)) {
@@ -102,7 +112,7 @@ class GradesInputSheetImport implements ToCollection, WithCalculatedFormulas, Ha
 
             foreach (self::PERIOD_BLOCK_START as $period => $blockStart) {
                 if (! in_array($period, $activePeriods, true)) {
-                    continue; // walang score sa period na ito sa file
+                    continue;
                 }
 
                 foreach (self::OFFSET_PTL as $i => $offset) {
@@ -125,12 +135,11 @@ class GradesInputSheetImport implements ToCollection, WithCalculatedFormulas, Ha
 
         if (empty($toInsert)) {
             $this->result->importedCount = 0;
-            return; // huwag i-delete ang existing grades kung wala namang ipapalit
+            return;
         }
 
         $this->result->importedCount = count($this->matchedStudentIds);
 
-        // Yung mga period lang na nasa file ang buburahin at papalitan.
         Grade::where('section_id', $this->sectionId)
             ->whereIn('period', $activePeriods)
             ->delete();

@@ -61,20 +61,43 @@
                         <span>View rankings</span>
                     </button>
 
-                    <div class="mt-2 px-1">
-                        <label class="block text-[11px] text-white/45 mb-1" for="section-select">Section</label>
+                    <div class="mt-2 px-1 relative">
+                        <label class="block text-[11px] text-white/45 mb-1" id="section-label">Section</label>
                         <div class="relative">
-                            <select
-                                id="section-select"
-                                v-model="activeSectionId"
-                                @change="currentIndex = 0; activeView = 'rankings'"
-                                class="sidebar-select"
+                            <button
+                                type="button"
+                                @click="sectionMenuOpen = !sectionMenuOpen"
+                                class="section-trigger"
+                                aria-haspopup="listbox"
+                                :aria-expanded="sectionMenuOpen"
+                                aria-labelledby="section-label"
                             >
-                                <option v-for="s in sections" :key="s.id" :value="s.id">
-                                    {{ s.subject ? `${s.subject} · ${s.name}` : s.name }}
-                                </option>
-                            </select>
-                            <svg class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/60" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                                <span class="truncate">{{ activeSection?.subject ? `${activeSection.subject} · ${activeSection.name}` : activeSection?.name }}</span>
+                                <svg
+                                    width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    class="shrink-0 transition-transform"
+                                    :class="sectionMenuOpen ? 'rotate-180' : ''"
+                                ><path d="M6 9l6 6 6-6"/></svg>
+                            </button>
+
+                            <div v-if="sectionMenuOpen" class="fixed inset-0 z-40" @click="sectionMenuOpen = false"></div>
+
+                            <Transition name="dropdown">
+                                <ul v-if="sectionMenuOpen" class="section-menu" role="listbox">
+                                    <li
+                                        v-for="s in sections"
+                                        :key="s.id"
+                                        role="option"
+                                        :aria-selected="s.id === activeSectionId"
+                                        class="section-option"
+                                        :class="s.id === activeSectionId ? 'section-option--active' : ''"
+                                        @click="selectSection(s.id)"
+                                    >
+                                        <span class="truncate">{{ s.subject ? `${s.subject} · ${s.name}` : s.name }}</span>
+                                        <svg v-if="s.id === activeSectionId" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" class="shrink-0"><path d="M20 6 9 17l-5-5"/></svg>
+                                    </li>
+                                </ul>
+                            </Transition>
                         </div>
                     </div>
                 </div>
@@ -933,6 +956,19 @@ const {
     openEditForm, openDeleteForm, cancelEditForm, submitEditMessage, submitDeleteMessage,
 } = useClassmateMessages();
 
+// Custom section dropdown (replaces native <select> so we control styling fully)
+const sectionMenuOpen = ref(false);
+const activeSection = computed(() =>
+    props.sections.find((s) => s.id === activeSectionId.value) ?? null
+);
+
+function selectSection(id) {
+    activeSectionId.value = id;
+    currentIndex.value = 0;
+    activeView.value = 'rankings';
+    sectionMenuOpen.value = false;
+}
+
 // Photo slideshow (top 10 of the active section)
 const slides = computed(() => filteredStudents.value);
 const slideIndex = computed(() =>
@@ -1081,18 +1117,60 @@ onBeforeUnmount(() => {
 }
 .nav-item--sub { font-size: 0.8rem; padding: 0.5rem 0.65rem; }
 
-.sidebar-select {
+/* ---- custom section dropdown (replaces native <select>) ---- */
+.section-trigger {
     width: 100%;
-    appearance: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
     font-size: 0.8rem;
+    font-weight: 500;
     color: #fff;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 0.65rem;
-    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    padding: 0.55rem 0.75rem;
+    transition: background 0.15s ease, border-color 0.15s ease;
 }
-.sidebar-select:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
-.sidebar-select option { background: var(--navy-deep); color: #fff; }
+.section-trigger:hover { background: rgba(255, 255, 255, 0.12); }
+.section-trigger:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+
+.section-menu {
+    position: absolute;
+    top: calc(100% + 0.4rem);
+    left: 0;
+    right: 0;
+    z-index: 50;
+    max-height: 14rem;
+    overflow-y: auto;
+    background: var(--navy-deep);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.75rem;
+    padding: 0.35rem;
+    box-shadow: 0 18px 40px -14px rgba(0, 0, 0, 0.6);
+}
+.section-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.75);
+    padding: 0.5rem 0.65rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+.section-option:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.section-option--active {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--gold);
+    font-weight: 600;
+}
+
+.dropdown-enter-active, .dropdown-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }
+.dropdown-enter-from, .dropdown-leave-to { opacity: 0; transform: translateY(-4px); }
 
 /* ---- panels & cards ---- */
 .ink-panel {

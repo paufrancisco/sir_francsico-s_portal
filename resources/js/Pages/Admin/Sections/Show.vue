@@ -38,13 +38,6 @@
                 >
                     Grades
                 </button>
-                <button
-                    @click="activeTab = 'topics'"
-                    class="text-xs font-medium px-4 py-1.5 rounded-md transition"
-                    :class="activeTab === 'topics' ? 'bg-white text-[#003399] shadow-sm' : 'text-slate-500'"
-                >
-                    Topics
-                </button>
             </div>
 
             <MasterlistTab
@@ -66,17 +59,6 @@
                 :switch-period="switchPeriod"
             />
 
-            <TopicsTab
-                v-else-if="activeTab === 'topics'"
-                :section="section"
-                :topics="topics"
-                :archived-topics="archivedTopics"
-                :current-period="currentPeriod"
-                :periods="periods"
-                :period-loading="periodLoading"
-                :switch-period="switchPeriod"
-            />
-
         </main>
     </AdminLayout>
 </template>
@@ -88,7 +70,6 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { usePeriodSwitcher } from '@/composables/usePeriodSwitcher';
 import MasterlistTab from './components/MasterlistTab.vue';
 import GradesTab from './components/GradesTab.vue';
-import TopicsTab from './components/TopicsTab.vue';
 
 const props = defineProps({
     section: Object,
@@ -97,15 +78,12 @@ const props = defineProps({
     gradeItems: { type: Array, default: () => [] },
     gradesBreakdown: { type: Array, default: () => [] },
     currentPeriod: { type: String, default: 'prelim' },
-    topics: { type: Array, default: () => [] },
-    archivedTopics: { type: Array, default: () => [] },
 });
 
 const activeTab = ref('masterlist');
 
 // Period tabs (Prelim / Midterm / Pre-Final / Finals) are shared by
-// the Grades tab and the Topics tab, so the switcher lives here and
-// gets passed down as props.
+// the Grades tab, so the switcher lives here and gets passed down as a prop.
 const currentPeriodRef = computed(() => props.currentPeriod);
 const { periods, periodLoading, switchPeriod } = usePeriodSwitcher(props.section.id, currentPeriodRef);
 </script>

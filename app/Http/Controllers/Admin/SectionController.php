@@ -79,7 +79,7 @@ class SectionController extends Controller
         $request->validate(['password' => 'required|string']);
 
         if (! Hash::check($request->password, auth()->user()->password)) {
-            return back()->withErrors(['password' => 'Maling password.']);
+            return back()->withErrors(['password' => 'Incorrect password.']);
         }
 
         session(['revealed_section_' . $section->id => true]);
@@ -138,15 +138,42 @@ class SectionController extends Controller
 
     private function gradeItems(Section $section, string $period)
     {
-        $categoryOrder = ['long_quiz' => 0, 'tp' => 1, 'exam' => 2];
+        // Same as Excel: PT/Lab, Quiz, Exam
+        $categoryOrder = ['tp' => 0, 'long_quiz' => 1, 'exam' => 2];
 
         return Grade::where('section_id', $section->id)
             ->where('period', $period)
             ->get(['category', 'title'])
             ->unique(fn ($g) => $g->category . '|' . $g->title)
-            ->sortBy(fn ($g) => $categoryOrder[$g->category] ?? 99)
+            ->sortBy(fn ($g) => ($categoryOrder[$g->category] ?? 9) . '|' . $g->title)
             ->values()
             ->map(fn ($g) => ['category' => $g->category, 'title' => $g->title]);
+    }
+
+    /**
+     * Transmutation table (same as the TRANSMUTATION sheet in Excel).
+     */
+    private function transmute(float $grade): float
+    {
+        $table = [
+            97.5 => 1.0,
+            94.5 => 1.25,
+            91.5 => 1.5,
+            86.5 => 1.75,
+            81.5 => 2.0,
+            76.0 => 2.25,
+            70.5 => 2.5,
+            65.0 => 2.75,
+            59.5 => 3.0,
+        ];
+
+        foreach ($table as $min => $eq) {
+            if ($grade >= $min) {
+                return $eq;
+            }
+        }
+
+        return 5.0;
     }
 
     private function gradesBreakdown(Section $section, string $period)
@@ -156,10 +183,11 @@ class SectionController extends Controller
         $items = $this->gradeItems($section, $period);
         $weights = ['long_quiz' => 0.20, 'tp' => 0.30, 'exam' => 0.50];
 
-        // Pinaka-huling correction (anumang status) kada estudyante, para dito lang sa section+period na 'to
+        // Most recent correction record (confirmed OR recheck) per student, scoped to this section+period.
+        // A student's latest action — whether they confirmed or requested a recheck — is what the
+        // Status column reflects.
         $corrections = GradeCorrection::where('section_id', $section->id)
             ->where('period', $period)
-            ->where('type', 'recheck')
             ->latest()
             ->get()
             ->unique('student_id')
@@ -168,8 +196,12 @@ class SectionController extends Controller
         $rows = $students->map(function ($student) use ($allGrades, $items, $weights, $corrections) {
             $studentGrades = $allGrades->where('student_id', $student->id);
 
-            $scores = $items->mapWithKeys(function ($item) use ($studentGrades) {
-                $g = $studentGrades->first(fn ($gr) => $gr->category === $item['category'] && $gr->title === $item['title']);
+            $find = fn ($item) => $studentGrades->first(
+                fn ($gr) => $gr->category === $item['category'] && $gr->title === $item['title']
+            );
+
+            $scores = $items->mapWithKeys(function ($item) use ($find) {
+                $g = $find($item);
                 return [
                     $item['category'] . '|' . $item['title'] => $g ? ['score' => $g->score, 'max_score' => $g->max_score] : null,
                 ];
@@ -177,15 +209,19 @@ class SectionController extends Controller
 
             $weighted = 0;
             $categoryPercentages = [];
+            $categoryTotals = [];
+
             foreach ($weights as $category => $weight) {
                 $catItems = $items->where('category', $category);
+
                 if ($catItems->isEmpty()) {
                     $categoryPercentages[$category] = null;
-                    continue; // walang item na na-define para sa category na ito, kahit saang estudyante
+                    $categoryTotals[$category] = null;
+                    continue; // no item defined for this category, for any student
                 }
 
-                $avgPercent = $catItems->map(function ($item) use ($studentGrades) {
-                    $g = $studentGrades->first(fn ($gr) => $gr->category === $item['category'] && $gr->title === $item['title']);
+                $avgPercent = $catItems->map(function ($item) use ($find) {
+                    $g = $find($item);
                     if (! $g) {
                         return 0; // missing = 0
                     }
@@ -193,9 +229,16 @@ class SectionController extends Controller
                 })->avg();
 
                 $categoryPercentages[$category] = round($avgPercent, 2);
+                // TTL = raw score total for the category (PT/Lab TTL, Quiz TTL)
+                $categoryTotals[$category] = round(
+                    $catItems->sum(fn ($item) => optional($find($item))->score ?? 0),
+                    2
+                );
                 $weighted += $avgPercent * $weight;
             }
 
+            $total = round($weighted, 2);
+            $hasGrades = $studentGrades->isNotEmpty();
             $correction = $corrections->get($student->id);
 
             return [
@@ -204,9 +247,12 @@ class SectionController extends Controller
                 'student_number' => $student->student_number,
                 'scores' => $scores,
                 'category_percentages' => $categoryPercentages,
-                'total_percentage' => round($weighted, 2),
+                'category_totals' => $categoryTotals,
+                'total_percentage' => $total,
+                'equivalent' => $hasGrades ? $this->transmute($total) : null,
                 'pending_correction' => $correction ? [
                     'id' => $correction->id,
+                    'type' => $correction->type,
                     'status' => $correction->status,
                     'decision' => $correction->decision,
                     'notes' => $correction->notes,
@@ -220,8 +266,11 @@ class SectionController extends Controller
         ->sortByDesc('total_percentage')
         ->values();
 
-        return $rows->map(function ($row, $i) {
-            $row['rank'] = $i + 1;
+        // Rank ties, same as RANK() in Excel
+        $totals = $rows->pluck('total_percentage');
+
+        return $rows->map(function ($row) use ($totals) {
+            $row['rank'] = $totals->filter(fn ($t) => $t > $row['total_percentage'])->count() + 1;
             return $row;
         });
     }
@@ -272,7 +321,7 @@ class SectionController extends Controller
 
         $section->students()->create($validated);
 
-        return back()->with('success', 'Naidagdag ang estudyante.');
+        return back()->with('success', 'Student added.');
     }
 
     public function updateStudent(Request $request, Section $section, Student $student)
@@ -289,14 +338,14 @@ class SectionController extends Controller
 
         $student->update($validated);
 
-        return back()->with('success', 'Na-update ang estudyante.');
+        return back()->with('success', 'Student updated.');
     }
 
     public function destroyStudent(Section $section, Student $student)
     {
         $student->delete();
 
-        return back()->with('success', 'Natanggal ang estudyante.');
+        return back()->with('success', 'Student removed.');
     }
 
     public function destroyStudents(Request $request, Section $section)
@@ -307,7 +356,7 @@ class SectionController extends Controller
             ->where('section_id', $section->id)
             ->delete();
 
-        return back()->with('success', count($validated['student_ids']) . ' estudyante ang natanggal.');
+        return back()->with('success', count($validated['student_ids']) . ' student(s) removed.');
     }
 
     public function updatePhoto(Request $request, Section $section, Student $student)
@@ -328,7 +377,7 @@ class SectionController extends Controller
             return response()->json(['photo_url' => $student->fresh()->photo_url]);
         }
 
-        return back()->with('success', 'Na-update ang picture.');
+        return back()->with('success', 'Photo updated.');
     }
 
     public function deletePhoto(Section $section, Student $student)
@@ -338,7 +387,7 @@ class SectionController extends Controller
             $student->update(['photo_path' => null]);
         }
 
-        return back()->with('success', 'Naalis ang picture.');
+        return back()->with('success', 'Photo removed.');
     }
 
     public function importPhotos(Request $request, Section $section)
@@ -351,7 +400,7 @@ class SectionController extends Controller
         $zip = new ZipArchive();
 
         if ($zip->open($zipPath) !== true) {
-            return back()->with('error', 'Hindi mabuksan ang ZIP file.');
+            return back()->with('error', 'Could not open the ZIP file.');
         }
 
         $allowedExt = ['jpg', 'jpeg', 'png', 'webp'];
@@ -397,10 +446,10 @@ class SectionController extends Controller
 
         $zip->close();
 
-        $message = "{$matched} na picture ang na-import.";
+        $message = "{$matched} photo(s) imported.";
         if (count($unmatched) > 0) {
-            $message .= ' Walang tumugma para sa: ' . implode(', ', array_slice($unmatched, 0, 10))
-                . (count($unmatched) > 10 ? ' at ' . (count($unmatched) - 10) . ' pa...' : '');
+            $message .= ' No match found for: ' . implode(', ', array_slice($unmatched, 0, 10))
+                . (count($unmatched) > 10 ? ' and ' . (count($unmatched) - 10) . ' more...' : '');
         }
 
         return back()->with($matched > 0 ? 'success' : 'error', $message);

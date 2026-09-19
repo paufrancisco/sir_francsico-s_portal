@@ -22,6 +22,7 @@ export function useGradeCorrections(sectionId, currentPeriod) {
     const correctionDecision = ref(null);
 
     const correctionBadgeLabel = (c) => {
+        if (c.type === 'confirmed') return 'Confirmed';
         if (c.status === 'pending') return 'Pending request';
         if (c.decision === 'approved') return 'Approved';
         if (c.decision === 'rejected') return 'Rejected';
@@ -29,6 +30,7 @@ export function useGradeCorrections(sectionId, currentPeriod) {
     };
 
     const correctionBadgeClass = (c) => {
+        if (c.type === 'confirmed') return 'bg-[#EAF3DE] text-[#3B6D11]';
         if (c.status === 'pending') return 'bg-[#E6F1FB] text-[#003399]';
         if (c.decision === 'approved') return 'bg-[#EAF3DE] text-[#3B6D11]';
         if (c.decision === 'rejected') return 'bg-red-50 text-red-600';
@@ -36,7 +38,9 @@ export function useGradeCorrections(sectionId, currentPeriod) {
     };
 
     const openCorrectionReview = async (row) => {
-        if (!row.pending_correction) return;
+        // Only recheck requests carry a proposal to review — a plain
+        // "grades are correct" confirmation has nothing to show.
+        if (!row.pending_correction || row.pending_correction.type !== 'recheck') return;
 
         correctionModalOpen.value = true;
         correctionLoadingGrades.value = true;

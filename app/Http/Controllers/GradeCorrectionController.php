@@ -28,7 +28,7 @@ class GradeCorrectionController extends Controller
         $student = Student::where('student_number', $request->student_number)->first();
 
         if (! $student || $student->password !== $request->password) {
-            return response()->json(['message' => 'Mali ang student number o password.'], 422);
+            return response()->json(['message' => 'Incorrect student number or password.'], 422);
         }
 
         if ($request->type === 'confirmed') {
@@ -42,26 +42,26 @@ class GradeCorrectionController extends Controller
                 'resolved_at' => now(),
             ]);
 
-            return response()->json(['message' => 'Salamat! Na-confirm na ang grades mo.']);
+            return response()->json(['message' => 'Thank you! Your grades have been confirmed.']);
         }
 
         // ---- type === 'recheck' ----
         $deadline = Setting::get('grade_correction_deadline');
         if ($deadline && now()->gt(\Carbon\Carbon::parse($deadline)->endOfDay())) {
             return response()->json([
-                'message' => 'Tapos na ang deadline para sa grade correction requests (' . \Carbon\Carbon::parse($deadline)->format('M d, Y') . '). Makipag-ugnayan na lang kay Sir Francisco.',
+                'message' => 'The deadline for grade correction requests has passed (' . \Carbon\Carbon::parse($deadline)->format('M d, Y') . '). Please get in touch with Sir Francisco directly.',
             ], 422);
         }
 
         $editedItems = json_decode($request->edited_items, true);
 
         if (! is_array($editedItems) || count($editedItems) === 0) {
-            return response()->json(['message' => 'Ilagay muna kung alin ang mali sa grades mo.'], 422);
+            return response()->json(['message' => 'Please indicate which grades are incorrect.'], 422);
         }
 
         foreach ($editedItems as $item) {
             if (! isset($item['category'], $item['title'], $item['claimed_score'])) {
-                return response()->json(['message' => 'May kulang na detalye sa binagong item.'], 422);
+                return response()->json(['message' => 'One of the edited items is missing required details.'], 422);
             }
         }
 
@@ -80,7 +80,7 @@ class GradeCorrectionController extends Controller
             }
             $attachmentPath = $request->file('attachment')->store('grade-correction-attachments', 'supabase');
         } elseif (! $existing) {
-            return response()->json(['message' => 'Maglagay ng patunay (attachment) para sa recheck request.'], 422);
+            return response()->json(['message' => 'Please attach proof/evidence for the recheck request.'], 422);
         }
 
         if ($existing) {
@@ -91,7 +91,7 @@ class GradeCorrectionController extends Controller
             ]);
 
             return response()->json([
-                'message' => 'Na-update ang recheck request mo. Isa lang ang active request habang naka-pending, kaya ito ang bagong laman na titingnan ni Sir Francisco.',
+                'message' => 'Your recheck request has been updated. Only one active request is allowed while pending, so this is the latest version Sir Francisco will review.',
                 'updated_existing' => true,
             ]);
         }
@@ -110,7 +110,7 @@ class GradeCorrectionController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Naipasa na ang recheck request mo, titingnan ito ni Sir Francisco.',
+            'message' => 'Your recheck request has been submitted and will be reviewed by Sir Francisco.',
             'updated_existing' => false,
         ]);
     }
@@ -153,8 +153,8 @@ class GradeCorrectionController extends Controller
         Setting::set('grade_correction_deadline', $request->deadline);
 
         return back()->with('success', $request->deadline
-            ? 'Na-set ang deadline sa ' . \Carbon\Carbon::parse($request->deadline)->format('M d, Y') . '.'
-            : 'Naalis ang deadline (walang limitasyon ngayon).');
+            ? 'Deadline set to ' . \Carbon\Carbon::parse($request->deadline)->format('M d, Y') . '.'
+            : 'Deadline removed (no limit for now).');
     }
 
     public function resolve(Request $request, GradeCorrection $gradeCorrection)
@@ -185,7 +185,7 @@ class GradeCorrectionController extends Controller
 
         GradeCorrection::whereIn('id', $request->ids)->update(['archived' => true]);
 
-        return response()->json(['message' => count($request->ids) . ' na request ang na-archive.']);
+        return response()->json(['message' => count($request->ids) . ' request(s) archived.']);
     }
 
     public function unarchiveMany(Request $request)
@@ -194,7 +194,7 @@ class GradeCorrectionController extends Controller
 
         GradeCorrection::whereIn('id', $request->ids)->update(['archived' => false]);
 
-        return response()->json(['message' => count($request->ids) . ' na request ang naibalik mula sa archive.']);
+        return response()->json(['message' => count($request->ids) . ' request(s) restored from archive.']);
     }
 
     public function cancel(Request $request, GradeCorrection $gradeCorrection)
@@ -207,11 +207,11 @@ class GradeCorrectionController extends Controller
         $student = Student::where('student_number', $request->student_number)->first();
 
         if (! $student || $student->password !== $request->password || $gradeCorrection->student_id !== $student->id) {
-            return response()->json(['message' => 'Mali ang student number o password.'], 422);
+            return response()->json(['message' => 'Incorrect student number or password.'], 422);
         }
 
         if ($gradeCorrection->status !== 'pending') {
-            return response()->json(['message' => 'Hindi na pwedeng kanselahin ang request na ito.'], 422);
+            return response()->json(['message' => 'This request can no longer be canceled.'], 422);
         }
 
         if ($gradeCorrection->attachment_path) {
@@ -220,6 +220,6 @@ class GradeCorrectionController extends Controller
 
         $gradeCorrection->delete();
 
-        return response()->json(['message' => 'Nakansela na ang recheck request mo.']);
+        return response()->json(['message' => 'Your recheck request has been canceled.']);
     }
 }

@@ -6,7 +6,7 @@
                 <div>
                     <div class="text-lg font-semibold text-slate-800">Seating Arrangement</div>
                     <div class="text-xs text-slate-400">
-                        {{ viewMode === 'summary' ? 'History ng aura points per date.' : 'Click a box to assign, o i-select para bulk-award ng points.' }}
+                        {{ viewMode === 'summary' ? 'History of aura points per date.' : 'Click a box to assign, or select to bulk-award points.' }}
                     </div>
                 </div>
 
@@ -52,7 +52,7 @@
                     </button>
                 </div>
 
-                <!-- Selection controls, seating tabs lang -->
+                <!-- Selection controls, seating tabs only -->
                 <div v-if="viewMode !== 'summary'" class="flex items-center gap-2">
                     <button
                         @click="toggleSelectMode"
@@ -169,14 +169,14 @@
                         :disabled="resetting"
                         class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200 text-red-600 disabled:opacity-50"
                     >
-                        {{ resetting ? 'Nagre-reset...' : 'Reset all' }}
+                        {{ resetting ? 'Resetting...' : 'Reset all' }}
                     </button>
                 </div>
 
-                <p v-if="summaryLoading" class="text-xs text-slate-400 text-center py-8">Naglo-load...</p>
+                <p v-if="summaryLoading" class="text-xs text-slate-400 text-center py-8">Loading...</p>
 
                 <p v-else-if="summaryRows.length === 0" class="text-xs text-slate-400 text-center py-8">
-                    Wala pang na-record na aura points sa section na ito.
+                    No aura points recorded yet for this section.
                 </p>
 
                 <div v-else class="overflow-x-auto">
@@ -393,14 +393,14 @@ const bulkApply = async (delta) => {
             student_ids: Array.from(selectedIds.value),
             delta,
         });
-        // I-update ang local seats object para makita agad ang bagong points
+        // Update the local seats object so the new points show immediately
         Object.values(props.seats).forEach((seat) => {
             if (seat?.student && data.updated[seat.student.id] !== undefined) {
                 seat.student.aura_points = data.updated[seat.student.id];
             }
         });
     } catch (e) {
-        alert(e.response?.data?.message ?? 'May error, subukan ulit.');
+        alert(e.response?.data?.message ?? 'Something went wrong, please try again.');
     } finally {
         bulkApplying.value = false;
     }
@@ -422,7 +422,7 @@ const loadSummary = async () => {
         summaryDates.value = data.dates;
         summaryRows.value = data.rows;
     } catch (e) {
-        alert('Hindi na-load ang summary.');
+        alert('Failed to load summary.');
     } finally {
         summaryLoading.value = false;
     }
@@ -443,7 +443,7 @@ const pointsColor = (n) => {
 };
 
 const confirmReset = () => {
-    const confirmed = confirm('Sigurado ka bang gusto mong i-reset ang LAHAT ng aura points sa section na ito? Hindi na ito mababawi (pero mananatili ang history).');
+    const confirmed = confirm('Are you sure you want to reset ALL aura points in this section? This cannot be undone (but history will be kept).');
     if (!confirmed) return;
     resetAll();
 };
@@ -455,7 +455,7 @@ const resetAll = async () => {
         await loadSummary();
         router.reload({ only: ['seats', 'unassignedStudents'] });
     } catch (e) {
-        alert('Hindi na-reset, subukan ulit.');
+        alert('Reset failed, please try again.');
     } finally {
         resetting.value = false;
     }

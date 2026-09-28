@@ -124,37 +124,41 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
     Route::patch('appointments/{appointment}/resolve', [AdminFacultyAvailabilityController::class, 'resolve'])->name('appointments.resolve');
 });
 
-Route::post('/portal/chat/verify', [ChatController::class, 'verify'])->middleware('throttle:6,1');
+Route::post('/portal/chat/verify', [ChatController::class, 'verify'])->middleware('throttle:portal-verify');
 Route::post('/portal/chat/send', [ChatController::class, 'send'])->middleware('throttle:20,1');
-Route::get('/portal/chat/history', [ChatController::class, 'history'])->middleware('throttle:30,1');
+Route::get('/portal/chat/history', [ChatController::class, 'history'])->middleware('throttle:300,1');
 
 Route::post('/portal/grades/verify', [StudentDashboardController::class, 'verifyGrades'])
-    ->middleware('throttle:6,1') // 6 attempts per minute, konting brute-force protection
+    ->middleware('throttle:portal-verify') // Reminder: per-student limit, see portal-verify in AppServiceProvider
     ->name('portal.grades.verify');
 Route::post('/portal/grades/change-password', [StudentDashboardController::class, 'changePassword'])
-    ->middleware('throttle:6,1')
+    ->middleware('throttle:portal-verify')
     ->name('portal.grades.change-password');
 
 // Student-facing grade correction (public, verified via student_number+password sa request body)
-Route::post('/portal/grades/correction', [GradeCorrectionController::class, 'store']);
+Route::post('/portal/grades/correction', [GradeCorrectionController::class, 'store'])->middleware('throttle:portal-verify');
 Route::delete('/portal/grades/correction/{gradeCorrection}', [GradeCorrectionController::class, 'cancel'])
-    ->middleware('throttle:10,1');
+    ->middleware('throttle:portal-verify');
 
 // Student-facing "Set an appointment" (public, verified via student_number+password sa request body)
 Route::post('/portal/appointments/verify', [PortalAppointmentController::class, 'verify'])
-    ->middleware('throttle:6,1');
+    ->middleware('throttle:portal-verify');
 Route::post('/portal/appointments/available', [PortalAppointmentController::class, 'available'])
-    ->middleware('throttle:10,1');
+    ->middleware('throttle:portal-verify');
 Route::post('/portal/appointments/book', [PortalAppointmentController::class, 'book'])
-    ->middleware('throttle:6,1');
+    ->middleware('throttle:portal-verify');
 Route::delete('/portal/appointments/{appointment}', [PortalAppointmentController::class, 'destroy'])
-    ->middleware('throttle:10,1');
+    ->middleware('throttle:portal-verify');
 
 // Classmate messages under the photo slideshow (GET public list, POST verified via student_number+password sa request body)
 Route::get('/portal/classmate-messages', [ClassmateMessageController::class, 'index'])
-    ->middleware('throttle:60,1');
+    ->middleware('throttle:600,1');
 Route::post('/portal/classmate-messages', [ClassmateMessageController::class, 'store'])
-    ->middleware('throttle:6,1');
+    ->middleware('throttle:portal-verify');
+Route::patch('/portal/classmate-messages/{classmateMessage}', [ClassmateMessageController::class, 'update'])
+    ->middleware('throttle:portal-verify');
+Route::delete('/portal/classmate-messages/{classmateMessage}', [ClassmateMessageController::class, 'destroy'])
+    ->middleware('throttle:portal-verify');
 
 
 

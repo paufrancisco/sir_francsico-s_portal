@@ -15,6 +15,7 @@ export function useDashboardState(props) {
     const chatOpen = ref(false);
     const paused = ref(false);
     const currentIndex = ref(0);
+    const autoStopped = ref(false); // set by Dashboard.vue to stop the built-in autoplay
     const slideDirection = ref('slide-next');
 
     // ---- Dark mode state ----
@@ -700,6 +701,7 @@ export function useDashboardState(props) {
 
     onMounted(() => {
         autoTimer = setInterval(() => {
+            if (autoStopped.value) return;
             if (paused.value || filteredStudents.value.length === 0) return;
             slideDirection.value = 'slide-next';
             currentIndex.value = (currentIndex.value + 1) % filteredStudents.value.length;
@@ -784,7 +786,7 @@ export function useDashboardState(props) {
         isSyncing, syncNow,
 
         // class ledger carousel
-        showFullList, paused, currentIndex, slideDirection, currentStudent, goTo,
+        showFullList, paused, autoStopped, currentIndex, slideDirection, currentStudent, goTo,
 
         // chat widget
         chatOpen, chatStudent, chatLogin, chatLoginError, chatLoginLoading,

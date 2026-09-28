@@ -155,7 +155,7 @@
                         No grades have been recorded yet for this section.
                     </p>
 
-                    <div v-else class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-5 gap-8">
+                    <div v-else class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-5 gap-8" @click="slideStopped = true">
                         <!-- Photo slideshow: top 10 -->
                         <div class="md:col-span-2 flex flex-col items-center text-center min-h-0">
                             <div class="rank-ribbon" :class="rankRibbonClass(slideIndex)">TOP {{ currentSlide.rank }}</div>
@@ -203,95 +203,94 @@
 
                             <div class="text-base font-semibold mt-3 text-white" style="font-family:var(--font-display);">{{ currentSlide.name }}</div>
                             <div class="text-2xl font-semibold mt-1 tabular-nums" style="font-family:var(--font-mono); color:var(--gold);">{{ currentSlide.grade }}</div>
-                        </div>
-
-                        <!-- Right column: post wall for the current top, then the top 10 list -->
-                        <div class="md:col-span-3 w-full flex flex-col gap-4 min-h-0">
-
-                            <!-- Messages for the current top (changes with each slide) -->
-                            <div class="msg-panel shrink-0 rounded-2xl p-4">
-                                <div class="flex items-center justify-between gap-3 mb-3">
-                                    <div class="min-w-0">
-                                        <div class="text-sm font-semibold text-white truncate" style="font-family:var(--font-display);">Messages from {{ currentSlide.name }}</div>
-                                        <div class="text-[11px] text-white/55">Only shown once they sign in and post it themselves</div>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        @click="openMessageModal()"
-                                        class="slide-btn shrink-0"
-                                        title="Post a message"
-                                        aria-label="Post a message for this classmate"
-                                    >
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                                    </button>
+                        <!-- Messages for the current top (changes with each slide) -->
+                        <div class="msg-panel shrink-0 rounded-2xl p-4 w-full mt-3 text-left">
+                            <div class="flex items-center justify-between gap-3 mb-3">
+                                <div class="min-w-0">
+                                    <div class="text-sm font-semibold text-white truncate" style="font-family:var(--font-display);">Messages from {{ currentSlide.name }}</div>
+                                    <div class="text-[11px] text-white/55">Only shown once they sign in and post it themselves</div>
                                 </div>
+                                <button
+                                    type="button"
+                                    @click="openMessageModal()"
+                                    class="slide-btn shrink-0"
+                                    title="Post a message"
+                                    aria-label="Post a message for this classmate"
+                                >
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                </button>
+                            </div>
 
-                                <div class="max-h-56 overflow-y-auto space-y-3 pr-1">
-                                    <p v-if="(currentMessages.status === 'loading' || currentMessages.status === 'idle') && !currentMessages.items.length" class="text-xs text-white/55">Loading messages...</p>
-                                    <p v-else-if="currentMessages.status === 'error' && !currentMessages.items.length" class="text-xs text-white/55">Couldn't load messages. Switch photos to retry.</p>
-                                    <p v-else-if="!currentMessages.items.length" class="text-xs text-white/55">No messages yet. Tap the pencil to post one.</p>
+                            <div class="max-h-36 overflow-y-auto space-y-3 pr-1">
+                                <p v-if="(currentMessages.status === 'loading' || currentMessages.status === 'idle') && !currentMessages.items.length" class="text-xs text-white/55">Loading messages...</p>
+                                <p v-else-if="currentMessages.status === 'error' && !currentMessages.items.length" class="text-xs text-white/55">Couldn't load messages. Switch photos to retry.</p>
+                                <p v-else-if="!currentMessages.items.length" class="text-xs text-white/55">No messages yet. Tap the pencil to post one.</p>
 
-                                    <div v-for="m in currentMessages.items" :key="m.id" class="msg-bubble">
-                                        <div class="flex items-start justify-between gap-2">
-                                            <div class="text-[11px] font-semibold mb-1" style="color:var(--gold);">{{ m.sender_name }}</div>
-                                            <div v-if="editingMessageId !== m.id" class="msg-actions shrink-0">
-                                                <button
-                                                    type="button"
-                                                    @click="openEditForm(m)"
-                                                    class="msg-action-btn"
-                                                    title="Edit"
-                                                    aria-label="Edit message"
-                                                >
-                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    @click="openDeleteForm(m)"
-                                                    class="msg-action-btn"
-                                                    title="Delete"
-                                                    aria-label="Delete message"
-                                                >
-                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
-                                                </button>
-                                            </div>
+                                <div v-for="m in currentMessages.items" :key="m.id" class="msg-bubble">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div class="text-[11px] font-semibold mb-1" style="color:var(--gold);">{{ m.sender_name }}</div>
+                                        <div v-if="editingMessageId !== m.id" class="msg-actions shrink-0">
+                                            <button
+                                                type="button"
+                                                @click="openEditForm(m)"
+                                                class="msg-action-btn"
+                                                title="Edit"
+                                                aria-label="Edit message"
+                                            >
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                @click="openDeleteForm(m)"
+                                                class="msg-action-btn"
+                                                title="Delete"
+                                                aria-label="Delete message"
+                                            >
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
+                                            </button>
                                         </div>
+                                    </div>
 
-                                        <!-- Normal display -->
-                                        <div v-if="editingMessageId !== m.id" class="text-sm text-white/90 leading-relaxed italic quote-text">{{ m.body }}</div>
+                                    <!-- Normal display -->
+                                    <div v-if="editingMessageId !== m.id" class="text-sm text-white/90 leading-relaxed italic quote-text">{{ m.body }}</div>
 
-                                        <!-- Inline edit/delete confirm form -->
-                                        <div v-else class="mt-1 space-y-1.5">
-                                            <textarea
-                                                v-if="editAction === 'edit'"
-                                                v-model="editForm.body"
-                                                rows="2"
-                                                :maxlength="MESSAGE_MAX_LENGTH"
-                                                class="portal-input text-xs"
-                                                style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #fff;"
-                                            ></textarea>
-                                            <p v-else class="text-xs text-white/70">Delete this message? Confirm your login to proceed.</p>
+                                    <!-- Inline edit/delete confirm form -->
+                                    <div v-else class="mt-1 space-y-1.5">
+                                        <textarea
+                                            v-if="editAction === 'edit'"
+                                            v-model="editForm.body"
+                                            rows="2"
+                                            :maxlength="MESSAGE_MAX_LENGTH"
+                                            class="portal-input text-xs"
+                                            style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #fff;"
+                                        ></textarea>
+                                        <p v-else class="text-xs text-white/70">Delete this message? Confirm your login to proceed.</p>
 
-                                            <input v-model="editForm.student_number" type="text" placeholder="Student number" class="portal-input text-xs" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #fff;" />
-                                            <input v-model="editForm.password" type="password" placeholder="Password" class="portal-input text-xs" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #fff;" />
+                                        <input v-model="editForm.student_number" type="text" placeholder="Student number" class="portal-input text-xs" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #fff;" />
+                                        <input v-model="editForm.password" type="password" placeholder="Password" class="portal-input text-xs" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #fff;" />
 
-                                            <p v-if="editError" class="text-xs text-red-400">{{ editError }}</p>
+                                        <p v-if="editError" class="text-xs text-red-400">{{ editError }}</p>
 
-                                            <div class="flex gap-2">
-                                                <button
-                                                    type="button"
-                                                    @click="editAction === 'edit' ? submitEditMessage(m, currentSlide) : submitDeleteMessage(m, currentSlide)"
-                                                    :disabled="editLoading"
-                                                    class="flex-1 text-xs font-semibold py-1.5 rounded-lg disabled:opacity-50"
-                                                    :style="editAction === 'delete' ? 'background:#cf222e; color:#fff;' : 'background:var(--gold); color:var(--navy-deep);'"
-                                                >
-                                                    {{ editLoading ? 'Processing...' : (editAction === 'edit' ? 'Save' : 'Delete') }}
-                                                </button>
-                                                <button type="button" @click="cancelEditForm" class="text-xs text-white/60 px-2">Cancel</button>
-                                            </div>
+                                        <div class="flex gap-2">
+                                            <button
+                                                type="button"
+                                                @click="editAction === 'edit' ? submitEditMessage(m, currentSlide) : submitDeleteMessage(m, currentSlide)"
+                                                :disabled="editLoading"
+                                                class="flex-1 text-xs font-semibold py-1.5 rounded-lg disabled:opacity-50"
+                                                :style="editAction === 'delete' ? 'background:#cf222e; color:#fff;' : 'background:var(--gold); color:var(--navy-deep);'"
+                                            >
+                                                {{ editLoading ? 'Processing...' : (editAction === 'edit' ? 'Save' : 'Delete') }}
+                                            </button>
+                                            <button type="button" @click="cancelEditForm" class="text-xs text-white/60 px-2">Cancel</button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                        </div>
+
+                        <!-- Right column: top 10 list -->
+                        <div class="md:col-span-3 w-full flex flex-col gap-4 min-h-0">
 
                             <!-- Top 10 list (click a row to jump to that photo) -->
                             <div class="flex-1 min-h-0 flex flex-col justify-between overflow-y-auto">
@@ -995,6 +994,7 @@ watch(currentSlide, (student) => {
     messagesTimer = setTimeout(() => loadMessages(student), 400);
 }, { immediate: true });
 const slidePaused = ref(false);
+const slideStopped = ref(false);
 let slideTimer = null;
 
 function nextSlide() {
@@ -1013,7 +1013,7 @@ function startSlideshow() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     slideTimer = setInterval(() => {
         // Don't move on while hovering or while any modal is open
-        if (slidePaused.value || msgModalOpen.value || gradesModalOpen.value || cpModalOpen.value) return;
+        if (slidePaused.value || slideStopped.value || msgModalOpen.value || gradesModalOpen.value || cpModalOpen.value) return;
         nextSlide();
     }, 8000); // pinabagal mula 5000 -> 8000ms
 }

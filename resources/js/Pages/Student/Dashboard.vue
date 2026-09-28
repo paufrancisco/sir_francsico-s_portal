@@ -978,6 +978,15 @@ const currentSlide = computed(() => slides.value[slideIndex.value] ?? null);
 
 // Messages under the photo: load whenever the slide changes
 const currentMessages = computed(() => messageState(currentSlide.value));
+
+// After a successful post, jump to the sender's own card (posts always land there)
+watch(lastPostedSender, (sender) => {
+    if (!sender) return;
+    const idx = slides.value.findIndex((s) =>
+        String(s.id ?? s.student_id) === String(sender.id) || s.name === sender.name
+    );
+    if (idx !== -1) currentIndex.value = idx;
+});
 // Debounced so quick slide changes don't queue up requests (php artisan serve is single-threaded)
 let messagesTimer = null;
 watch(currentSlide, (student) => {

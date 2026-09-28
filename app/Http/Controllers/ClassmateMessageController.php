@@ -126,7 +126,7 @@ class ClassmateMessageController extends Controller
 
         if (is_null($sender->password_changed_at)) {
             throw ValidationException::withMessages([
-                'student_number' => 'Change your password first before posting.',
+                'student_number' => 'Change your password first.',
             ]);
         }
 

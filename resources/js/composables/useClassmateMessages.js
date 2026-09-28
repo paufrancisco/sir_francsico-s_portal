@@ -6,6 +6,11 @@ import { reactive, ref } from 'vue';
 const SEND_URL = '/portal/classmate-messages';
 export const MESSAGE_MAX_LENGTH = 300;
 
+// Field error muna (mas specific), saka generic message, saka fallback
+function apiError(data, fallback) {
+    return Object.values(data.errors ?? {})[0]?.[0] || data.message || fallback;
+}
+
 // GET on the same route returns { messages: [{ id, sender_name, body, created_at }] }
 // Query: recipient_id (or recipient_name when there's no id).
 
@@ -123,10 +128,7 @@ export function useClassmateMessages() {
             const data = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                msgError.value =
-                    data.message ||
-                    Object.values(data.errors ?? {})[0]?.[0] ||
-                    'Could not post. Check your login and try again.';
+                msgError.value = apiError(data, 'Could not post. Check your login and try again.');
                 return;
             }
 
@@ -146,10 +148,129 @@ export function useClassmateMessages() {
         }
     }
 
+    // ---- Edit / delete state (per-message inline confirm) ----
+    const editingMessageId = ref(null); // which message bubble has its confirm form open
+    const editAction = ref(null); // 'edit' | 'delete'
+    const editForm = reactive({ student_number: '', password: '', body: '' });
+    const editError = ref('');
+    const editLoading = ref(false);
+
+    function openEditForm(message) {
+        editingMessageId.value = message.id;
+        editAction.value = 'edit';
+        editForm.student_number = '';
+        editForm.password = '';
+        editForm.body = message.body;
+        editError.value = '';
+    }
+
+    function openDeleteForm(message) {
+        editingMessageId.value = message.id;
+        editAction.value = 'delete';
+        editForm.student_number = '';
+        editForm.password = '';
+        editError.value = '';
+    }
+
+    function cancelEditForm() {
+        editingMessageId.value = null;
+        editAction.value = null;
+        editForm.student_number = '';
+        editForm.password = '';
+        editForm.body = '';
+        editError.value = '';
+    }
+
+    async function submitEditMessage(message, student) {
+        editError.value = '';
+
+        if (!editForm.student_number.trim() || !editForm.password) {
+            editError.value = 'Enter your student number and password.';
+            return;
+        }
+        if (!editForm.body.trim()) {
+            editError.value = 'Message cannot be empty.';
+            return;
+        }
+
+        editLoading.value = true;
+        try {
+            const res = await fetch(`${SEND_URL}/${message.id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    ...csrfHeaders(),
+                },
+                body: JSON.stringify({
+                    student_number: editForm.student_number.trim(),
+                    password: editForm.password,
+                    body: editForm.body.trim(),
+                }),
+            });
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                editError.value = apiError(data, 'Could not update. Check your login and try again.');
+                return;
+            }
+
+            cancelEditForm();
+            loadMessages(student, true);
+        } catch (e) {
+            editError.value = 'Network error. Please try again.';
+        } finally {
+            editLoading.value = false;
+        }
+    }
+
+    async function submitDeleteMessage(message, student) {
+        editError.value = '';
+
+        if (!editForm.student_number.trim() || !editForm.password) {
+            editError.value = 'Enter your student number and password.';
+            return;
+        }
+
+        editLoading.value = true;
+        try {
+            const res = await fetch(`${SEND_URL}/${message.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    ...csrfHeaders(),
+                },
+                body: JSON.stringify({
+                    student_number: editForm.student_number.trim(),
+                    password: editForm.password,
+                }),
+            });
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                editError.value = apiError(data, 'Could not delete. Check your login and try again.');
+                return;
+            }
+
+            cancelEditForm();
+            loadMessages(student, true);
+        } catch (e) {
+            editError.value = 'Network error. Please try again.';
+        } finally {
+            editLoading.value = false;
+        }
+    }
+    // ---- End edit / delete state ----
+
     return {
         msgModalOpen, msgForm, msgError, msgSuccess, msgLoading, showMsgPassword,
         lastPostedSender,
         openMessageModal, closeMessageModal, submitMessage,
         messageState, loadMessages,
+
+        // edit / delete
+        editingMessageId, editAction, editForm, editError, editLoading,
+        openEditForm, openDeleteForm, cancelEditForm, submitEditMessage, submitDeleteMessage,
     };
 }

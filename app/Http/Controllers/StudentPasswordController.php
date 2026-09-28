@@ -18,7 +18,7 @@ class StudentPasswordController extends Controller
         $student = Student::where('student_number', $request->student_number)->first();
 
         if (! $student || $student->password !== $request->current_password) {
-            return response()->json(['message' => 'Mali ang student number o current password.'], 422);
+            return response()->json(['message' => 'Incorrect student number or current password.'], 422);
         }
 
         $student->password = $request->new_password;

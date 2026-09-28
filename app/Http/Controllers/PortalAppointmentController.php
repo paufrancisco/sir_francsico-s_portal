@@ -42,7 +42,7 @@ class PortalAppointmentController extends Controller
         $student = Student::where('student_number', $request->student_number)->first();
 
         if (! $student || $student->password !== $request->password) {
-            return response()->json(['message' => 'Mali ang student number o password.'], 422);
+            return response()->json(['message' => 'Incorrect student number or password.'], 422);
         }
 
         return response()->json([

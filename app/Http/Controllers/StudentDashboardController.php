@@ -104,7 +104,7 @@ class StudentDashboardController extends Controller
         $student = Student::where('student_number', $request->student_number)->first();
 
         if (! $student || $student->password !== $request->current_password) {
-            return response()->json(['message' => 'Mali ang student number o password.'], 422);
+            return response()->json(['message' => 'Incorrect student number or password.'], 422);
         }
 
         if ($request->new_password === $request->current_password) {
@@ -132,7 +132,7 @@ class StudentDashboardController extends Controller
         $student = Student::where('student_number', $request->student_number)->first();
 
         if (! $student || $student->password !== $request->password) {
-            return response()->json(['message' => 'Mali ang student number o password.'], 422);
+            return response()->json(['message' => 'Incorrect student number or password.'], 422);
         }
 
         if (is_null($student->password_changed_at)) {

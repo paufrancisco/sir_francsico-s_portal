@@ -36,19 +36,72 @@
             </div>
 
             <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-                <div class="text-sm font-semibold text-slate-700 mb-3">Sections</div>
-                <p v-if="sections.length === 0" class="text-xs text-slate-400">No sections yet.</p>
-                <div v-for="s in sections" :key="s.id" class="flex items-center justify-between py-3 border-b border-slate-50 last:border-0">
-                    <div>
-                        <div class="text-sm font-medium text-slate-800">{{ s.name }}</div>
-                        <div class="text-xs text-slate-400">{{ s.schedule || 'No schedule' }} · {{ s.students_count }} students</div>
+                <div class="text-sm font-semibold text-slate-700 mb-3">Grading progress per period</div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div v-for="p in periodProgress" :key="p.key" class="border border-slate-200 rounded-lg p-3">
+                        <div class="text-xs text-slate-400">{{ p.label }}</div>
+                        <div class="text-xl font-semibold text-[var(--navy)] mt-1">{{ p.done }} / {{ p.total }}</div>
+                        <div class="h-1.5 rounded-full bg-slate-500/15 mt-2 overflow-hidden">
+                            <div class="h-full rounded-full bg-[var(--navy)]" :style="{ width: (p.total ? Math.round((p.done / p.total) * 100) : 0) + '%' }"></div>
+                        </div>
+                        <div class="text-[11px] text-slate-400 mt-1">sections with grades</div>
                     </div>
-                    <span
-                        class="text-[11px] font-medium px-2 py-0.5 rounded-full"
-                        :class="s.grades_computed ? 'bg-[var(--teal-bg)] text-[var(--teal)]' : 'bg-slate-100 text-slate-500'"
-                    >
-                        {{ s.grades_computed ? 'Top 10 computed' : 'Not yet computed' }}
-                    </span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                    <div class="text-sm font-semibold text-slate-700 mb-3">Recent activity</div>
+                    <p v-if="recentActivity.length === 0" class="text-xs text-slate-400">No activity yet.</p>
+                    <div v-for="a in recentActivity" :key="a.id" class="py-2 border-b border-slate-500/20 last:border-0">
+                        <div class="text-sm text-slate-800">{{ a.name }}</div>
+                        <div class="text-xs text-slate-500">{{ a.summary }}</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">{{ a.section || 'No section' }} · {{ formatDate(a.created_at) }}</div>
+                    </div>
+                </div>
+                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                    <div class="text-sm font-semibold text-slate-700 mb-3">Recent logins</div>
+                    <p v-if="recentLogins.length === 0" class="text-xs text-slate-400">No logins yet.</p>
+                    <div v-for="l in recentLogins" :key="l.id" class="flex items-start justify-between gap-3 py-2 border-b border-slate-500/20 last:border-0">
+                        <div class="min-w-0">
+                            <div class="text-sm text-slate-800 truncate">{{ l.name }}</div>
+                            <div class="text-[11px] text-slate-400">{{ l.section || 'No section' }} · {{ l.source }} · {{ formatDate(l.created_at) }}</div>
+                        </div>
+                        <span
+                            class="text-[11px] font-medium px-2 py-0.5 rounded-full shrink-0"
+                            :class="l.success ? 'bg-[var(--teal-bg)] text-[var(--teal)]' : 'bg-red-50 text-red-600'"
+                        >
+                            {{ l.success ? 'Success' : 'Failed' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                <div class="text-sm font-semibold text-slate-700 mb-3">Grade confirmations per section</div>
+                <p v-if="confirmations.length === 0" class="text-xs text-slate-400">No sections yet.</p>
+                <div v-for="c in confirmations" :key="c.id" class="py-2 border-b border-slate-500/20 last:border-0">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="text-sm text-slate-800">{{ c.name }}</div>
+                        <div class="flex items-center gap-1.5 shrink-0 text-[11px] font-semibold">
+                            <span title="Confirmed" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--teal-bg)] text-[var(--teal)]">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                                {{ c.confirmed }}
+                            </span>
+                            <span title="Pending" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                                {{ c.pending }}
+                            </span>
+                            <span title="Rejected" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/15 text-red-500">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                                {{ c.rejected }}
+                            </span>
+                            <span class="text-slate-500 font-medium">/ {{ c.total }}</span>
+                        </div>
+                    </div>
+                    <div class="h-1.5 rounded-full bg-slate-500/15 mt-1.5 overflow-hidden">
+                        <div class="h-full rounded-full bg-[var(--teal)]" :style="{ width: (c.total ? Math.round((c.confirmed / c.total) * 100) : 0) + '%' }"></div>
+                    </div>
                 </div>
             </div>
 
@@ -170,6 +223,10 @@ const props = defineProps({
     sections: { type: Array, default: () => [] },
     announcements: { type: Array, default: () => [] },
     allSections: { type: Array, default: () => [] },
+    periodProgress: { type: Array, default: () => [] },
+    recentLogins: { type: Array, default: () => [] },
+    recentActivity: { type: Array, default: () => [] },
+    confirmations: { type: Array, default: () => [] },
 });
 
 const totalStudents = computed(() =>

@@ -4,7 +4,7 @@
         :class="isDarkMode ? 'dark' : ''"
     >
         <!-- Ambient background: paper grain + soft ink blobs -->
-        <div class="pointer-events-none fixed inset-0 -z-10 bg-[var(--page-bg)]">
+        <div class="pointer-events-none fixed inset-0 -z-10 aurora-bg">
             <div class="absolute inset-0 grain-layer"></div>
             <div class="absolute w-[28rem] h-[28rem] rounded-full blur-3xl opacity-[0.16] blob-a" style="background:#8A8D91;"></div>
             <div class="absolute w-[26rem] h-[26rem] rounded-full blur-3xl opacity-[0.18] blob-b" style="background:var(--gold);"></div>

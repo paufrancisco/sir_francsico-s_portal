@@ -25,6 +25,6 @@ class StudentPasswordController extends Controller
         $student->password_changed_at = now();
         $student->save();
 
-        return response()->json(['message' => 'Na-update na ang password mo.']);
+        return response()->json(['message' => 'Your password has been updated.']);
     }
 }

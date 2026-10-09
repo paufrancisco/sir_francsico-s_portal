@@ -28,7 +28,7 @@ class StudentAuthController extends Controller
         }
 
         return back()->withErrors([
-            'student_number' => 'Mali yung student number o password.',
+            'student_number' => 'Incorrect student number or password.',
         ])->onlyInput('student_number');
     }
 

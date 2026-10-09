@@ -108,7 +108,7 @@ class StudentDashboardController extends Controller
         }
 
         if ($request->new_password === $request->current_password) {
-            return response()->json(['message' => 'Ibahin mo ang bagong password sa luma.'], 422);
+            return response()->json(['message' => 'New password must be different from the old one.'], 422);
         }
 
         $student->update([

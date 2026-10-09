@@ -26,7 +26,7 @@ class AdminFaqController extends Controller
             'section_id' => 'nullable|exists:sections,id',
         ]);
         Faq::create($request->only('question', 'answer', 'section_id'));
-        return back()->with('success', 'Naidagdag ang FAQ.');
+        return back()->with('success', 'FAQ added.');
     }
 
     public function update(Request $request, Faq $faq)
@@ -37,12 +37,12 @@ class AdminFaqController extends Controller
             'section_id' => 'nullable|exists:sections,id',
         ]);
         $faq->update($request->only('question', 'answer', 'section_id'));
-        return back()->with('success', 'Na-update ang FAQ.');
+        return back()->with('success', 'FAQ updated.');
     }
 
     public function destroy(Faq $faq)
     {
         $faq->delete();
-        return back()->with('success', 'Natanggal ang FAQ.');
+        return back()->with('success', 'FAQ deleted.');
     }
 }

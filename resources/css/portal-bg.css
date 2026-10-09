@@ -1,0 +1,93 @@
+/* TODO: i-tweak ang colors dito kung gusto mo ng ibang vibe */
+body {
+    background-color: #eef4ff;
+    background-image:
+        radial-gradient(50rem 32rem at 8% -8%, rgba(56, 189, 248, 0.35), transparent 60%),
+        radial-gradient(45rem 30rem at 100% 0%, rgba(129, 140, 248, 0.30), transparent 55%),
+        radial-gradient(45rem 30rem at 55% 110%, rgba(45, 212, 191, 0.22), transparent 60%),
+        linear-gradient(180deg, #f4f8ff 0%, #e6eefc 100%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    min-height: 100vh;
+}
+
+/* TODO: gamitin ang .glass-card sa cards/panels na gusto mong frosted */
+.glass-card {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px rgba(15, 42, 82, 0.10);
+}
+
+/* TODO: aurora para sa student portal, sumusunod sa light/dark toggle */
+.portal-root .aurora-bg {
+    background-color: var(--page-bg);
+    background-image:
+        radial-gradient(55rem 35rem at 5% -5%, rgba(51, 161, 224, 0.22), transparent 60%),
+        radial-gradient(45rem 30rem at 100% 5%, rgba(129, 140, 248, 0.16), transparent 55%),
+        radial-gradient(50rem 30rem at 55% 110%, rgba(45, 212, 191, 0.14), transparent 60%);
+}
+.portal-root.dark .aurora-bg {
+    background-image:
+        radial-gradient(55rem 35rem at 5% -5%, rgba(51, 161, 224, 0.28), transparent 60%),
+        radial-gradient(45rem 30rem at 100% 5%, rgba(99, 102, 241, 0.22), transparent 55%),
+        radial-gradient(50rem 30rem at 55% 110%, rgba(45, 212, 191, 0.14), transparent 60%);
+}
+
+/* TODO: mas malakas na aurora, i-lower ang alpha kung sobra */
+.portal-root .aurora-bg {
+    background-image:
+        radial-gradient(60rem 40rem at 0% 0%, rgba(51, 161, 224, 0.45), transparent 60%),
+        radial-gradient(50rem 35rem at 100% 0%, rgba(129, 140, 248, 0.38), transparent 55%),
+        radial-gradient(55rem 35rem at 50% 105%, rgba(45, 212, 191, 0.30), transparent 60%);
+}
+.portal-root.dark .aurora-bg {
+    background-image:
+        radial-gradient(60rem 40rem at 0% 0%, rgba(51, 161, 224, 0.55), transparent 60%),
+        radial-gradient(50rem 35rem at 100% 0%, rgba(99, 102, 241, 0.50), transparent 55%),
+        radial-gradient(55rem 35rem at 50% 105%, rgba(45, 212, 191, 0.32), transparent 60%);
+}
+
+/* TODO: frosted glass sa sidebar at ink-panel para lumabas ang aurora sa likod */
+.portal-root .sidebar {
+    background: linear-gradient(180deg,
+        color-mix(in srgb, var(--navy) 58%, transparent),
+        color-mix(in srgb, var(--navy-deep) 58%, transparent)) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+.portal-root .ink-panel {
+    background: linear-gradient(160deg,
+        color-mix(in srgb, var(--navy) 50%, transparent),
+        color-mix(in srgb, var(--navy-deep) 50%, transparent)) !important;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* TODO: dagdag glow sa kaliwa at gitna */
+.portal-root.dark .aurora-bg {
+    background-image:
+        radial-gradient(45rem 35rem at 0% 55%, rgba(51, 161, 224, 0.35), transparent 60%),
+        radial-gradient(60rem 40rem at 0% 0%, rgba(51, 161, 224, 0.55), transparent 60%),
+        radial-gradient(50rem 35rem at 100% 0%, rgba(99, 102, 241, 0.50), transparent 55%),
+        radial-gradient(55rem 35rem at 50% 105%, rgba(45, 212, 191, 0.32), transparent 60%);
+}
+
+/* TODO: light mode lang, halos solid para mabasa ang scores. Ibaba ang 94% kung gusto mo mas transparent */
+.portal-root:not(.dark) .sidebar {
+    background: linear-gradient(180deg,
+        color-mix(in srgb, var(--navy) 94%, transparent),
+        color-mix(in srgb, var(--navy-deep) 94%, transparent)) !important;
+}
+.portal-root:not(.dark) .ink-panel {
+    background: linear-gradient(160deg,
+        color-mix(in srgb, var(--navy) 94%, transparent),
+        color-mix(in srgb, var(--navy-deep) 94%, transparent)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+/* TODO: mas maliwanag na accent sa light mode para sa scores at rank numbers */
+.portal-root:not(.dark) .ink-panel { --gold: #A8DCFF; }

@@ -124,7 +124,7 @@
                             {{ c.notes ?? '—' }}
                             <a
                                 v-if="c.attachment_url"
-                                :href="c.attachment_url"
+                                :href="c.attachment_url" @click.prevent="openPreview(c.attachment_url)"
                                 target="_blank"
                                 class="flex items-center gap-1 text-[11px] text-[#003399] mt-1"
                             >
@@ -139,10 +139,16 @@
                                 Pending
                             </span>
                             <span
+                                v-else-if="c.type === 'confirmed'"
+                                class="text-xs font-medium px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 student-confirmed-pill"
+                            >
+                                Student confirmed
+                            </span>
+                            <span
                                 v-else-if="c.decision === 'approved'"
                                 class="text-xs font-medium px-2 py-0.5 rounded-full bg-[#EAF3DE] text-[#3B6D11]"
                             >
-                                Approved
+                                Correction approved
                             </span>
                             <span
                                 v-else-if="c.decision === 'cancelled'"
@@ -225,7 +231,7 @@
                         <div class="text-xs text-slate-400">{{ activeNotes ?? 'No notes' }}</div>
                         <a
                             v-if="activeAttachmentUrl"
-                            :href="activeAttachmentUrl"
+                            :href="activeAttachmentUrl" @click.prevent="openPreview(activeAttachmentUrl)"
                             target="_blank"
                             class="text-[11px] text-[#003399] mt-0.5 inline-block"
                         >
@@ -333,7 +339,7 @@
 
                     <a
                         v-if="historyCorrection?.attachment_url"
-                        :href="historyCorrection.attachment_url"
+                        :href="historyCorrection.attachment_url" @click.prevent="openPreview(historyCorrection.attachment_url)"
                         target="_blank"
                         class="text-[11px] text-[#003399] inline-block"
                     >
@@ -396,6 +402,21 @@
                 </div>
             </div>
         </div>
+        <Teleport to="body">
+            <div
+                v-if="previewUrl"
+                class="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4"
+                @click.self="previewUrl = null"
+            >
+                <div class="max-w-4xl w-full flex flex-col items-center gap-3">
+                    <img :src="previewUrl" alt="Attachment preview" class="max-h-[80vh] max-w-full rounded-lg object-contain" />
+                    <div class="flex gap-2 text-xs">
+                        <a :href="previewUrl" target="_blank" class="px-3 py-1.5 rounded-lg bg-white/10 text-white">Open in new tab</a>
+                        <button @click="previewUrl = null" class="px-3 py-1.5 rounded-lg bg-white/10 text-white">Close</button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
     </div>
 </template>
 
@@ -560,6 +581,8 @@ const activeCorrectionId = ref(null);
 const activeStudentName = ref('');
 const activeNotes = ref('');
 const activeAttachmentUrl = ref(null);
+const previewUrl = ref(null);
+const openPreview = (url) => { previewUrl.value = url; };
 const activeStatus = ref('pending');
 const activeDecision = ref(null);
 const activeCorrectionItems = ref([]); // proposed items from the student

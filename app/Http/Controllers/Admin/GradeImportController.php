@@ -30,14 +30,14 @@ class GradeImportController extends Controller
 
         $section->update(['grades_computed_at' => now()]);
 
-        $message = "{$import->importedCount} estudyante ang na-import ang grades (Prelim, Midterm, Pre-Final, Finals).";
+        $message = "{$import->importedCount} students had their grades imported (Prelim, Midterm, Pre-Final, Finals).";
 
         if (! empty($import->skipped)) {
-            $message .= " May " . count($import->skipped) . " na hindi na-match sa Masterlist: " . implode(', ', $import->skipped) . ".";
+            $message .= " " . count($import->skipped) . " student(s) could not be matched to the Masterlist: " . implode(', ', $import->skipped) . ".";
         }
 
         if (! empty($import->duplicates)) {
-            $message .= " Babala: paulit-ulit sa file (huling row lang ang na-save): " . implode(', ', $import->duplicates) . ".";
+            $message .= " Warning: duplicates in file (only the last row was saved): " . implode(', ', $import->duplicates) . ".";
         }
 
         return redirect()

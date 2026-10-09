@@ -106,7 +106,7 @@ class GradeController extends Controller
             ->where('student_id', $student->id)
             ->delete();
 
-        return back()->with('success', 'Natanggal na ang grades ni ' . $student->full_name . '.');
+        return back()->with('success', 'Grades removed for ' . $student->full_name . '.');
     }
 
     public function destroyForStudents(Request $request, Section $section)
@@ -117,6 +117,6 @@ class GradeController extends Controller
             ->whereIn('student_id', $validated['student_ids'])
             ->delete();
 
-        return back()->with('success', count($validated['student_ids']) . ' estudyante ang na-clear ang grades.');
+        return back()->with('success', count($validated['student_ids']) . ' students had their grades cleared.');
     }
 }

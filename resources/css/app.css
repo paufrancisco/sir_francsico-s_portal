@@ -1,4 +1,6 @@
 @import './admin-theme.css';
+@import './portal-bg.css';
+@import './admin-dark.css';
 
 @tailwind base;
 @tailwind components;

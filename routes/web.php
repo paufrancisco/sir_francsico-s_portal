@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Admin\LogController;
+use App\Http\Middleware\LogStudentPortalAccess;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StudentDashboardController;
 use Illuminate\Support\Facades\Route;
@@ -116,6 +118,7 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
 
 
 
+    Route::get('logs', [LogController::class, 'index'])->name('logs.index');
     // Faculty availability (Set an appointment feature) — dito mo ina-admin yung available times mo
     Route::get('availability', [AdminFacultyAvailabilityController::class, 'index'])->name('availability.index');
     Route::post('availability', [AdminFacultyAvailabilityController::class, 'store'])->name('availability.store');
@@ -124,12 +127,12 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
     Route::patch('appointments/{appointment}/resolve', [AdminFacultyAvailabilityController::class, 'resolve'])->name('appointments.resolve');
 });
 
-Route::post('/portal/chat/verify', [ChatController::class, 'verify'])->middleware('throttle:portal-verify');
+Route::post('/portal/chat/verify', [ChatController::class, 'verify'])->middleware(['throttle:portal-verify', LogStudentPortalAccess::class.':chat']);
 Route::post('/portal/chat/send', [ChatController::class, 'send'])->middleware('throttle:20,1');
 Route::get('/portal/chat/history', [ChatController::class, 'history'])->middleware('throttle:300,1');
 
 Route::post('/portal/grades/verify', [StudentDashboardController::class, 'verifyGrades'])
-    ->middleware('throttle:portal-verify') // Reminder: per-student limit, see portal-verify in AppServiceProvider
+    ->middleware(['throttle:portal-verify', LogStudentPortalAccess::class.':grades']) // Reminder: per-student limit, see portal-verify in AppServiceProvider
     ->name('portal.grades.verify');
 Route::post('/portal/grades/change-password', [StudentDashboardController::class, 'changePassword'])
     ->middleware('throttle:portal-verify')
@@ -142,7 +145,7 @@ Route::delete('/portal/grades/correction/{gradeCorrection}', [GradeCorrectionCon
 
 // Student-facing "Set an appointment" (public, verified via student_number+password sa request body)
 Route::post('/portal/appointments/verify', [PortalAppointmentController::class, 'verify'])
-    ->middleware('throttle:portal-verify');
+    ->middleware(['throttle:portal-verify', LogStudentPortalAccess::class.':appointments']);
 Route::post('/portal/appointments/available', [PortalAppointmentController::class, 'available'])
     ->middleware('throttle:portal-verify');
 Route::post('/portal/appointments/book', [PortalAppointmentController::class, 'book'])

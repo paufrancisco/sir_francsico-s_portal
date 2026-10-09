@@ -48,7 +48,7 @@ class ChatController extends Controller
 
         if (! $alreadyActive && $activeSessions->count() >= self::MAX_CONCURRENT_CHATTERS) {
             return response()->json([
-                'message' => 'Busy pa si AI assistant — may 3 estudyante pa na kausap niya ngayon. Subukan mo ulit sa loob ng ilang minuto. Samantala, baka nasa FAQ o Announcements na makikita mo yung sagot sa tanong mo!',
+                'message' => 'The AI assistant is busy right now and is already chatting with 3 students. Please try again in a few minutes. In the meantime, the answer might already be in the FAQ or Announcements!',
             ], 429);
         }
 
@@ -153,7 +153,7 @@ class ChatController extends Controller
         $apiKey = config('services.gemini.key');
 
         if (! $apiKey) {
-            return ['Pasensya, hindi pa naka-configure ang AI assistant. Titingnan na lang ni Sir Francisco ang tanong mo.', true];
+            return ['Sorry, the AI assistant is not configured yet. Sir Francisco will look at your question instead.', true];
         }
 
         $siblingSectionIds = $student->section
@@ -166,7 +166,7 @@ class ChatController extends Controller
             ->get(['id', 'question', 'answer', 'section_id']);
 
         $faqText = $faqs->isEmpty()
-            ? '(wala pang FAQ na naka-set)'
+            ? '(no FAQs set yet)'
             : $faqs->map(function ($f) {
                 $label = $f->section ? "[{$f->section->subject}] " : '';
                 return "{$label}Q: {$f->question}\nA: {$f->answer}";
@@ -186,23 +186,23 @@ class ChatController extends Controller
         $studentFirstName = trim(explode(',', $student->full_name)[1] ?? $student->full_name);
 
         $prompt = <<<PROMPT
-        Ikaw ay si "AI Assistant", ang chat assistant ni Sir Francisco sa kanyang class portal. Ang kausap mo ngayon ay si {$studentFirstName}.
+        You are "AI Assistant", the chat assistant of Sir Francisco in his class portal. You are talking to {$studentFirstName}. Always reply in English.
 
-        FAQ list (basehan mo lang ito sa mga impormasyon tungkol sa klase, quiz, deadline, atbp.):
+        FAQ list (base your answers only on this information about the class, quizzes, deadlines, etc.):
         {$faqText}
 
-        Kasaysayan ng usapan:
+        Conversation history:
         {$historyText}
 
         {$studentFirstName}: {$question}
 
-        Paano ka dapat kumilos:
-        - Kausap mo ay tao, hindi FAQ lookup machine — makipag-usap ka nang natural, parang totoong AI assistant, gamit ang pangalan niya paminsan-minsan.
-        - Kung greeting lang (hi, hello, kamusta, good morning), bumati ka pabalik nang palakaibigan, tawagin mo siya sa pangalan kung bagay, huwag mag-alala tungkol sa FAQ dito.
-        - Kung mukhang typo, gibberish, o hindi malinaw ang tanong (hal. "asd", "asdiasndi", random letters), huwag mo agad sabihing "hindi ko masagot" — sa halip, sabihin mo nang magaan na parang hindi mo naintindihan o baka na-typo, at hilingin mong ulitin o linawin ang tanong.
-        - Kung malinaw ang tanong at may kaugnayan ito sa impormasyon ng klase (quiz, deadline, schedule, grades, atbp.), sagutin mo LAMANG base sa FAQ list sa itaas. Ang bawat FAQ ay maaaring may [Subject] label — ibig sabihin partikular ito sa subject na iyon. Kung walang label, para ito sa lahat.
-        - Kung malinaw ang tanong pero WALA itong FAQ na tumutugma (at hindi ito greeting o typo/gibberish), sagutin mo ng EKSAKTONG ganito, walang ibang idagdag: UNSURE_NOTIFY: Hindi ko pa masagot yan agad, ipapaalam ko kay Sir Francisco para siya na ang sumagot sa'yo.
-        - Huwag kailanman manghula o gumawa ng sagot na wala sa FAQ list para sa mga tanong tungkol sa klase.
+        How you should behave:
+        - You are talking to a person, not a FAQ lookup machine - chat naturally like a real AI assistant, using their name occasionally.
+        - If it is only a greeting (hi, hello, good morning), greet them back in a friendly way, use their name if it fits, and do not worry about the FAQ here.
+        - If the question looks like a typo, gibberish, or is unclear (e.g. "asd", "asdiasndi", random letters), do not immediately say you cannot answer - instead, lightly say you did not understand or that it may be a typo, and ask them to repeat or clarify the question.
+        - If the question is clear and related to class information (quiz, deadline, schedule, grades, etc.), answer ONLY based on the FAQ list above. Each FAQ may have a [Subject] label - this means it applies only to that subject. If there is no label, it applies to everyone.
+        - If the question is clear but NO FAQ matches it (and it is not a greeting or typo/gibberish), answer with EXACTLY this and nothing else: UNSURE_NOTIFY: I cannot answer that right away, I will let Sir Francisco know so he can reply to you.
+        - Never guess or make up an answer that is not in the FAQ list for questions about the class.
 
         AI:
         PROMPT;
@@ -258,6 +258,6 @@ class ChatController extends Controller
         // Naubos na ang buong fallback chain, wala talagang gumana.
         \Log::error('All Gemini models failed', ['last_error' => $lastError]);
 
-        return ['Pasensya, may error sa AI assistant. Titingnan na lang ni Sir Francisco ang tanong mo.', true];
+        return ['Sorry, the AI assistant ran into an error. Sir Francisco will look at your question instead.', true];
     }
 }

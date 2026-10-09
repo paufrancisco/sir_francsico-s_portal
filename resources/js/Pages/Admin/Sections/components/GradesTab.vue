@@ -269,12 +269,12 @@
                             <span
                                 v-if="row.pending_correction?.type === 'confirmed'"
                                 title="Student confirmed these grades"
-                                class="inline-flex items-center gap-1 text-xs font-medium text-[#3B6D11] whitespace-nowrap"
+                                class="inline-flex items-center gap-1 text-xs font-medium text-sky-700 student-confirmed whitespace-nowrap"
                             >
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M20 6 9 17l-5-5"/>
                                 </svg>
-                                Confirmed
+                                Student confirmed
                             </span>
                             <button
                                 v-else-if="row.pending_correction?.type === 'recheck'"

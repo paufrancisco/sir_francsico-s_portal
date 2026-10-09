@@ -7,7 +7,14 @@ const SEND_URL = '/portal/classmate-messages';
 export const MESSAGE_MAX_LENGTH = 300;
 
 // Field error muna (mas specific), saka generic message, saka fallback
-function apiError(data, fallback) {
+function apiError(data, fallback, res) {
+    // 429 = na-throttle ng portal-verify; ipakita kung ilang segundo bago ulit
+    if (res?.status === 429) {
+        const wait = parseInt(res.headers.get('Retry-After') ?? '', 10);
+        return wait > 0
+            ? `Too many attempts. Try again in ${wait} second${wait === 1 ? '' : 's'}.`
+            : 'Too many attempts. Please wait a moment and try again.';
+    }
     return Object.values(data.errors ?? {})[0]?.[0] || data.message || fallback;
 }
 
@@ -128,7 +135,7 @@ export function useClassmateMessages() {
             const data = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                msgError.value = apiError(data, 'Could not post. Check your login and try again.');
+                msgError.value = apiError(data, 'Could not post. Check your login and try again.', res);
                 return;
             }
 
@@ -211,7 +218,7 @@ export function useClassmateMessages() {
             const data = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                editError.value = apiError(data, 'Could not update. Check your login and try again.');
+                editError.value = apiError(data, 'Could not update. Check your login and try again.', res);
                 return;
             }
 
@@ -249,7 +256,7 @@ export function useClassmateMessages() {
             const data = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                editError.value = apiError(data, 'Could not delete. Check your login and try again.');
+                editError.value = apiError(data, 'Could not delete. Check your login and try again.', res);
                 return;
             }
 

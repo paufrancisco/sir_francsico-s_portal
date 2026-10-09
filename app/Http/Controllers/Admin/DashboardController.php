@@ -26,7 +26,7 @@ class DashboardController extends Controller
             'body' => $a->body,
             'is_global' => $a->is_global,
             'section_ids' => $a->sections->pluck('id'),
-            'target' => $a->is_global ? 'Lahat ng section' : $a->sections->pluck('name')->implode(', '),
+            'target' => $a->is_global ? 'All sections' : $a->sections->pluck('name')->implode(', '),
             'created_at' => $a->created_at,
         ]);
 

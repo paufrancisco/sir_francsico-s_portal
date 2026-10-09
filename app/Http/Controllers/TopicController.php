@@ -33,7 +33,7 @@ class TopicController extends Controller
             'sort_order' => ($lastOrder ?? 0) + 1,
         ]);
 
-        return back()->with('flash', ['success' => 'Naidagdag ang topic.']);
+        return back()->with('flash', ['success' => 'Topic added.']);
     }
 
     /**
@@ -54,7 +54,7 @@ class TopicController extends Controller
             'quiz_items' => $data['has_quiz'] ?? false ? $data['quiz_items'] : null,
         ]);
 
-        return back()->with('flash', ['success' => 'Na-update ang topic.']);
+        return back()->with('flash', ['success' => 'Topic updated.']);
     }
 
     /**
@@ -64,7 +64,7 @@ class TopicController extends Controller
     {
         $topic->update(['archived_at' => now()]);
 
-        return back()->with('flash', ['success' => 'Na-archive ang topic.']);
+        return back()->with('flash', ['success' => 'Topic archived.']);
     }
 
     /**
@@ -74,7 +74,7 @@ class TopicController extends Controller
     {
         $topic->update(['archived_at' => null]);
 
-        return back()->with('flash', ['success' => 'Na-restore ang topic.']);
+        return back()->with('flash', ['success' => 'Topic restored.']);
     }
 
     /**
@@ -84,6 +84,6 @@ class TopicController extends Controller
     {
         $topic->delete();
 
-        return back()->with('flash', ['success' => 'Permanenteng natanggal ang topic.']);
+        return back()->with('flash', ['success' => 'Topic permanently deleted.']);
     }
 }

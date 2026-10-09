@@ -24,7 +24,7 @@ export function useGradeCorrections(sectionId, currentPeriod) {
     const correctionBadgeLabel = (c) => {
         if (c.type === 'confirmed') return 'Confirmed';
         if (c.status === 'pending') return 'Pending request';
-        if (c.decision === 'approved') return 'Approved';
+        if (c.decision === 'approved') return 'Correction approved';
         if (c.decision === 'rejected') return 'Rejected';
         return 'Resolved';
     };

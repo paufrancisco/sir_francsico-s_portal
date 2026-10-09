@@ -31,7 +31,7 @@ class NewChatMessageMail extends Mailable
 
     private function subjectLine(): string
     {
-        $label = $this->needsReview ? 'Kakaibang tanong' : 'Bagong tanong sa chat';
+        $label = $this->needsReview ? 'Unusual question' : 'New chat question';
 
         $subjectName = $this->studentContext['subject'] ?? null;
         $sectionName = $this->studentContext['section'] ?? null;

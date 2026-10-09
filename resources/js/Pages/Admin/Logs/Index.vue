@@ -1,17 +1,29 @@
 <script setup>
-import { reactive, watch } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import { computed, reactive, watch } from 'vue';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import { activityTypes, timeAgo } from '@/composables/activityTypes';
 
 defineOptions({ layout: AdminLayout });
 
-const props = defineProps({ tab: String, filters: Object, rows: Object });
+const props = defineProps({
+    tab: String,
+    filters: Object,
+    rows: Object,
+    sections: { type: Array, default: () => [] },
+});
+
+const page = usePage();
+const unreadCount = computed(() => page.props.activity?.unread ?? 0);
 
 const f = reactive({
     q: props.filters.q ?? '',
     from: props.filters.from ?? '',
     to: props.filters.to ?? '',
     result: props.filters.result ?? '',
+    type: props.filters.type ?? '',
+    section_id: props.filters.section_id ?? '',
+    unread: props.filters.unread ?? '',
 });
 
 const go = (extra = {}) => {
@@ -22,13 +34,27 @@ const go = (extra = {}) => {
 
 let timer;
 watch(() => f.q, () => { clearTimeout(timer); timer = setTimeout(() => go(), 350); });
-watch(() => [f.from, f.to, f.result], () => go());
+watch(() => [f.from, f.to, f.result, f.type, f.section_id, f.unread], () => go());
 
 const switchTab = (t) => router.get('/paulo/logs', { tab: t });
+
+const markAllRead = () => router.post('/paulo/activity/read', {}, { preserveScroll: true, preserveState: true });
 
 const fmt = (iso) => iso ? new Date(iso).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
 
 const sourceLabel = { chat: 'AI chat', grades: 'Grades', appointments: 'Appointments' };
+
+const tabs = [
+    { k: 'logins', l: 'Logins' },
+    { k: 'messages', l: 'Messages' },
+    { k: 'activity', l: 'Activity' },
+];
+
+const placeholder = computed(() => ({
+    logins: 'Search name or student number',
+    messages: 'Search name, number, or message',
+    activity: 'Search name, number, or details',
+}[props.tab]));
 
 const device = (ua) => {
     if (!ua) return '—';
@@ -40,32 +66,61 @@ const device = (ua) => {
 
 <template>
     <div class="p-4 md:p-6 space-y-4">
-        <div>
-            <h1 class="text-xl font-semibold text-slate-800">Logs</h1>
-            <p class="text-xs text-slate-500">Student logins and posted messages.</p>
+        <div class="flex items-start justify-between gap-3">
+            <div>
+                <h1 class="text-xl font-semibold text-slate-800">Logs</h1>
+                <p class="text-xs text-slate-500">Student logins, posted messages, and activity.</p>
+            </div>
+            <button
+                v-if="tab === 'activity' && unreadCount > 0"
+                @click="markAllRead"
+                class="px-3 py-1.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+            >Mark all read ({{ unreadCount }})</button>
         </div>
 
         <div class="flex gap-2">
             <button
-                v-for="t in [{ k: 'logins', l: 'Logins' }, { k: 'messages', l: 'Messages' }]"
+                v-for="t in tabs"
                 :key="t.k"
                 @click="switchTab(t.k)"
-                class="px-4 py-1.5 rounded-full text-sm font-medium border transition"
+                class="px-4 py-1.5 rounded-full text-sm font-medium border transition flex items-center gap-2"
                 :class="tab === t.k ? 'bg-[var(--navy)] text-white border-transparent' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
-            >{{ t.l }}</button>
+            >
+                {{ t.l }}
+                <span
+                    v-if="t.k === 'activity' && unreadCount > 0"
+                    class="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center"
+                >{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+            </button>
         </div>
 
         <div class="flex flex-wrap gap-2 items-center">
-            <input v-model="f.q" type="search" :placeholder="tab === 'logins' ? 'Search name or student number' : 'Search name, number, or message'"
+            <input v-model="f.q" type="search" :placeholder="placeholder"
                 class="px-3 py-1.5 text-sm rounded-lg border border-slate-200 bg-white w-64" />
             <input v-model="f.from" type="date" class="px-2 py-1.5 text-sm rounded-lg border border-slate-200 bg-white" />
             <span class="text-xs text-slate-400">to</span>
             <input v-model="f.to" type="date" class="px-2 py-1.5 text-sm rounded-lg border border-slate-200 bg-white" />
+
             <select v-if="tab === 'logins'" v-model="f.result" class="px-2 py-1.5 text-sm rounded-lg border border-slate-200 bg-white">
                 <option value="">All results</option>
                 <option value="success">Success</option>
                 <option value="failed">Failed</option>
             </select>
+
+            <template v-if="tab === 'activity'">
+                <select v-model="f.type" class="px-2 py-1.5 text-sm rounded-lg border border-slate-200 bg-white">
+                    <option value="">All activity</option>
+                    <option v-for="(t, key) in activityTypes" :key="key" :value="key">{{ t.label }}</option>
+                </select>
+                <select v-model="f.section_id" class="px-2 py-1.5 text-sm rounded-lg border border-slate-200 bg-white">
+                    <option value="">All sections</option>
+                    <option v-for="s in sections" :key="s.id" :value="s.id">{{ s.name }}</option>
+                </select>
+                <select v-model="f.unread" class="px-2 py-1.5 text-sm rounded-lg border border-slate-200 bg-white">
+                    <option value="">Read and unread</option>
+                    <option value="1">Unread only</option>
+                </select>
+            </template>
         </div>
 
         <div class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
@@ -98,7 +153,7 @@ const device = (ua) => {
                 </tbody>
             </table>
 
-            <table v-else class="w-full text-sm">
+            <table v-else-if="tab === 'messages'" class="w-full text-sm">
                 <thead class="text-left text-xs text-slate-500 bg-slate-50">
                     <tr><th class="px-3 py-2">When</th><th class="px-3 py-2">Posted by</th><th class="px-3 py-2">Section</th><th class="px-3 py-2">Message</th><th class="px-3 py-2">Status</th></tr>
                 </thead>
@@ -119,6 +174,41 @@ const device = (ua) => {
                         </td>
                     </tr>
                     <tr v-if="!rows.data.length"><td colspan="5" class="px-3 py-8 text-center text-slate-400">No messages found.</td></tr>
+                </tbody>
+            </table>
+
+            <table v-else class="w-full text-sm">
+                <thead class="text-left text-xs text-slate-500 bg-slate-50">
+                    <tr>
+                        <th class="px-3 py-2">When</th><th class="px-3 py-2">Student</th><th class="px-3 py-2">Section</th>
+                        <th class="px-3 py-2">Type</th><th class="px-3 py-2">Details</th><th class="px-3 py-2">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <tr v-for="r in rows.data" :key="r.id" :class="r.read ? '' : 'bg-amber-50/50'">
+                        <td class="px-3 py-2 whitespace-nowrap text-slate-600">
+                            <div>{{ fmt(r.at) }}</div>
+                            <div class="text-xs text-slate-400">{{ timeAgo(r.at) }}</div>
+                        </td>
+                        <td class="px-3 py-2">
+                            <div class="font-medium text-slate-700">{{ r.student_name ?? 'Deleted student' }}</div>
+                            <div class="text-xs text-slate-400">{{ r.student_number }}</div>
+                        </td>
+                        <td class="px-3 py-2 text-slate-600">{{ r.section ?? '—' }}</td>
+                        <td class="px-3 py-2 whitespace-nowrap">
+                            <span class="text-xs font-medium px-2 py-0.5 rounded-full" :class="activityTypes[r.type]?.cls ?? 'bg-slate-100 text-slate-600'">
+                                {{ activityTypes[r.type]?.label ?? r.type }}
+                            </span>
+                        </td>
+                        <td class="px-3 py-2 text-slate-700 max-w-md break-words">{{ r.summary }}</td>
+                        <td class="px-3 py-2">
+                            <span class="text-xs font-medium px-2 py-0.5 rounded-full"
+                                :class="r.read ? 'bg-slate-100 text-slate-500' : 'bg-amber-100 text-amber-700'">
+                                {{ r.read ? 'Read' : 'Unread' }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr v-if="!rows.data.length"><td colspan="6" class="px-3 py-8 text-center text-slate-400">No activity found.</td></tr>
                 </tbody>
             </table>
         </div>

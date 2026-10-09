@@ -61,9 +61,11 @@ class StudentDashboardController extends Controller
                 }
 
                 return [
+                    'id' => $student->id,
                     'name' => $student->full_name,
                     'grade' => round($weighted, 2),
                     'photo_url' => $student->photo_url,
+                    'frame' => $student->frame,
                 ];
             })
             ->sortByDesc('grade')

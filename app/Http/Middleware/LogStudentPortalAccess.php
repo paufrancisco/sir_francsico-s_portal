@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Student;
+use App\Models\StudentActivity;
 use App\Models\StudentLoginLog;
 use Closure;
 use Illuminate\Http\Request;
@@ -37,6 +38,19 @@ class LogStudentPortalAccess
                         'ip' => $request->ip(),
                         'user_agent' => mb_substr((string) $request->userAgent(), 0, 255),
                     ]);
+
+                    if ($ok && $student && $source === 'grades') {
+                        $payload = json_decode((string) $response->getContent(), true);
+                        $mustChange = is_array($payload) && ! empty($payload['must_change_password']);
+
+                        if (! $mustChange) {
+                            StudentActivity::record(
+                                'grades_viewed',
+                                $student,
+                                "{$student->full_name} viewed their grades."
+                            );
+                        }
+                    }
                 }
             }
         } catch (\Throwable $e) {

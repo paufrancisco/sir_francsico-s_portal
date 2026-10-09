@@ -160,7 +160,8 @@
                         <div class="md:col-span-2 flex flex-col items-center text-center min-h-0">
                             <div class="rank-ribbon" :class="rankRibbonClass(slideIndex)">TOP {{ currentSlide.rank }}</div>
                             <div
-                                class="relative w-full flex-1 min-h-[12rem] rounded-2xl overflow-hidden ring-4 ring-[var(--gold)] shadow-lg"
+                                class="relative w-full flex-1 min-h-[12rem] rounded-2xl overflow-hidden shadow-lg frame-ring"
+                                :class="'frame-' + frameFor(currentSlide)"
                                 @mouseenter="slidePaused = true"
                                 @mouseleave="slidePaused = false"
                             >
@@ -186,6 +187,11 @@
                                 </button>
                                 <button type="button" @click="step(1)" class="slide-btn absolute right-3 top-1/2 -translate-y-1/2 z-20" aria-label="Next photo">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 18l6-6-6-6"/></svg>
+                                </button>
+
+                                <!-- Change photo frame -->
+                                <button type="button" @click.stop="openFrameModal()" class="slide-btn absolute right-3 top-3 z-20" title="Change photo frame" aria-label="Change photo frame">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
                                 </button>
 
                                 <!-- Messages for the current top (changes with each slide) -->
@@ -749,6 +755,47 @@
                 </div>
             </div>
 
+            <!-- Photo frame modal (sign-in required) -->
+            <div v-if="frameModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+                <div class="surface-card w-full max-w-sm shadow-xl p-5" style="border-radius: 1.5rem;">
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">Choose your photo frame</div>
+                        <button @click="closeFrameModal" class="text-[var(--text-muted)] hover:text-[var(--text-body)]" aria-label="Close">✕</button>
+                    </div>
+
+                    <form v-if="frameStep === 'login'" @submit.prevent="signInForFrame" class="space-y-3">
+                        <p class="text-xs text-[var(--text-muted)] mb-3">Sign in first. The frame applies to your own photo card.</p>
+                        <input v-model="frameForm.student_number" type="text" placeholder="Student number" class="portal-input" />
+                        <div class="flex items-center gap-2">
+                            <input v-model="frameForm.password" :type="showFramePassword ? 'text' : 'password'" placeholder="Password" class="portal-input" />
+                            <button type="button" @click="showFramePassword = !showFramePassword" class="text-xs text-[var(--text-muted)] shrink-0">{{ showFramePassword ? 'Hide' : 'Show' }}</button>
+                        </div>
+                        <p v-if="frameError" class="text-xs" style="color: var(--coral);">{{ frameError }}</p>
+                        <button type="submit" :disabled="frameLoading" class="w-full text-white text-sm font-semibold py-2 rounded-xl disabled:opacity-60" style="background:var(--navy);">
+                            {{ frameLoading ? 'Signing in...' : 'Continue' }}
+                        </button>
+                    </form>
+
+                    <div v-else class="space-y-3">
+                        <p class="text-xs text-[var(--text-muted)]">Hi {{ frameOwner?.name }}. Pick a frame, then save.</p>
+                        <div class="grid grid-cols-4 gap-2">
+                            <button v-for="f in FRAME_OPTIONS" :key="f.key" type="button" @click="selectedFrame = f.key" class="flex flex-col items-center gap-1">
+                                <span class="block w-full h-12 rounded-xl frame-ring" :class="['frame-' + f.key, selectedFrame === f.key ? 'frame-picked' : '']"></span>
+                                <span class="text-[11px] text-[var(--text-muted)]">{{ f.label }}</span>
+                            </button>
+                        </div>
+                        <p v-if="frameError" class="text-xs" style="color: var(--coral);">{{ frameError }}</p>
+                        <p v-if="frameSuccess" class="text-xs font-medium" style="color: var(--teal, #1a7f37);">{{ frameSuccess }}</p>
+                        <div class="flex gap-2">
+                            <button type="button" @click="saveFrame" :disabled="frameLoading" class="flex-1 text-white text-sm font-semibold py-2 rounded-xl disabled:opacity-60" style="background:var(--navy);">
+                                {{ frameLoading ? 'Saving...' : 'Save frame' }}
+                            </button>
+                            <button type="button" @click="closeFrameModal" class="px-4 text-sm rounded-xl border border-[var(--text-muted)]/30 text-[var(--text-body)]">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Message a classmate modal (sign-in required) -->
             <div v-if="msgModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
                 <div class="surface-card w-full max-w-sm shadow-xl p-5" style="border-radius: 1.5rem;">
@@ -884,6 +931,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useDashboardState } from '../../composables/useDashboardState';
 import { useClassmateMessages, MESSAGE_MAX_LENGTH } from '../../composables/useClassmateMessages';
+import { useStudentFrame, frameFor, FRAME_OPTIONS } from '../../composables/useStudentFrame';
 
 const props = defineProps({
     sections: { type: Array, default: () => [] },
@@ -954,6 +1002,13 @@ const {
     editingMessageId, editAction, editForm, editError, editLoading,
     openEditForm, openDeleteForm, cancelEditForm, submitEditMessage, submitDeleteMessage,
 } = useClassmateMessages();
+
+// Photo frame picker modal
+const {
+    frameModalOpen, frameStep, frameLoading, frameError, frameSuccess,
+    showFramePassword, frameForm, selectedFrame, frameOwner,
+    openFrameModal, closeFrameModal, signInForFrame, saveFrame,
+} = useStudentFrame();
 
 // Custom section dropdown (replaces native <select> so we control styling fully)
 const sectionMenuOpen = ref(false);
@@ -1384,5 +1439,150 @@ onBeforeUnmount(() => {
     .blob-a, .blob-b { animation: none; }
     .slide-enter-active, .slide-leave-active { transition: none; }
     .sidebar { transition: none; }
+}
+/* ---- Photo frames v2 ---- */
+.frame-ring {
+    position: relative;
+    overflow: hidden;
+    border: 4px solid transparent;
+    background:
+        linear-gradient(var(--navy-deep), var(--navy-deep)) padding-box,
+        var(--frame-fill) border-box;
+    background-size: 100% 100%, 300% 300%;
+}
+.frame-picked { outline: 2px solid var(--text-heading, #111); outline-offset: 2px; }
+
+@keyframes frame-pulse {
+    from { box-shadow: 0 0 8px var(--glow), 0 0 18px var(--glow2); }
+    to { box-shadow: 0 0 18px var(--glow), 0 0 40px var(--glow2); }
+}
+@keyframes frame-shift {
+    0% { background-position: 0 0, 0% 50%; }
+    100% { background-position: 0 0, 300% 50%; }
+}
+@keyframes frame-rise {
+    0% { background-position: 0 0, 50% 0%; }
+    100% { background-position: 0 0, 50% 300%; }
+}
+@keyframes frame-sweep {
+    0% { background-position: 0 0; }
+    60%, 100% { background-position: 100% 0; }
+}
+
+/* Light sweep across the photo */
+.frame-gold::after, .frame-ice::after, .frame-royal::after,
+.frame-aurora::after, .frame-rainbow::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.28) 50%, transparent 60%);
+    background-size: 250% 100%;
+    background-repeat: no-repeat;
+    animation: frame-sweep 3.5s ease-in-out infinite;
+}
+
+/* Flame: rising border, flickering glow, fire tongues, embers */
+@keyframes flame-lick {
+    0% { transform: scaleY(0.8) skewX(-3deg); opacity: 0.85; }
+    100% { transform: scaleY(1.15) skewX(3deg); opacity: 1; }
+}
+@keyframes ember-rise {
+    to { background-position: 10px -90px, 40px -130px, 0 -10px; }
+}
+.frame-flame {
+    --frame-fill: linear-gradient(0deg, #ff3d00, #ff9100, #ffd600, #ff9100, #ff3d00);
+    --glow: rgba(255, 120, 0, 0.9);
+    --glow2: rgba(255, 50, 0, 0.55);
+    animation: frame-rise 1.6s linear infinite, frame-pulse 0.55s ease-in-out infinite alternate;
+}
+.frame-flame::after {
+    content: '';
+    position: absolute;
+    left: -5%;
+    right: -5%;
+    bottom: -6px;
+    height: 45%;
+    z-index: 5;
+    pointer-events: none;
+    filter: blur(5px);
+    mix-blend-mode: screen;
+    transform-origin: 50% 100%;
+    animation: flame-lick 0.7s ease-in-out infinite alternate;
+    background:
+        radial-gradient(ellipse 8% 85% at 6% 100%, #ffe45c 0%, rgba(255, 120, 0, 0.85) 40%, rgba(255, 50, 0, 0) 75%),
+        radial-gradient(ellipse 10% 100% at 20% 100%, #ffe45c 0%, rgba(255, 120, 0, 0.85) 40%, rgba(255, 50, 0, 0) 75%),
+        radial-gradient(ellipse 9% 80% at 34% 100%, #ffe45c 0%, rgba(255, 120, 0, 0.85) 40%, rgba(255, 50, 0, 0) 75%),
+        radial-gradient(ellipse 11% 100% at 48% 100%, #ffe45c 0%, rgba(255, 120, 0, 0.85) 40%, rgba(255, 50, 0, 0) 75%),
+        radial-gradient(ellipse 9% 90% at 62% 100%, #ffe45c 0%, rgba(255, 120, 0, 0.85) 40%, rgba(255, 50, 0, 0) 75%),
+        radial-gradient(ellipse 10% 95% at 76% 100%, #ffe45c 0%, rgba(255, 120, 0, 0.85) 40%, rgba(255, 50, 0, 0) 75%),
+        radial-gradient(ellipse 8% 85% at 90% 100%, #ffe45c 0%, rgba(255, 120, 0, 0.85) 40%, rgba(255, 50, 0, 0) 75%),
+        linear-gradient(0deg, rgba(255, 80, 0, 0.55), transparent 60%);
+}
+.frame-flame::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0.85;
+    background-image:
+        radial-gradient(circle, #ffd600 0 2px, transparent 3px),
+        radial-gradient(circle, #ff9100 0 1.5px, transparent 2.5px),
+        radial-gradient(circle, #ffe08a 0 1px, transparent 2px);
+    background-size: 70px 90px, 110px 130px, 50px 70px;
+    background-position: 10px 0, 40px 30px, 0 60px;
+    -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 85%);
+    mask-image: linear-gradient(to top, #000 0%, transparent 85%);
+    animation: ember-rise 3s linear infinite;
+}
+
+/* Other frames */
+.frame-gold {
+    --frame-fill: linear-gradient(135deg, var(--gold), var(--gold));
+    --glow: var(--gold);
+    --glow2: transparent;
+    animation: frame-pulse 2.4s ease-in-out infinite alternate;
+}
+.frame-aurora {
+    --frame-fill: linear-gradient(135deg, #00f5a0, #00d9f5, #7b61ff, #00f5a0);
+    --glow: rgba(0, 245, 160, 0.6);
+    --glow2: rgba(123, 97, 255, 0.4);
+    animation: frame-shift 5s linear infinite, frame-pulse 3s ease-in-out infinite alternate;
+}
+.frame-neon {
+    --frame-fill: linear-gradient(135deg, #39ff14, #39ff14);
+    --glow: #39ff14;
+    --glow2: rgba(57, 255, 20, 0.45);
+    animation: frame-pulse 0.9s ease-in-out infinite alternate;
+}
+.frame-ice {
+    --frame-fill: linear-gradient(135deg, #e0f7ff, #7fd8ff, #e0f7ff);
+    --glow: rgba(127, 216, 255, 0.8);
+    --glow2: rgba(224, 247, 255, 0.4);
+    animation: frame-pulse 2.6s ease-in-out infinite alternate;
+}
+.frame-rose {
+    --frame-fill: linear-gradient(135deg, #ff7eb3, #ffc1d9, #ff4d94);
+    --glow: rgba(255, 126, 179, 0.75);
+    --glow2: rgba(255, 77, 148, 0.4);
+    animation: frame-pulse 1.8s ease-in-out infinite alternate;
+}
+.frame-royal {
+    --frame-fill: linear-gradient(135deg, #6a11cb, #d4af37, #6a11cb);
+    --glow: rgba(212, 175, 55, 0.7);
+    --glow2: rgba(106, 17, 203, 0.5);
+    animation: frame-shift 6s linear infinite, frame-pulse 2.4s ease-in-out infinite alternate;
+}
+.frame-rainbow {
+    --frame-fill: linear-gradient(135deg, #ff0000, #ff9a00, #ffee00, #2bd600, #00b3ff, #7a00ff, #ff0000);
+    --glow: rgba(255, 255, 255, 0.5);
+    --glow2: rgba(122, 0, 255, 0.4);
+    animation: frame-shift 3s linear infinite, frame-pulse 2s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .frame-ring, .frame-ring::before, .frame-ring::after { animation: none !important; }
 }
 </style>

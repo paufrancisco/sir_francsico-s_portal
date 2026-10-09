@@ -119,6 +119,7 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
 
 
     Route::get('logs', [LogController::class, 'index'])->name('logs.index');
+    Route::post('activity/read', [LogController::class, 'markRead'])->name('activity.read');
     // Faculty availability (Set an appointment feature) — dito mo ina-admin yung available times mo
     Route::get('availability', [AdminFacultyAvailabilityController::class, 'index'])->name('availability.index');
     Route::post('availability', [AdminFacultyAvailabilityController::class, 'store'])->name('availability.store');
@@ -166,6 +167,9 @@ Route::delete('/portal/classmate-messages/{classmateMessage}', [ClassmateMessage
 
 
 
+// Student card frame: sign in, then choose (no frame in body = verify only)
+Route::post('/portal/student-frame', \App\Http\Controllers\StudentFrameController::class)
+    ->middleware('throttle:portal-verify');
 Route::get('/', [StudentDashboardController::class, 'index']);
 
 Route::get('/dashboard', function () {

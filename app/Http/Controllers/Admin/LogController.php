@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ClassmateMessage;
+use App\Models\Section;
+use App\Models\StudentActivity;
 use App\Models\StudentLoginLog;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -12,18 +14,29 @@ class LogController extends Controller
 {
     public function index(Request $request)
     {
-        $tab = $request->query('tab') === 'messages' ? 'messages' : 'logins';
+        $tab = in_array($request->query('tab'), ['messages', 'activity'], true)
+            ? $request->query('tab')
+            : 'logins';
         $q = trim((string) $request->query('q', ''));
         $from = $request->query('from');
         $to = $request->query('to');
+        $type = $request->query('type');
+        $sectionId = $request->query('section_id');
+        $unreadOnly = $request->query('unread') === '1' ? '1' : null;
+        $sections = [];
+
+        $like = fn ($builder, string $column, string $term, bool $or = false) => $builder->{$or ? 'orWhereRaw' : 'whereRaw'}(
+            "LOWER({$column}) LIKE ?",
+            ['%' . mb_strtolower($term) . '%']
+        );
 
         if ($tab === 'logins') {
             $query = StudentLoginLog::with('student.section')->latest('created_at')->latest('id');
 
             if ($q !== '') {
-                $query->where(function ($w) use ($q) {
-                    $w->where('student_number', 'like', "%{$q}%")
-                      ->orWhereHas('student', fn ($s) => $s->where('full_name', 'like', "%{$q}%"));
+                $query->where(function ($w) use ($q, $like) {
+                    $like($w, 'student_login_logs.student_number', $q);
+                    $w->orWhereHas('student', fn ($s) => $like($s, 'students.full_name', $q));
                 });
             }
             if ($request->query('result') === 'failed') $query->where('success', false);
@@ -42,14 +55,18 @@ class LogController extends Controller
                 'user_agent' => $l->user_agent,
                 'at' => $l->created_at?->toIso8601String(),
             ]);
-        } else {
+        } elseif ($tab === 'messages') {
             $query = ClassmateMessage::with('sender.section')->latest('created_at')->latest('id');
 
             if ($q !== '') {
-                $query->where(function ($w) use ($q) {
-                    $w->where('body', 'like', "%{$q}%")
-                      ->orWhereHas('sender', fn ($s) => $s->where('full_name', 'like', "%{$q}%")
-                          ->orWhere('student_number', 'like', "%{$q}%"));
+                $query->where(function ($w) use ($q, $like) {
+                    $like($w, 'classmate_messages.body', $q);
+                    $w->orWhereHas('sender', function ($s) use ($q, $like) {
+                        $s->where(function ($x) use ($q, $like) {
+                            $like($x, 'students.full_name', $q);
+                            $like($x, 'students.student_number', $q, true);
+                        });
+                    });
                 });
             }
             if ($from) $query->whereDate('created_at', '>=', $from);
@@ -64,6 +81,38 @@ class LogController extends Controller
                 'hidden' => (bool) $m->hidden_at,
                 'at' => $m->created_at?->toIso8601String(),
             ]);
+        } else {
+            $query = StudentActivity::with('student.section')->latest('created_at')->latest('id');
+
+            if ($q !== '') {
+                $query->where(function ($w) use ($q, $like) {
+                    $like($w, 'student_activities.summary', $q);
+                    $w->orWhereHas('student', function ($s) use ($q, $like) {
+                        $s->where(function ($x) use ($q, $like) {
+                            $like($x, 'students.full_name', $q);
+                            $like($x, 'students.student_number', $q, true);
+                        });
+                    });
+                });
+            }
+            if ($type && in_array($type, StudentActivity::TYPES, true)) $query->where('type', $type);
+            if ($sectionId !== null && $sectionId !== '') $query->where('section_id', (int) $sectionId);
+            if ($unreadOnly) $query->whereNull('read_at');
+            if ($from) $query->whereDate('created_at', '>=', $from);
+            if ($to) $query->whereDate('created_at', '<=', $to);
+
+            $sections = Section::orderBy('name')->get(['id', 'name']);
+
+            $rows = $query->paginate(25)->withQueryString()->through(fn ($a) => [
+                'id' => $a->id,
+                'type' => $a->type,
+                'summary' => $a->summary,
+                'student_name' => $a->student?->full_name,
+                'student_number' => $a->student?->student_number,
+                'section' => $a->student?->section?->name,
+                'read' => (bool) $a->read_at,
+                'at' => $a->created_at?->toIso8601String(),
+            ]);
         }
 
         return Inertia::render('Admin/Logs/Index', [
@@ -73,8 +122,25 @@ class LogController extends Controller
                 'from' => $from,
                 'to' => $to,
                 'result' => $request->query('result'),
+                'type' => $type,
+                'section_id' => $sectionId,
+                'unread' => $unreadOnly,
             ],
             'rows' => $rows,
+            'sections' => $sections,
         ]);
+    }
+
+    public function markRead(Request $request)
+    {
+        $query = StudentActivity::whereNull('read_at');
+
+        if (is_array($request->input('ids'))) {
+            $query->whereIn('id', $request->input('ids'));
+        }
+
+        $query->update(['read_at' => now()]);
+
+        return back();
     }
 }

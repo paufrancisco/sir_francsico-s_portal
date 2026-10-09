@@ -19,7 +19,7 @@ class Student extends Authenticatable
     protected $fillable = [
         'student_number', 'full_name', 'section_id',
         'password', 'password_changed_at', 'aura_points',
-        'photo_path',
+        'photo_path', 'frame',
     ];
 
     public function seats()

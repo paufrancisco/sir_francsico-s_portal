@@ -97,7 +97,13 @@ const toggle = () => {
 };
 
 const page = usePage();
-const isActive = (href) => (href === '/paulo' ? page.url === '/paulo' : page.url.startsWith(href));
+const isActive = (href) => {
+    if (href === '/paulo') return page.url === '/paulo';
+    const onGrades = page.url.includes('tab=grades');
+    if (href.includes('tab=grades')) return onGrades && page.url.startsWith('/paulo/sections');
+    if (href === '/paulo/sections') return page.url.startsWith(href) && !onGrades;
+    return page.url.startsWith(href);
+};
 
 const userName = ref(page.props.auth?.user?.name ?? 'Admin');
 const userInitials = ref(
@@ -122,6 +128,19 @@ onUnmounted(() => document.removeEventListener('click', closeOnOutsideClick));
 const navItems = [
     { href: '/paulo', label: 'Dashboard', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>' },
     { href: '/paulo/sections', label: 'Sections', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
+    {
+        // Goes straight to the Grades tab of the last opened section
+        get href() {
+            try {
+                const id = localStorage.getItem('lastSectionId');
+                return id ? `/paulo/sections/${id}?tab=grades` : '/paulo/sections?tab=grades';
+            } catch (e) {
+                return '/paulo/sections?tab=grades';
+            }
+        },
+        label: 'Grades',
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>',
+    },
     { href: '/paulo/grade-corrections', label: 'Grade Correction', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' },
     { href: '/paulo/availability', label: 'Appointments', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/><path d="M12 14v4M10 16h4"/></svg>' },
     { href: '/paulo/seating', label: 'Seating Arrangement', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' },

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Section;
 use App\Models\StudentActivity;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -25,7 +26,23 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
             ],
             'activity' => fn () => $this->activity($request),
+            'adminSections' => fn () => $this->adminSections($request),
         ]);
+    }
+
+    private function adminSections(Request $request): array
+    {
+        if (! $request->user() || ! $request->is('paulo', 'paulo/*')) {
+            return [];
+        }
+
+        try {
+            return Section::orderBy('name')->get(['id', 'name'])->toArray();
+        } catch (\Throwable $e) {
+            report($e);
+
+            return [];
+        }
     }
 
     private function activity(Request $request): ?array

@@ -1,18 +1,18 @@
 <template>
     <div class="space-y-3">
         <div class="flex items-center justify-between">
-            <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+            <div class="flex items-center gap-1 bg-slate-500/15 rounded-lg p-1 w-fit max-w-full overflow-x-auto">
                 <button
                     @click="topicView = 'active'"
-                    class="text-xs font-medium px-4 py-1.5 rounded-md transition"
-                    :class="topicView === 'active' ? 'bg-white text-[#003399] shadow-sm' : 'text-slate-500'"
+                    class="text-xs font-medium px-4 py-1.5 rounded-md transition whitespace-nowrap"
+                    :class="topicView === 'active' ? 'bg-[#003399] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-500/15'"
                 >
                     Active
                 </button>
                 <button
                     @click="topicView = 'archived'"
-                    class="text-xs font-medium px-4 py-1.5 rounded-md transition"
-                    :class="topicView === 'archived' ? 'bg-white text-[#003399] shadow-sm' : 'text-slate-500'"
+                    class="text-xs font-medium px-4 py-1.5 rounded-md transition whitespace-nowrap"
+                    :class="topicView === 'archived' ? 'bg-[#003399] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-500/15'"
                 >
                     Archived
                 </button>
@@ -28,21 +28,21 @@
 
         <!-- Period tabs -->
         <div class="flex items-center gap-2">
-            <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+            <div class="flex items-center gap-1 bg-slate-500/15 rounded-lg p-1 w-fit max-w-full overflow-x-auto">
                 <button
                     v-for="p in periods"
                     :key="p.value"
                     @click="switchPeriod(p.value)"
                     :disabled="periodLoading"
-                    class="text-xs font-medium px-4 py-1.5 rounded-md transition disabled:cursor-not-allowed"
-                    :class="currentPeriod === p.value ? 'bg-white text-[#003399] shadow-sm' : 'text-slate-500'"
+                    class="text-xs font-medium px-4 py-1.5 rounded-md transition whitespace-nowrap disabled:cursor-not-allowed"
+                    :class="currentPeriod === p.value ? 'bg-[#003399] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-500/15'"
                 >
                     {{ p.label }}
                 </button>
             </div>
             <svg
                 v-if="periodLoading"
-                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" class="animate-spin text-[#003399]"
+                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" class="animate-spin text-sky-500"
             >
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" stroke-linecap="round"/>
             </svg>

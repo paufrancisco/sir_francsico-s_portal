@@ -17,7 +17,38 @@
                     Back to sections
                 </Link>
                 <div class="flex items-center gap-2">
-                    <div class="text-lg font-semibold text-slate-800">{{ section.name }}</div>
+                    <div class="relative" ref="sectionMenuRef">
+                        <button
+                            type="button"
+                            @click="sectionMenuOpen = !sectionMenuOpen"
+                            title="Switch section"
+                            class="flex items-center gap-1.5 text-lg font-semibold text-slate-800 hover:text-[#003399] transition"
+                        >
+                            {{ section.name }}
+                            <svg
+                                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round"
+                                class="transition-transform"
+                                :class="sectionMenuOpen ? 'rotate-180' : ''"
+                            >
+                                <path d="M6 9l6 6 6-6" />
+                            </svg>
+                        </button>
+                        <div
+                            v-if="sectionMenuOpen"
+                            class="absolute left-0 mt-2 min-w-[12rem] max-h-72 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-30"
+                        >
+                            <Link
+                                v-for="s in ($page.props.adminSections ?? [])"
+                                :key="s.id"
+                                :href="sectionHref(s.id)"
+                                class="block px-4 py-2 text-sm hover:bg-slate-50 truncate"
+                                :class="s.id === section.id ? 'text-[#003399] font-medium' : 'text-slate-600'"
+                            >
+                                {{ s.name }}
+                            </Link>
+                        </div>
+                    </div>
                     <span v-if="section.subject" class="text-sm font-medium text-slate-400">— {{ section.subject }}</span>
                 </div>
                 <div class="text-xs text-slate-400">{{ students.length }} students</div>
@@ -64,7 +95,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { usePeriodSwitcher } from '@/composables/usePeriodSwitcher';
@@ -80,7 +111,32 @@ const props = defineProps({
     currentPeriod: { type: String, default: 'prelim' },
 });
 
-const activeTab = ref('masterlist');
+const activeTab = ref(
+    new URLSearchParams(window.location.search).get('tab') === 'grades' ? 'grades' : 'masterlist'
+);
+
+// Remember the last opened section for the sidebar "Grades" shortcut
+try {
+    const m = window.location.pathname.match(/\/paulo\/sections\/(\d+)/);
+    if (m) localStorage.setItem('lastSectionId', m[1]);
+} catch (e) { /* storage unavailable */ }
+
+// ---- Section switcher (dropdown sa section name) ----
+const sectionMenuOpen = ref(false);
+const sectionMenuRef = ref(null);
+
+// Stay on the tab that is currently open
+const sectionHref = (id) =>
+    '/paulo/sections/' + id + (activeTab.value === 'grades' ? '?tab=grades' : '');
+
+const closeSectionMenu = (e) => {
+    if (sectionMenuRef.value && !sectionMenuRef.value.contains(e.target)) {
+        sectionMenuOpen.value = false;
+    }
+};
+onMounted(() => document.addEventListener('click', closeSectionMenu));
+onUnmounted(() => document.removeEventListener('click', closeSectionMenu));
+// ---- End section switcher ----
 
 // Period tabs (Prelim / Midterm / Pre-Final / Finals) are shared by
 // the Grades tab, so the switcher lives here and gets passed down as a prop.

@@ -188,12 +188,21 @@ class SectionController extends Controller
         // Status column reflects.
         $corrections = GradeCorrection::where('section_id', $section->id)
             ->where('period', $period)
+            ->where('archived', false)
             ->latest()
             ->get()
             ->unique('student_id')
             ->keyBy('student_id');
 
-        $rows = $students->map(function ($student) use ($allGrades, $items, $weights, $corrections) {
+        // Full correction history per student for this section + period (newest first)
+        $history = GradeCorrection::where('section_id', $section->id)
+            ->where('period', $period)
+            ->where('archived', false)
+            ->latest()->latest('id')
+            ->get()
+            ->groupBy('student_id');
+
+        $rows = $students->map(function ($student) use ($allGrades, $items, $weights, $corrections, $history) {
             $studentGrades = $allGrades->where('student_id', $student->id);
 
             $find = fn ($item) => $studentGrades->first(
@@ -250,6 +259,15 @@ class SectionController extends Controller
                 'category_totals' => $categoryTotals,
                 'total_percentage' => $total,
                 'equivalent' => $hasGrades ? $this->transmute($total) : null,
+                'correction_history' => $history->get($student->id, collect())->map(fn ($h) => [
+                    'id' => $h->id,
+                    'type' => $h->type,
+                    'status' => $h->status,
+                    'decision' => $h->decision,
+                    'notes' => $h->notes,
+                    'created_at' => $h->created_at,
+                    'resolved_at' => $h->resolved_at,
+                ])->values(),
                 'pending_correction' => $correction ? [
                     'id' => $correction->id,
                     'type' => $correction->type,

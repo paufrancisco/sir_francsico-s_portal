@@ -8,6 +8,15 @@
             >
                 Clear grades ({{ selectedGradeRows.length }})
             </button>
+            <button
+                v-if="selectedGradeRows.length > 0 && clearableHistoryIds.length > 0"
+                type="button"
+                @click="clearSelectedHistory"
+                :disabled="clearingHistory"
+                class="bg-slate-500/15 text-slate-600 text-xs font-medium px-4 py-2 rounded-lg hover:bg-slate-500/25 transition disabled:opacity-50"
+            >
+                {{ clearingHistory ? 'Clearing...' : 'Clear history (' + clearableHistoryIds.length + ')' }}
+            </button>
             <label class="bg-[#003399] text-white text-xs font-medium px-4 py-2 rounded-lg cursor-pointer" :class="{ 'opacity-50 cursor-not-allowed': periodLoading }">
                 {{ uploading ? 'Uploading...' : periodLoading ? 'Loading...' : 'Import grades (Excel)' }}
                 <input type="file" accept=".xlsx,.xls,.csv" class="hidden" @change="uploadGrades" :disabled="uploading || periodLoading" />
@@ -19,21 +28,21 @@
 
         <!-- Period tabs (view only) -->
         <div class="flex items-center gap-2">
-            <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+            <div class="flex items-center gap-1 bg-slate-500/15 rounded-lg p-1 w-fit max-w-full overflow-x-auto">
                 <button
                     v-for="p in periods"
                     :key="p.value"
                     @click="switchPeriod(p.value)"
                     :disabled="periodLoading"
-                    class="text-xs font-medium px-4 py-1.5 rounded-md transition disabled:cursor-not-allowed"
-                    :class="currentPeriod === p.value ? 'bg-white text-[#003399] shadow-sm' : 'text-slate-500'"
+                    class="text-xs font-medium px-4 py-1.5 rounded-md transition whitespace-nowrap disabled:cursor-not-allowed"
+                    :class="currentPeriod === p.value ? 'bg-[#003399] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-500/15'"
                 >
                     {{ p.label }}
                 </button>
             </div>
             <svg
                 v-if="periodLoading"
-                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" class="animate-spin text-[#003399]"
+                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" class="animate-spin text-sky-500"
             >
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" stroke-linecap="round"/>
             </svg>
@@ -98,7 +107,7 @@
                                 class="rounded border-slate-300"
                             />
                         </th>
-                        <th rowspan="2" class="bg-slate-50 px-3 py-2 text-left">Rank</th>
+                        <th rowspan="2" class="bg-slate-50 px-3 py-2 text-left">{{ showTrueRank ? 'Rank' : '#' }}</th>
                         <th rowspan="2" class="bg-slate-50 px-3 py-2 text-left">ID No.</th>
                         <th rowspan="2" class="bg-slate-50 px-3 py-2 text-left">Name</th>
 
@@ -181,7 +190,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="row in sortedGradesBreakdown" :key="row.id" class="border-t border-slate-100">
+                    <tr v-for="(row, idx) in sortedGradesBreakdown" :key="row.id" class="border-t border-slate-100">
                         <td class="px-3 py-2">
                             <input
                                 type="checkbox"
@@ -190,7 +199,7 @@
                                 class="rounded border-slate-300"
                             />
                         </td>
-                        <td class="px-3 py-2 text-slate-500">{{ row.rank }}</td>
+                        <td class="px-3 py-2 text-slate-500">{{ showTrueRank ? row.rank : idx + 1 }}</td>
                         <td class="px-3 py-2 text-slate-500 whitespace-nowrap">{{ row.student_number }}</td>
                         <td class="px-3 py-2 text-slate-700 font-medium whitespace-nowrap">
                             <span class="inline-flex items-center gap-1.5">
@@ -289,6 +298,15 @@
                                 {{ correctionBadgeLabel(row.pending_correction) }}
                             </button>
                             <span v-else class="text-xs text-slate-300">—</span>
+                            <button
+                                v-if="row.correction_history?.length"
+                                type="button"
+                                @click="openHistory(row)"
+                                title="View status history"
+                                class="ml-1.5 p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-500/15 transition align-middle"
+                            >
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                            </button>
                         </td>
                         <td class="px-3 py-2">
                             <div class="flex items-center justify-center gap-2">
@@ -380,6 +398,13 @@
             </div>
         </div>
 
+        <GradeCorrectionHistoryModal
+            :open="historyOpen"
+            :student-name="historyRow?.name ?? ''"
+            :history="historyRow?.correction_history ?? []"
+            @close="historyOpen = false"
+        />
+
         <GradeCorrectionModal
             :open="correctionModalOpen"
             :loading="correctionLoadingGrades"
@@ -402,9 +427,12 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import axios from 'axios';
+import { router } from '@inertiajs/vue3';
 import { useGradesTab } from '@/composables/useGradesTab';
 import { useGradeCorrections } from '@/composables/useGradeCorrections';
 import GradeCorrectionModal from './GradeCorrectionModal.vue';
+import GradeCorrectionHistoryModal from './GradeCorrectionHistoryModal.vue';
 
 const props = defineProps({
     section: Object,
@@ -464,6 +492,42 @@ const {
     rejectCorrectionInline,
 } = useGradeCorrections(sectionId, currentPeriodRef);
 
+// ---- Status history modal ----
+const historyOpen = ref(false);
+const historyRow = ref(null);
+const openHistory = (row) => {
+    historyRow.value = row;
+    historyOpen.value = true;
+};
+
+// ---- Bulk clear history (archive, hindi delete) ----
+// Resolved entries lang ng mga naka-check na estudyante; Pending ay hindi ginagalaw.
+const clearableHistoryIds = computed(() => {
+    const selected = new Set(selectedGradeRows.value);
+    return props.gradesBreakdown
+        .filter((r) => selected.has(r.id))
+        .flatMap((r) => r.correction_history ?? [])
+        .filter((h) => h.status !== 'pending')
+        .map((h) => h.id);
+});
+const clearingHistory = ref(false);
+
+const clearSelectedHistory = async () => {
+    const ids = clearableHistoryIds.value;
+    if (!ids.length) return;
+    if (!confirm('Clear the history of ' + selectedGradeRows.value.length + ' selected student(s)? Pending requests are kept. Cleared entries move to the Archived tab in Grade Corrections and can be restored there.')) return;
+
+    clearingHistory.value = true;
+    try {
+        await axios.post('/paulo/grade-corrections/archive', { ids });
+        router.reload({ only: ['gradesBreakdown'] });
+    } catch (e) {
+        alert(e.response?.data?.message ?? 'Failed to clear history, please try again.');
+    } finally {
+        clearingHistory.value = false;
+    }
+};
+
 // ---- Excel-style table helpers ----
 // Same as Excel: always PTL1-4, Q1-4 and EX, even if empty.
 // Also adds any other item that exists in the database but isn't in the standard list.
@@ -506,6 +570,9 @@ const sortedGradesBreakdown = computed(() => {
             return rows.sort((a, b) => a.rank - b.rank);
     }
 });
+
+// Totoong rank (may tabla) kapag rank/grade-high ang sort; position lang sa iba.
+const showTrueRank = computed(() => ['rank', 'grade_desc'].includes(sortOrder.value));
 
 const keyOf = (item) => item.category + '|' + item.title;
 

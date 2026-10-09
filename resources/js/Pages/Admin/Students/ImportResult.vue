@@ -11,6 +11,19 @@
                 Passwords have been saved — you can view them anytime in this section's master list (click "Show passwords").
             </div>
 
+            <div class="bg-slate-50 text-slate-600 text-xs rounded-lg px-4 py-3">
+                {{ imported.length }} new &middot;
+                {{ $page.props.updated?.length ?? 0 }} already in this section (photos, passwords and grades untouched) &middot;
+                {{ $page.props.skipped?.length ?? 0 }} skipped
+            </div>
+
+            <div v-if="$page.props.skipped?.length" class="bg-[#FBEAEA] text-[#9B1C1C] text-xs rounded-lg px-4 py-3 space-y-1">
+                <div class="font-medium">Skipped (hindi inilipat, nasa ibang section na)</div>
+                <div v-for="s in $page.props.skipped" :key="s.student_number">
+                    {{ s.student_number }} &mdash; {{ s.full_name }}
+                </div>
+            </div>
+
             <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                 <table class="w-full text-sm">
                     <thead>
@@ -24,7 +37,7 @@
                         <tr v-for="row in imported" :key="row.student_number" class="border-t border-slate-100">
                             <td class="px-4 py-2 text-slate-700">{{ row.student_number }}</td>
                             <td class="px-4 py-2 text-slate-700">{{ row.full_name }}</td>
-                            <td class="px-4 py-2 font-mono text-[#003399]">{{ row.password }}</td>
+                            <td class="px-4 py-2 font-mono text-[#003399]">{{ row.password ?? '—' }}</td>
                         </tr>
                     </tbody>
                 </table>

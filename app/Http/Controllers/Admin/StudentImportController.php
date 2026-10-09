@@ -29,6 +29,8 @@ class StudentImportController extends Controller
 
         return Inertia::render('Admin/Students/ImportResult', [
             'imported' => $import->imported,
+            'updated' => $import->updated,
+            'skipped' => $import->skipped,
             'section' => $section,
         ]);
     }

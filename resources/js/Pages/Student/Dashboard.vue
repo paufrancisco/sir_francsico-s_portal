@@ -160,11 +160,12 @@
                         <div class="md:col-span-2 flex flex-col items-center text-center min-h-0">
                             <div class="rank-ribbon" :class="rankRibbonClass(slideIndex)">TOP {{ currentSlide.rank }}</div>
                             <div
-                                class="relative w-full flex-1 min-h-[12rem] rounded-2xl overflow-hidden shadow-lg frame-ring"
-                                :class="'frame-' + frameFor(currentSlide)"
+                                class="relative w-full flex-1 min-h-[12rem] rounded-2xl shadow-lg fx-wrap"
+                                :class="'fx-' + frameFor(currentSlide)"
                                 @mouseenter="slidePaused = true"
                                 @mouseleave="slidePaused = false"
                             >
+                                <div class="absolute inset-0 rounded-2xl overflow-hidden">
                                 <Transition name="slide">
                                     <div
                                         :key="slideIndex"
@@ -181,6 +182,7 @@
                                         <span v-else>{{ initials(currentSlide.name) }}</span>
                                     </div>
                                 </Transition>
+                                </div>
 
                                 <button type="button" @click="step(-1)" class="slide-btn absolute left-3 top-1/2 -translate-y-1/2 z-20" aria-label="Previous photo">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg>
@@ -188,6 +190,14 @@
                                 <button type="button" @click="step(1)" class="slide-btn absolute right-3 top-1/2 -translate-y-1/2 z-20" aria-label="Next photo">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 18l6-6-6-6"/></svg>
                                 </button>
+
+                                <!-- Frame decoration (overlaps the photo edge) -->
+                                <div class="fx-deco" aria-hidden="true">
+                                    <b></b>
+                                    <u class="wing wl"></u><u class="wing wr"></u><u class="gem"></u>
+                                    <i class="c1"></i><i class="c2"></i><i class="c3"></i><i class="c4"></i>
+                                    <i class="s1"></i><i class="s2"></i>
+                                </div>
 
                                 <!-- Change photo frame -->
                                 <button type="button" @click.stop="openFrameModal()" class="slide-btn absolute right-3 top-3 z-20" title="Change photo frame" aria-label="Change photo frame">
@@ -1584,5 +1594,62 @@ onBeforeUnmount(() => {
 
 @media (prefers-reduced-motion: reduce) {
     .frame-ring, .frame-ring::before, .frame-ring::after { animation: none !important; }
+}
+
+/* ---- Photo frames v3 (ornate overlay) ---- */
+.fx-wrap { margin-top: 16px; --fx-glow: rgba(255, 255, 255, 0.6); --fx-shape: polygon(50% 0, 100% 55%, 50% 100%, 0 55%); }
+.fx-deco { position: absolute; inset: 0; z-index: 30; pointer-events: none; filter: drop-shadow(0 0 5px var(--fx-glow)) drop-shadow(0 0 14px var(--fx-glow)); animation: fx-pulse 1.8s ease-in-out infinite alternate; }
+.fx-deco b {
+    position: absolute; inset: -9px; padding: 11px; border-radius: 25px;
+    background: var(--fx-fill); background-size: 300% 300%; background-position: 0% 50%;
+    -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+    -webkit-mask-clip: content-box, border-box;
+    -webkit-mask-composite: xor;
+    mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+    mask-clip: content-box, border-box;
+    mask-composite: exclude;
+    animation: fx-shift 5s linear infinite;
+}
+.fx-deco i, .fx-deco u { position: absolute; display: block; text-decoration: none; }
+.fx-deco i { width: 40px; height: 56px; background: var(--fx-orn, var(--fx-fill)); clip-path: var(--fx-shape); transform-origin: 50% 100%; }
+.fx-deco .gem { top: -24px; left: calc(50% - 14px); width: 28px; height: 28px; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); background: radial-gradient(circle at 35% 30%, #fff 0, #fff 14%, var(--fx-glow) 70%); }
+.fx-deco .wing { top: -13px; width: 70px; height: 22px; clip-path: polygon(0 20%, 55% 0, 100% 65%, 45% 100%, 0 80%); background: var(--fx-fill); background-size: 300% 300%; }
+.fx-deco .wl { left: calc(50% - 84px); }
+.fx-deco .wr { left: calc(50% + 14px); }
+.fx-deco .c1 { left: -20px; bottom: -28px; rotate: -28deg; }
+.fx-deco .c2 { right: -20px; bottom: -28px; rotate: 28deg; }
+.fx-deco .c3 { left: -12px; top: -20px; width: 26px; height: 36px; rotate: -35deg; }
+.fx-deco .c4 { right: -12px; top: -20px; width: 26px; height: 36px; rotate: 35deg; }
+.fx-deco .s1 { left: -6px; top: 48%; width: 30px; height: 42px; rotate: -80deg; }
+.fx-deco .s2 { right: -6px; top: 48%; width: 30px; height: 42px; rotate: 80deg; }
+@keyframes fx-shift { to { background-position: 300% 50%; } }
+@keyframes fx-rise { from { background-position: 50% 0%; } to { background-position: 50% 300%; } }
+@keyframes fx-pulse { from { opacity: 0.85; } to { opacity: 1; } }
+@keyframes fx-flick { from { scale: 1 0.88; } to { scale: 1.06 1.14; } }
+.fx-gold { --fx-fill: linear-gradient(135deg, var(--gold), var(--gold)); --fx-glow: transparent; }
+.fx-gold .fx-deco { filter: none; animation: none; }
+.fx-gold .fx-deco b { inset: -4px; padding: 4px; border-radius: 20px; animation: none; }
+.fx-gold .fx-deco i, .fx-gold .fx-deco u { display: none; }
+.fx-aurora { --fx-fill: linear-gradient(135deg, #00f5a0, #00d9f5, #7b61ff, #00f5a0); --fx-glow: rgba(0, 245, 200, 0.75); }
+.fx-neon { --fx-fill: linear-gradient(135deg, #39ff14, #b6ff9e, #39ff14); --fx-glow: rgba(57, 255, 20, 0.85); }
+.fx-ice { --fx-fill: linear-gradient(135deg, #e0f7ff, #7fd8ff, #e0f7ff); --fx-glow: rgba(127, 216, 255, 0.85); }
+.fx-rose { --fx-fill: linear-gradient(135deg, #ff7eb3, #ffc1d9, #ff4d94, #ff7eb3); --fx-glow: rgba(255, 126, 179, 0.8); }
+.fx-royal { --fx-fill: linear-gradient(135deg, #6a11cb, #d4af37, #6a11cb); --fx-glow: rgba(212, 175, 55, 0.85); }
+.fx-rainbow { --fx-fill: linear-gradient(135deg, #ff0000, #ff9a00, #ffee00, #2bd600, #00b3ff, #7a00ff, #ff0000); --fx-glow: rgba(255, 255, 255, 0.7); }
+.fx-flame {
+    --fx-fill: linear-gradient(0deg, #8a1200, #ff4d00, #ff9100, #ffd23f, #ff9100, #ff4d00, #8a1200);
+    --fx-orn: linear-gradient(0deg, #c2180a, #ff6a00 45%, #ffd23f);
+    --fx-glow: rgba(255, 110, 0, 0.9);
+    --fx-shape: path('M20 0 C23 14 38 22 36 38 C35 50 27 56 20 56 C13 56 5 50 4 38 C3 28 10 24 13 14 C15 20 17 9 20 0 Z');
+}
+.fx-flame .fx-deco b { background-size: 100% 300%; animation: fx-rise 1.6s linear infinite; }
+.fx-flame .fx-deco i { animation: fx-flick 0.6s ease-in-out infinite alternate; }
+.fx-flame .fx-deco .c2 { animation-delay: -0.2s; }
+.fx-flame .fx-deco .c3 { animation-delay: -0.35s; }
+.fx-flame .fx-deco .c4 { animation-delay: -0.1s; }
+.fx-flame .fx-deco .s1 { animation-delay: -0.45s; }
+.fx-flame .fx-deco .s2 { animation-delay: -0.25s; }
+@media (prefers-reduced-motion: reduce) {
+    .fx-deco, .fx-deco b, .fx-deco i { animation: none !important; }
 }
 </style>

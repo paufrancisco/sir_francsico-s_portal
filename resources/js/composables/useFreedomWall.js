@@ -167,8 +167,22 @@ export function useFreedomWall() {
         }
     }
 
+    async function deletePost(post) {
+        if (!window.confirm('Delete this note? This cannot be undone.')) return;
+        try {
+            const res = await fetch(`/paulo/freedom-wall/${post.id}`, {
+                method: 'DELETE',
+                headers: { 'Accept': 'application/json', ...csrfHeaders() },
+            });
+            if (!res.ok) throw new Error('delete failed');
+            wallPosts.value = wallPosts.value.filter((p) => p.id !== post.id);
+        } catch (e) {
+            window.alert('Could not delete the note. Make sure you are logged in as admin.');
+        }
+    }
+
     return {
-        wallPosts, wallStatus, wallModalOpen, wallLoading, wallError, wallSuccess,
+        wallPosts, wallStatus, wallModalOpen, wallLoading, wallError, wallSuccess, deletePost,
         showWallPassword, wallForm,
         loadWall, openWallModal, closeWallModal, submitWallPost, toggleLike,
     };

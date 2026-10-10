@@ -21,6 +21,7 @@ class FreedomWallController extends Controller
     public function index(Request $request): JsonResponse
     {
         $posts = FreedomWallPost::query()
+            ->whereNull('hidden_at')
             ->withCount('likes')
             ->when($request->filled('section_id'), fn ($q) => $q->where('section_id', $request->integer('section_id')))
             ->latest('created_at')->latest('id')
@@ -48,6 +49,12 @@ class FreedomWallController extends Controller
         ]);
 
         $student = $this->verify($data['student_number'], $data['password']);
+
+        if (\App\Support\ProfanityFilter::contains($data['body'])) {
+            throw ValidationException::withMessages([
+                'body' => 'Bawal ang masasamang salita sa Freedom Wall. Pakipalitan ang note mo.',
+            ]);
+        }
 
         $recent = FreedomWallPost::where('student_id', $student->id)
             ->where('created_at', '>=', now()->subMinutes(10))
@@ -102,6 +109,14 @@ class FreedomWallController extends Controller
         ]);
     }
 
+    // DELETE (admin only, route is inside the auth group): remove a note and its likes
+    public function destroy(FreedomWallPost $freedomWallPost): JsonResponse
+    {
+        $freedomWallPost->delete();
+
+        return response()->json(['deleted' => true]);
+    }
+
     private function present(FreedomWallPost $p, bool $liked = false): array
     {
         return [
@@ -112,6 +127,7 @@ class FreedomWallController extends Controller
             'created_at' => $p->created_at,
             'likes_count' => $p->likes_count ?? $p->likes()->count(),
             'liked' => $liked,
+            'can_delete' => auth()->check(),
         ];
     }
 

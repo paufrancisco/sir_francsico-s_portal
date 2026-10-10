@@ -40,6 +40,8 @@ const switchTab = (t) => router.get('/paulo/logs', { tab: t });
 
 const markAllRead = () => router.post('/paulo/activity/read', {}, { preserveScroll: true, preserveState: true });
 
+const toggleWall = (id) => router.post(`/paulo/freedom-wall/${id}/toggle-hidden`, {}, { preserveScroll: true, preserveState: true });
+
 const fmt = (iso) => iso ? new Date(iso).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
 
 const sourceLabel = { chat: 'AI chat', grades: 'Grades', appointments: 'Appointments' };
@@ -200,7 +202,17 @@ const device = (ua) => {
                                 {{ activityTypes[r.type]?.label ?? r.type }}
                             </span>
                         </td>
-                        <td class="px-3 py-2 text-slate-700 max-w-md break-words">{{ r.summary }}</td>
+                        <td class="px-3 py-2 text-slate-700 max-w-md break-words">
+                            {{ r.summary }}
+                            <button
+                                v-if="r.wall_hidden !== null && r.wall_hidden !== undefined"
+                                type="button"
+                                @click="toggleWall(r.wall_post_id)"
+                                class="ml-2 text-xs font-medium px-2 py-0.5 rounded-full border"
+                                :class="r.wall_hidden ? 'border-emerald-400 text-emerald-500' : 'border-red-400 text-red-500'"
+                            >{{ r.wall_hidden ? 'Unhide' : 'Hide' }}</button>
+                            <span v-if="r.wall_hidden" class="ml-1 text-xs text-slate-400">(hidden)</span>
+                        </td>
                         <td class="px-3 py-2">
                             <span class="text-xs font-medium px-2 py-0.5 rounded-full"
                                 :class="r.read ? 'bg-slate-100 text-slate-500' : 'bg-amber-100 text-amber-700 log-badge--unread'">

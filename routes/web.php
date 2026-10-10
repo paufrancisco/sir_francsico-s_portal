@@ -192,3 +192,12 @@ Route::middleware('auth')->group(function () {
 
 
 require __DIR__.'/auth.php';
+Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () {
+    Route::post('/freedom-wall/{id}/toggle-hidden', [\App\Http\Controllers\Admin\LogController::class, 'toggleWallPost'])
+        ->whereNumber('id')->name('wall.toggle');
+});
+
+Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () {
+    Route::delete('/freedom-wall/{freedomWallPost}', [\App\Http\Controllers\FreedomWallController::class, 'destroy'])
+        ->name('wall.destroy');
+});

@@ -111,6 +111,10 @@ class LogController extends Controller
                 'student_number' => $a->student?->student_number,
                 'section' => $a->student?->section?->name,
                 'read' => (bool) $a->read_at,
+                'wall_post_id' => $a->type === 'wall_post' ? ($a->meta['post_id'] ?? null) : null,
+                'wall_hidden' => ($a->type === 'wall_post' && isset($a->meta['post_id']))
+                    ? (($w = \Illuminate\Support\Facades\DB::table('freedom_wall_posts')->where('id', $a->meta['post_id'])->first(['hidden_at'])) ? (bool) $w->hidden_at : null)
+                    : null,
                 'at' => $a->created_at?->toIso8601String(),
             ]);
         }
@@ -140,6 +144,18 @@ class LogController extends Controller
         }
 
         $query->update(['read_at' => now()]);
+
+        return back();
+    }
+
+    public function toggleWallPost(int $id)
+    {
+        $post = \Illuminate\Support\Facades\DB::table('freedom_wall_posts')->where('id', $id)->first(['id', 'hidden_at']);
+        abort_if(! $post, 404);
+
+        \Illuminate\Support\Facades\DB::table('freedom_wall_posts')
+            ->where('id', $id)
+            ->update(['hidden_at' => $post->hidden_at ? null : now()]);
 
         return back();
     }

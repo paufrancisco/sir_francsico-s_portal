@@ -61,43 +61,24 @@
                         <span>View rankings</span>
                     </button>
 
-                    <div class="mt-2 px-1 relative">
-                        <label class="block text-[11px] text-white/45 mb-1" id="section-label">Section</label>
-                        <div class="relative">
+                    <div class="mt-1">
+                        <button type="button" @click="sectionMenuOpen = !sectionMenuOpen" class="nav-item" :aria-expanded="sectionMenuOpen">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>
+                            <span class="flex-1 text-left">Section</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0 transition-transform" :class="sectionMenuOpen ? 'rotate-180' : ''"><path d="M6 9l6 6 6-6"/></svg>
+                        </button>
+                        <div v-if="sectionMenuOpen" class="mt-1 ml-3 pl-3 border-l border-white/10">
                             <button
+                                v-for="s in sections"
+                                :key="s.id"
                                 type="button"
-                                @click="sectionMenuOpen = !sectionMenuOpen"
-                                class="section-trigger"
-                                aria-haspopup="listbox"
-                                :aria-expanded="sectionMenuOpen"
-                                aria-labelledby="section-label"
+                                @click="selectSection(s.id)"
+                                class="nav-item nav-item--sub"
+                                :style="s.id === activeSectionId ? 'color:var(--gold);font-weight:600' : ''"
                             >
-                                <span class="truncate">{{ activeSection?.subject ? `${activeSection.subject} · ${activeSection.name}` : activeSection?.name }}</span>
-                                <svg
-                                    width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                    class="shrink-0 transition-transform"
-                                    :class="sectionMenuOpen ? 'rotate-180' : ''"
-                                ><path d="M6 9l6 6 6-6"/></svg>
+                                <span class="flex-1 text-left truncate">{{ s.subject ? `${s.subject} · ${s.name}` : s.name }}</span>
+                                <svg v-if="s.id === activeSectionId" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" class="shrink-0"><path d="M20 6 9 17l-5-5"/></svg>
                             </button>
-
-                            <div v-if="sectionMenuOpen" class="fixed inset-0 z-40" @click="sectionMenuOpen = false"></div>
-
-                            <Transition name="dropdown">
-                                <ul v-if="sectionMenuOpen" class="section-menu" role="listbox">
-                                    <li
-                                        v-for="s in sections"
-                                        :key="s.id"
-                                        role="option"
-                                        :aria-selected="s.id === activeSectionId"
-                                        class="section-option"
-                                        :class="s.id === activeSectionId ? 'section-option--active' : ''"
-                                        @click="selectSection(s.id)"
-                                    >
-                                        <span class="truncate">{{ s.subject ? `${s.subject} · ${s.name}` : s.name }}</span>
-                                        <svg v-if="s.id === activeSectionId" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" class="shrink-0"><path d="M20 6 9 17l-5-5"/></svg>
-                                    </li>
-                                </ul>
-                            </Transition>
                         </div>
                     </div>
                 </div>
@@ -145,10 +126,12 @@
 
         <!-- Main content (offset for sidebar on lg) -->
         <main class="lg:pl-64 relative z-10">
-            <div class="max-w-[1200px] mx-auto px-5 lg:px-10 py-6 lg:h-screen">
+            <div class="max-w-[1500px] mx-auto px-5 lg:px-10 py-6 lg:min-h-screen lg:flex lg:flex-col lg:justify-center">
 
+                <h1 class="typewriter-line" aria-label="Welcome to Francisco's Portal"><span class="typewriter">Welcome to Francisco's Portal</span></h1>
+                <div class="w-full flex flex-col lg:flex-row gap-5">
                 <!-- Class ledger: top 1 (left) + top 10 (right) -->
-                <div class="ink-panel rounded-[1.75rem] p-5 lg:p-7 h-full flex flex-col">
+                <div v-show="activeView === 'rankings'" class="ink-panel rounded-[1.75rem] p-5 lg:p-7 flex flex-col lg:flex-1 min-w-0">
                     <div class="text-sm font-semibold text-white mb-5" style="font-family:var(--font-display);">Class ledger · {{ activeSectionLabel }}</div>
 
                     <p v-if="filteredStudents.length === 0" class="text-xs text-white/35 text-center py-8">
@@ -160,7 +143,7 @@
                         <div class="md:col-span-2 flex flex-col items-center text-center min-h-0">
                             <div class="rank-ribbon" :class="rankRibbonClass(slideIndex)">TOP {{ currentSlide.rank }}</div>
                             <div
-                                class="relative w-full flex-1 min-h-[12rem] rounded-2xl shadow-lg fx-wrap"
+                                class="relative w-full max-w-[17rem] h-[26rem] mx-auto shrink-0 rounded-2xl shadow-lg fx-wrap"
                                 :class="'fx-' + frameFor(currentSlide)"
                                 @mouseenter="slidePaused = true"
                                 @mouseleave="slidePaused = false"
@@ -205,16 +188,12 @@
                                 </button>
 
                                 <!-- Messages for the current top (changes with each slide) -->
-                                <div class="msg-panel absolute left-3 right-3 bottom-11 z-10 rounded-xl p-3 text-left shadow-lg" style="background: rgba(6,22,38,0.94); border: 1px solid rgba(255,255,255,0.16);">
-                                    <div class="flex items-center justify-between gap-3 mb-2">
-                                        <div class="min-w-0">
-                                            <div class="text-[15px] font-bold text-white truncate" style="font-family:var(--font-display);">Messages from {{ currentSlide.name }}</div>
-                                            <div class="text-xs text-white/85">Only shown once they sign in and post it themselves</div>
-                                        </div>
+                                <div class="msg-panel absolute left-3 right-3 bottom-11 z-10 rounded-xl text-left" :class="currentMessages.items.length ? 'p-3 shadow-lg' : 'p-0 pointer-events-none'" :style="currentMessages.items.length ? 'background: rgba(6,22,38,0.94); border: 1px solid rgba(255,255,255,0.16);' : ''">
+                                    <div class="flex items-center justify-end gap-3" :class="currentMessages.items.length ? 'mb-2' : ''">
                                         <button
                                             type="button"
                                             @click="openMessageModal()"
-                                            class="slide-btn shrink-0"
+                                            class="slide-btn shrink-0 pointer-events-auto"
                                             title="Post a message"
                                             aria-label="Post a message for this classmate"
                                         >
@@ -223,13 +202,10 @@
                                     </div>
 
                                     <div class="space-y-2">
-                                        <p v-if="(currentMessages.status === 'loading' || currentMessages.status === 'idle') && !currentMessages.items.length" class="text-sm text-white/85">Loading messages...</p>
-                                        <p v-else-if="currentMessages.status === 'error' && !currentMessages.items.length" class="text-sm text-white/85">Couldn't load messages. Switch photos to retry.</p>
-                                        <p v-else-if="!currentMessages.items.length" class="text-sm text-white/85">No messages yet. Tap the pencil to post one.</p>
 
                                         <div v-for="m in currentMessages.items.slice(0, 2)" :key="m.id" class="msg-bubble">
                                             <div class="flex items-start justify-between gap-2">
-                                                <div class="text-xs font-bold mb-0.5" style="color:var(--gold);">{{ m.sender_name }}</div>
+                                                <div></div>
                                                 <div v-if="editingMessageId !== m.id" class="msg-actions shrink-0">
                                                     <button
                                                         type="button"
@@ -306,16 +282,16 @@
                         </div>
 
                         <!-- Right column: top 10 list -->
-                        <div class="md:col-span-3 w-full flex flex-col gap-4 min-h-0">
+                        <div class="md:col-span-3 w-full flex flex-col justify-center gap-4 min-h-0">
 
                             <!-- Top 10 list (click a row to jump to that photo) -->
-                            <div class="flex-1 min-h-0 flex flex-col justify-between overflow-y-auto">
+                            <div class="flex-1 min-h-0 flex flex-col justify-between gap-0.5">
                                 <button
                                     v-for="(s, i) in slides"
                                     :key="s.name"
                                     type="button"
                                     @click="goToSlide(i)"
-                                    class="ledger-row ledger-row--btn w-full py-2 px-2 rounded-lg text-left"
+                                    class="ledger-row ledger-row--btn w-full py-1.5 px-2 rounded-lg text-left"
                                     :class="i === slideIndex ? 'ledger-row--current' : ''"
                                 >
                                     <span class="rank-num">{{ s.rank }}</span>
@@ -323,13 +299,42 @@
                                         <img v-if="s.photo_url" :src="s.photo_url" :alt="s.name" class="w-full h-full object-cover" />
                                         <span v-else>{{ initials(s.name) }}</span>
                                     </div>
-                                    <div class="text-sm text-white/90 shrink-0">{{ s.name }}</div>
+                                    <div class="text-xs text-white/90 shrink-0">{{ s.name }}</div>
                                     <span class="leader"></span>
                                     <div class="text-xs font-semibold shrink-0 tabular-nums" style="font-family:var(--font-mono); color:var(--gold);">{{ s.grade }}</div>
                                 </button>
                             </div>
                         </div>
                     </div>
+                </div>
+                <!-- Freedom wall: separate panel on the right -->
+                <aside class="wall-aside ink-panel rounded-[1.75rem] p-5 lg:w-[22rem] xl:w-[25rem] shrink-0 flex flex-col gap-3 min-h-[22rem]">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="text-sm font-semibold text-white" style="font-family:var(--font-display);">Freedom Wall</div>
+                            <div class="text-[11px] text-white/60 truncate">{{ activeSectionLabel }} · anonymous notes</div>
+                        </div>
+                        <button type="button" @click.stop="openWallModal()" class="text-xs font-semibold px-3 py-1.5 rounded-lg shrink-0" style="background:var(--gold);color:var(--navy-deep);">+ Add a note</button>
+                    </div>
+                    <div class="flex-1 min-h-0 overflow-y-auto rounded-xl">
+                        <div class="wall-board h-full" :style="{ minHeight: Math.max(320, Math.ceil(wallPosts.length / 2) * 150 + 90) + 'px' }">
+                            <p v-if="!wallPosts.length" class="absolute inset-0 flex items-center justify-center text-xs text-white/80 text-center px-4">
+                                {{ wallStatus === 'error' ? "Couldn't load the wall." : wallStatus === 'loading' ? 'Loading notes...' : 'No notes yet. Be the first to post.' }}
+                            </p>
+                            <div v-for="(p, i) in wallPosts" :key="p.id" class="wall-note" :style="stickerStyle(p, i, wallPosts.length)">
+                                <span class="wall-tape"></span>
+                                <p class="wall-text">{{ p.body }}</p>
+                                <div class="wall-foot">
+                                    <button type="button" class="wall-like" :class="p.liked ? 'wall-like--on' : ''" @click.stop="toggleLike(p)" :aria-label="p.liked ? 'Unlike' : 'Like'">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" :fill="p.liked ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+                                        <span>{{ p.likes_count || 0 }}</span>
+                                    </button>
+                                    <div class="wall-date">{{ new Date(p.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
                 </div>
             </div>
         </main>
@@ -765,6 +770,37 @@
                 </div>
             </div>
 
+            <!-- Freedom wall modal (sign-in required) -->
+            <div v-if="wallModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+                <div class="surface-card w-full max-w-sm shadow-xl p-5" style="border-radius: 1.5rem;">
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">Add a note</div>
+                        <button @click="closeWallModal" class="text-[var(--text-muted)] hover:text-[var(--text-body)]" aria-label="Close">✕</button>
+                    </div>
+                    <p class="text-xs text-[var(--text-muted)] mb-3">Sign in to post. Your name is never shown on the wall.</p>
+                    <form @submit.prevent="submitWallPost(activeSectionId)" class="space-y-3">
+                        <input v-model="wallForm.student_number" type="text" placeholder="Student number" class="portal-input" />
+                        <div class="flex items-center gap-2">
+                            <input v-model="wallForm.password" :type="showWallPassword ? 'text' : 'password'" placeholder="Password" class="portal-input" />
+                            <button type="button" @click="showWallPassword = !showWallPassword" class="text-xs text-[var(--text-muted)] shrink-0">{{ showWallPassword ? 'Hide' : 'Show' }}</button>
+                        </div>
+                        <textarea v-model="wallForm.body" :maxlength="WALL_MAX_LENGTH" rows="4" placeholder="Write your note..." class="portal-input"></textarea>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <button v-for="c in WALL_COLORS" :key="c.key" type="button" @click="wallForm.color = c.key" :title="c.key" :aria-label="c.key" class="w-6 h-6 rounded-md" :class="wallForm.color === c.key ? 'ring-2 ring-[var(--navy)] ring-offset-1' : ''" :style="{ background: c.bg }"></button>
+                            </div>
+                            <span class="text-[11px] text-[var(--text-muted)]">{{ wallForm.body.length }} / {{ WALL_MAX_LENGTH }}</span>
+                        </div>
+                        <p v-if="wallError" class="text-xs" style="color: var(--coral);">{{ wallError }}</p>
+                        <p v-if="wallSuccess" class="text-xs font-medium" style="color: var(--teal, #1a7f37);">{{ wallSuccess }}</p>
+                        <div class="flex gap-2">
+                            <button type="submit" :disabled="wallLoading" class="flex-1 text-white text-sm font-semibold py-2 rounded-xl disabled:opacity-60" style="background:var(--navy);">{{ wallLoading ? 'Posting...' : 'Post note' }}</button>
+                            <button type="button" @click="closeWallModal" class="px-4 text-sm rounded-xl border border-[var(--text-muted)]/30 text-[var(--text-body)]">Close</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <!-- Photo frame modal (sign-in required) -->
             <div v-if="frameModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
                 <div class="surface-card w-full max-w-sm shadow-xl p-5" style="border-radius: 1.5rem;">
@@ -942,6 +978,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useDashboardState } from '../../composables/useDashboardState';
 import { useClassmateMessages, MESSAGE_MAX_LENGTH } from '../../composables/useClassmateMessages';
 import { useStudentFrame, frameFor, FRAME_OPTIONS } from '../../composables/useStudentFrame';
+import { useFreedomWall, stickerStyle, WALL_COLORS, WALL_MAX_LENGTH } from '../../composables/useFreedomWall';
 
 const props = defineProps({
     sections: { type: Array, default: () => [] },
@@ -1030,7 +1067,6 @@ function selectSection(id) {
     activeSectionId.value = id;
     currentIndex.value = 0;
     activeView.value = 'rankings';
-    sectionMenuOpen.value = false;
 }
 
 // Photo slideshow (top 10 of the active section)
@@ -1119,6 +1155,16 @@ onBeforeUnmount(() => {
     stopSlideshow();
     clearTimeout(messagesTimer);
 });
+// Freedom wall
+const {
+    wallPosts, wallStatus, wallModalOpen, wallLoading, wallError, wallSuccess,
+    showWallPassword, wallForm,
+    loadWall, openWallModal, closeWallModal, submitWallPost, toggleLike,
+} = useFreedomWall();
+
+watch([activeView, activeSectionId], ([view, id]) => {
+    if (view === 'wall' || view === 'rankings') loadWall(id);
+}, { immediate: true });
 </script>
 
 <style scoped>
@@ -1173,8 +1219,8 @@ onBeforeUnmount(() => {
 .portal-root.dark .grain-layer {
     background-image: radial-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px);
 }
-.blob-a { top: -6rem; left: -6rem; animation: float-a 16s ease-in-out infinite; }
-.blob-b { bottom: -6rem; right: -6rem; animation: float-b 18s ease-in-out infinite; }
+.blob-a { top: -6rem; left: -6rem; }
+.blob-b { bottom: -6rem; right: -6rem; }
 @keyframes float-a { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(50px, 35px); } }
 @keyframes float-b { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-40px, -25px); } }
 
@@ -1224,36 +1270,57 @@ onBeforeUnmount(() => {
 
 .section-menu {
     position: absolute;
-    top: calc(100% + 0.4rem);
+    top: calc(100% + 0.5rem);
     left: 0;
     right: 0;
     z-index: 50;
-    max-height: 14rem;
+    max-height: 15rem;
     overflow-y: auto;
-    background: var(--navy-deep);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 0.75rem;
-    padding: 0.35rem;
-    box-shadow: 0 18px 40px -14px rgba(0, 0, 0, 0.6);
+    overscroll-behavior: contain;
+    background: linear-gradient(180deg, rgba(14, 40, 66, 0.97), rgba(8, 24, 42, 0.97));
+    border: 1px solid rgba(255, 215, 90, 0.35);
+    border-radius: 1rem;
+    padding: 0.4rem;
+    box-shadow: 0 24px 50px -16px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+    scrollbar-width: none;
 }
+.section-menu::-webkit-scrollbar { display: none; }
+
 .section-option {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.75);
-    padding: 0.5rem 0.65rem;
-    border-radius: 0.5rem;
+    gap: 0.6rem;
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.72);
+    padding: 0.6rem 0.75rem;
+    border-radius: 0.65rem;
     cursor: pointer;
-    transition: background 0.12s ease, color 0.12s ease;
+    transition: background 0.14s ease, color 0.14s ease, transform 0.14s ease;
 }
-.section-option:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.section-option + .section-option { margin-top: 2px; }
+.section-option:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
 .section-option--active {
-    background: rgba(255, 255, 255, 0.1);
+    background: linear-gradient(90deg, rgba(255, 215, 90, 0.18), rgba(255, 215, 90, 0.06));
     color: var(--gold);
     font-weight: 600;
 }
+.section-option--active:hover { transform: none; }
+.section-option--active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 22%;
+    bottom: 22%;
+    width: 3px;
+    border-radius: 999px;
+    background: var(--gold);
+}
+.section-option svg { color: var(--gold); }
 
 .dropdown-enter-active, .dropdown-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }
 .dropdown-enter-from, .dropdown-leave-to { opacity: 0; transform: translateY(-4px); }
@@ -1598,7 +1665,7 @@ onBeforeUnmount(() => {
 
 /* ---- Photo frames v3 (ornate overlay) ---- */
 .fx-wrap { margin-top: 16px; --fx-glow: rgba(255, 255, 255, 0.6); --fx-shape: polygon(50% 0, 100% 55%, 50% 100%, 0 55%); }
-.fx-deco { position: absolute; inset: 0; z-index: 30; pointer-events: none; filter: drop-shadow(0 0 5px var(--fx-glow)) drop-shadow(0 0 14px var(--fx-glow)); animation: fx-pulse 1.8s ease-in-out infinite alternate; }
+.fx-deco { position: absolute; inset: 0; z-index: 30; pointer-events: none; filter: drop-shadow(0 0 5px var(--fx-glow)) drop-shadow(0 0 14px var(--fx-glow)); }
 .fx-deco b {
     position: absolute; inset: -9px; padding: 11px; border-radius: 25px;
     background: var(--fx-fill); background-size: 300% 300%; background-position: 0% 50%;
@@ -1652,4 +1719,69 @@ onBeforeUnmount(() => {
 @media (prefers-reduced-motion: reduce) {
     .fx-deco, .fx-deco b, .fx-deco i { animation: none !important; }
 }
+/* ---- Freedom wall ---- */
+.wall-board {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.4rem 1rem;
+    padding: 1.4rem 1rem;
+    align-content: start;
+    border-radius: 1rem;
+    background:
+        radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.07) 0 2px, transparent 3px) 0 0 / 22px 22px,
+        radial-gradient(circle at 70% 60%, rgba(0, 0, 0, 0.08) 0 2px, transparent 3px) 0 0 / 31px 31px,
+        #9c7348;
+}
+.wall-note {
+    position: relative;
+    min-height: 7rem;
+    padding: 1.15rem 0.9rem 0.8rem;
+    border-radius: 3px;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+    transition: scale 0.2s ease;
+    animation: wall-pop 0.35s ease-out;
+}
+.wall-note:hover { scale: 1.07; z-index: 20 !important; }
+.wall-board > .wall-note:nth-child(even) { margin-top: 1.1rem; }
+.wall-tape {
+    position: absolute;
+    top: -9px;
+    left: calc(50% - 1.5rem);
+    width: 3rem;
+    height: 1.1rem;
+    background: rgba(255, 255, 255, 0.55);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    transform: rotate(-3deg);
+}
+.wall-text { font-size: 0.85rem; line-height: 1.35; word-break: break-word; white-space: pre-wrap; }
+.wall-foot { margin-top: 0.5rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.wall-like { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.45rem; border-radius: 999px; background: rgba(0, 0, 0, 0.08); transition: transform 0.15s ease, background 0.15s ease; }
+.wall-like:hover { background: rgba(0, 0, 0, 0.16); transform: scale(1.06); }
+.wall-like--on { color: #d6243c; background: rgba(214, 36, 60, 0.14); }
+.wall-date { margin-top: 0; font-size: 0.65rem; opacity: 0.6; text-align: right; }
+@keyframes wall-pop { from { opacity: 0; scale: 0.6; } to { opacity: 1; scale: 1; } }
+@media (prefers-reduced-motion: reduce) { .wall-note { animation: none; } }
+
+/* ---- Typewriter heading ---- */
+.typewriter-line {
+    margin-bottom: 1rem;
+    font-family: var(--font-mono);
+    font-size: clamp(1.1rem, 2.2vw, 1.6rem);
+    font-weight: 600;
+    color: var(--text-heading, #fff);
+}
+.typewriter {
+    display: inline-block;
+    max-width: 100%;
+    width: 29ch;
+    overflow: hidden;
+    white-space: nowrap;
+    vertical-align: bottom;
+    border-right: 3px solid var(--gold);
+    animation: tw-type 2.6s steps(29, end) 0.3s both, tw-caret 0.8s step-end infinite;
+}
+@keyframes tw-type { from { width: 0; } to { width: 29ch; } }
+@keyframes tw-caret { 50% { border-color: transparent; } }
 </style>

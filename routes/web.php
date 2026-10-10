@@ -170,6 +170,12 @@ Route::delete('/portal/classmate-messages/{classmateMessage}', [ClassmateMessage
 // Student card frame: sign in, then choose (no frame in body = verify only)
 Route::post('/portal/student-frame', \App\Http\Controllers\StudentFrameController::class)
     ->middleware('throttle:portal-verify');
+// Freedom wall: anonymous sticker notes per section (posting needs sign-in)
+Route::get('/portal/freedom-wall', [\App\Http\Controllers\FreedomWallController::class, 'index']);
+Route::post('/portal/freedom-wall', [\App\Http\Controllers\FreedomWallController::class, 'store'])
+    ->middleware('throttle:portal-verify');
+Route::post('/portal/freedom-wall/{freedomWallPost}/like', [\App\Http\Controllers\FreedomWallController::class, 'like'])
+    ->middleware('throttle:60,1');
 Route::get('/', [StudentDashboardController::class, 'index']);
 
 Route::get('/dashboard', function () {

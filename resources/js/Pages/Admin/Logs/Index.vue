@@ -185,7 +185,7 @@ const device = (ua) => {
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                    <tr v-for="r in rows.data" :key="r.id" :class="r.read ? '' : 'bg-amber-50/50'">
+                    <tr v-for="r in rows.data" :key="r.id" :class="r.read ? '' : 'log-row-unread'">
                         <td class="px-3 py-2 whitespace-nowrap text-slate-600">
                             <div>{{ fmt(r.at) }}</div>
                             <div class="text-xs text-slate-400">{{ timeAgo(r.at) }}</div>
@@ -196,14 +196,14 @@ const device = (ua) => {
                         </td>
                         <td class="px-3 py-2 text-slate-600">{{ r.section ?? '—' }}</td>
                         <td class="px-3 py-2 whitespace-nowrap">
-                            <span class="text-xs font-medium px-2 py-0.5 rounded-full" :class="activityTypes[r.type]?.cls ?? 'bg-slate-100 text-slate-600'">
+                            <span class="text-xs font-medium px-2 py-0.5 rounded-full" :class="[activityTypes[r.type]?.cls ?? 'bg-slate-100 text-slate-600', 'log-badge--' + r.type]">
                                 {{ activityTypes[r.type]?.label ?? r.type }}
                             </span>
                         </td>
                         <td class="px-3 py-2 text-slate-700 max-w-md break-words">{{ r.summary }}</td>
                         <td class="px-3 py-2">
                             <span class="text-xs font-medium px-2 py-0.5 rounded-full"
-                                :class="r.read ? 'bg-slate-100 text-slate-500' : 'bg-amber-100 text-amber-700'">
+                                :class="r.read ? 'bg-slate-100 text-slate-500' : 'bg-amber-100 text-amber-700 log-badge--unread'">
                                 {{ r.read ? 'Read' : 'Unread' }}
                             </span>
                         </td>
@@ -224,3 +224,12 @@ const device = (ua) => {
         </div>
     </div>
 </template>
+
+<style>
+.log-row-unread { box-shadow: inset 3px 0 0 #f5c542; background-color: rgba(245, 197, 66, 0.07) !important; }
+.log-row-unread td { color: inherit; }
+.log-badge { display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 0.125rem 0.6rem; border-radius: 999px; border: 1px solid transparent; }
+.log-badge--wall_post { background: rgba(236, 72, 153, 0.18) !important; color: #f9a8d4 !important; border-color: rgba(236, 72, 153, 0.35); }
+.log-badge--classmate_message { background: rgba(56, 189, 248, 0.18) !important; color: #7dd3fc !important; border-color: rgba(56, 189, 248, 0.35); }
+.log-badge--unread { background: rgba(245, 197, 66, 0.2) !important; color: #fcd34d !important; border-color: rgba(245, 197, 66, 0.4); }
+</style>

@@ -5,6 +5,7 @@ export const activityTypes = {
     chat_message: { label: 'AI chat', cls: 'bg-violet-100 text-violet-700' },
     appointment_booked: { label: 'Appointment', cls: 'bg-amber-100 text-amber-700' },
     classmate_message: { label: 'Classmate post', cls: 'bg-sky-100 text-sky-700' },
+    wall_post: { label: 'Freedom Wall post', cls: 'bg-pink-100 text-pink-700' },
 };
 
 export const timeAgo = (iso) => {

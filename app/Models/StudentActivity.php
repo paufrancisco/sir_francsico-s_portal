@@ -16,6 +16,7 @@ class StudentActivity extends Model
         'chat_message',
         'appointment_booked',
         'classmate_message',
+        'wall_post',
     ];
 
     protected $fillable = ['student_id', 'section_id', 'type', 'summary', 'meta', 'read_at'];

@@ -47,7 +47,7 @@ class GradesInputSheetImport implements ToCollection, WithCalculatedFormulas, Ha
             return;
         }
 
-        $allStudents = Student::where('section_id', $this->sectionId)->get();
+        $allStudents = Student::whereHas('sections', fn ($q) => $q->where('sections.id', $this->sectionId))->get();
 
         // Primary index: normal na normalize (minus offset kung numeric)
         $students = $allStudents->keyBy(fn ($s) => $this->normalizeStudentNumber($s->student_number));

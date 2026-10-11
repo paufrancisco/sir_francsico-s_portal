@@ -37,6 +37,11 @@ class Student extends Authenticatable
         ];
     }
 
+    public function sections()
+    {
+        return $this->belongsToMany(Section::class, 'section_student')->withTimestamps();
+    }
+
     public function section()
     {
         return $this->belongsTo(Section::class);

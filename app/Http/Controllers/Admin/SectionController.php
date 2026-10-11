@@ -119,7 +119,7 @@ class SectionController extends Controller
 
     private function unassignedStudents(Section $section, string $layout)
     {
-        $students = $section->students()->orderBy('full_name')->get(['id', 'student_number', 'full_name', 'aura_points', 'photo_path']);
+        $students = $section->students()->orderBy('full_name')->get(['students.id', 'students.student_number', 'students.full_name', 'students.aura_points', 'students.photo_path']);
 
         $assignedStudentIds = Seat::where('section_id', $section->id)
             ->where('layout', $layout)
@@ -156,18 +156,18 @@ class SectionController extends Controller
     private function transmute(float $grade): float
     {
         $table = [
-            97.5 => 1.0,
-            94.5 => 1.25,
-            91.5 => 1.5,
-            86.5 => 1.75,
-            81.5 => 2.0,
-            76.0 => 2.25,
-            70.5 => 2.5,
-            65.0 => 2.75,
-            59.5 => 3.0,
+            [97.5, 1.0],
+            [94.5, 1.25],
+            [91.5, 1.5],
+            [86.5, 1.75],
+            [81.5, 2.0],
+            [76.0, 2.25],
+            [70.5, 2.5],
+            [65.0, 2.75],
+            [59.5, 3.0],
         ];
 
-        foreach ($table as $min => $eq) {
+        foreach ($table as [$min, $eq]) {
             if ($grade >= $min) {
                 return $eq;
             }
@@ -337,7 +337,8 @@ class SectionController extends Controller
             'password' => 'required|string|min:4',
         ]);
 
-        $section->students()->create($validated);
+        $student = Student::create($validated + ['section_id' => $section->id]);
+        $section->students()->syncWithoutDetaching([$student->id]);
 
         return back()->with('success', 'Student added.');
     }
@@ -361,18 +362,16 @@ class SectionController extends Controller
 
     public function destroyStudent(Section $section, Student $student)
     {
-        $student->delete();
+        $section->students()->detach($student->id);
 
-        return back()->with('success', 'Student removed.');
+        return back()->with('success', 'Student removed from section.');
     }
 
     public function destroyStudents(Request $request, Section $section)
     {
         $validated = $request->validate(['student_ids' => 'required|array']);
 
-        Student::whereIn('id', $validated['student_ids'])
-            ->where('section_id', $section->id)
-            ->delete();
+        $section->students()->detach($validated['student_ids']);
 
         return back()->with('success', count($validated['student_ids']) . ' student(s) removed.');
     }

@@ -11,9 +11,9 @@ class StudentsImport implements ToCollection, WithHeadingRow
 {
     /** Bagong estudyante (may bagong password) */
     public array $imported = [];
-    /** Existing sa section na ito: walang ginalaw maliban sa pangalan kung nag-iba */
+    /** Existing na estudyante: na-enroll sa section na ito (walang ginalaw na password/grades) */
     public array $updated = [];
-    /** Existing sa ibang section: hindi ginalaw */
+    /** Hindi na ginagamit (iisang account na ang pwede sa maraming section), iniwan para sa Vue page */
     public array $skipped = [];
 
     public function __construct(private int $sectionId) {}
@@ -45,22 +45,14 @@ class StudentsImport implements ToCollection, WithHeadingRow
 
             $number = $this->normalizeNumber($row['student_number']);
 
-            // Hanapin gamit ang na-normalize at ang eksaktong numero sa file
             $student = Student::whereIn('student_number', array_unique([$number, $raw]))->first();
 
             if ($student) {
-                if ($student->section_id && (int) $student->section_id !== $this->sectionId) {
-                    $this->skipped[] = [
-                        'student_number' => $student->student_number,
-                        'full_name' => $student->full_name,
-                        'reason' => 'Already in another section',
-                    ];
-                    continue;
-                }
-
-                // Pangalan lang ang pwedeng mabago. Password, photo, frame, grades: hindi ginagalaw.
                 $updates = [];
-                if ($student->full_name !== $name) {
+
+                // Pangalan lang ang pwedeng mabago, at kung ang section na ito ang main section niya.
+                if ((! $student->section_id || (int) $student->section_id === $this->sectionId)
+                    && $student->full_name !== $name) {
                     $updates['full_name'] = $name;
                 }
                 if (! $student->section_id) {
@@ -69,6 +61,9 @@ class StudentsImport implements ToCollection, WithHeadingRow
                 if ($updates) {
                     $student->update($updates);
                 }
+
+                // Idagdag sa section na ito (hindi nag-aalis ng ibang section).
+                $student->sections()->syncWithoutDetaching([$this->sectionId]);
 
                 $this->updated[] = [
                     'student_number' => $student->student_number,
@@ -86,6 +81,8 @@ class StudentsImport implements ToCollection, WithHeadingRow
                 'password' => $plainPassword,
                 'password_changed_at' => now(),
             ]);
+
+            $student->sections()->syncWithoutDetaching([$this->sectionId]);
 
             $this->imported[] = [
                 'student_number' => $student->student_number,

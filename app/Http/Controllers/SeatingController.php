@@ -20,7 +20,7 @@ class SeatingController extends Controller
         $sectionId = $request->input('section_id', $sections->first()?->id);
         $layout = $request->input('layout', 'lecture');
 
-        $students = Student::where('section_id', $sectionId)
+        $students = Student::whereHas('sections', fn ($q) => $q->where('sections.id', $sectionId))
             ->orderBy('full_name')
             ->get(['id', 'student_number', 'full_name', 'aura_points', 'photo_path']);
 
@@ -107,7 +107,7 @@ class SeatingController extends Controller
     // ---- Single-student aura adjustment (existing, now also logs) ----
     public function adjustAura(Request $request, Student $student)
     {
-        $request->validate(['delta' => 'required|integer']);
+        $request->validate(['delta' => 'required|integer', 'section_id' => 'sometimes|exists:sections,id']);
 
         $newValue = max(0, $student->aura_points + $request->delta);
         $actualDelta = $newValue - $student->aura_points;
@@ -117,7 +117,7 @@ class SeatingController extends Controller
         if ($actualDelta !== 0) {
             AuraPointLog::create([
                 'student_id' => $student->id,
-                'section_id' => $student->section_id,
+                'section_id' => $request->input('section_id', $student->section_id),
                 'points' => $actualDelta,
                 'recorded_by' => Auth::id(),
             ]);
@@ -133,6 +133,7 @@ class SeatingController extends Controller
             'student_ids' => 'required|array|min:1',
             'student_ids.*' => 'exists:students,id',
             'delta' => 'required|integer',
+            'section_id' => 'sometimes|exists:sections,id',
         ]);
 
         $students = Student::whereIn('id', $request->student_ids)->get();
@@ -148,7 +149,7 @@ class SeatingController extends Controller
                 if ($actualDelta !== 0) {
                     AuraPointLog::create([
                         'student_id' => $student->id,
-                        'section_id' => $student->section_id,
+                        'section_id' => $request->input('section_id', $student->section_id),
                         'points' => $actualDelta,
                         'recorded_by' => Auth::id(),
                     ]);
@@ -166,7 +167,7 @@ class SeatingController extends Controller
     {
         $request->validate(['section_id' => 'required|exists:sections,id']);
 
-        $students = Student::where('section_id', $request->section_id)
+        $students = Student::whereHas('sections', fn ($q) => $q->where('sections.id', $request->section_id))
             ->orderBy('full_name')
             ->get(['id', 'student_number', 'full_name', 'aura_points']);
 
@@ -209,17 +210,17 @@ class SeatingController extends Controller
     {
         $request->validate(['section_id' => 'required|exists:sections,id']);
 
-        $students = Student::where('section_id', $request->section_id)
+        $students = Student::whereHas('sections', fn ($q) => $q->where('sections.id', $request->section_id))
             ->where('aura_points', '>', 0)
             ->get();
 
-        DB::transaction(function () use ($students) {
+        DB::transaction(function () use ($students, $request) {
             foreach ($students as $student) {
                 // Offsetting log entry — para tumugma pa rin ang sum ng logs sa
                 // bagong total (0) kahit hindi natin binubura ang history.
                 AuraPointLog::create([
                     'student_id' => $student->id,
-                    'section_id' => $student->section_id,
+                    'section_id' => $request->section_id,
                     'points' => -$student->aura_points,
                     'note' => 'Reset',
                     'recorded_by' => Auth::id(),

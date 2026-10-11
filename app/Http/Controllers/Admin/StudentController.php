@@ -34,11 +34,11 @@ class StudentController extends Controller
 
     private function studentList(bool $withPassword = false)
     {
-        return Student::with('section')->orderBy('full_name')->get()->map(fn ($s) => [
+        return Student::with('sections')->orderBy('full_name')->get()->map(fn ($s) => [
             'id' => $s->id,
             'student_number' => $s->student_number,
             'full_name' => $s->full_name,
-            'section' => $s->section?->name ?? '—',
+            'section' => $s->sections->pluck('name')->join(', ') ?: '—',
             'password' => $withPassword ? $s->password : null,
         ]);
     }

@@ -392,6 +392,7 @@ const bulkApply = async (delta) => {
         const { data } = await axios.post('/paulo/seating/aura/bulk', {
             student_ids: Array.from(selectedIds.value),
             delta,
+            section_id: props.activeSectionId,
         });
         // Update the local seats object so the new points show immediately
         Object.values(props.seats).forEach((seat) => {
@@ -545,7 +546,7 @@ const unassignSeat = () => {
 
 const adjustAura = async (delta) => {
     if (!activeSeat.value?.student) return;
-    const { data } = await axios.patch(`/paulo/students/${activeSeat.value.student.id}/aura`, { delta });
+    const { data } = await axios.patch(`/paulo/students/${activeSeat.value.student.id}/aura`, { delta, section_id: props.activeSectionId });
     activeSeat.value.student.aura_points = data.aura_points;
 };
 
@@ -558,7 +559,7 @@ const onPhotoSelected = async (event) => {
     const file = event.target.files?.[0];
     if (!file || !activeSeat.value?.student) return;
 
-    const sectionId = activeSeat.value.student.section_id ?? props.activeSectionId;
+    const sectionId = props.activeSectionId;
 
     const formData = new FormData();
     formData.append('photo', file);

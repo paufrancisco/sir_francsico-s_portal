@@ -44,7 +44,7 @@ class StudentDashboardController extends Controller
 
         $top10BySection = [];
         foreach ($sections as $section) {
-            $students = Student::where('section_id', $section->id)->with('grades')->get();
+            $students = Student::whereHas('sections', fn ($q) => $q->where('sections.id', $section->id))->with('grades')->get();
 
             $allRanked = $students->map(function ($student) use ($weights) {
                 $weighted = 0;

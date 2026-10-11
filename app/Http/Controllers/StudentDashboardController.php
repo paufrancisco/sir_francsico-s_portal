@@ -46,11 +46,11 @@ class StudentDashboardController extends Controller
         foreach ($sections as $section) {
             $students = Student::whereHas('sections', fn ($q) => $q->where('sections.id', $section->id))->with('grades')->get();
 
-            $allRanked = $students->map(function ($student) use ($weights) {
+            $allRanked = $students->map(function ($student) use ($weights, $section) {
                 $weighted = 0;
 
                 foreach ($weights as $category => $weight) {
-                    $catGrades = $student->grades->where('category', $category);
+                    $catGrades = $student->grades->where('section_id', $section->id)->where('category', $category);
                     if ($catGrades->isEmpty()) {
                         continue;
                     }

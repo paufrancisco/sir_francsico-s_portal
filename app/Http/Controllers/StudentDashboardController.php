@@ -235,6 +235,7 @@ class StudentDashboardController extends Controller
 
         return response()->json([
             'name' => $student->full_name,
+            'photo_url' => $student->photo_url,
             'period' => $period,
             'sections' => $result,
             'correction_deadline' => $deadline,

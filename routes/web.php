@@ -171,6 +171,10 @@ Route::get('/', [StudentDashboardController::class, 'index']);
 Route::post('/portal/photo/upload', [\App\Http\Controllers\StudentPhotoController::class, 'store'])
     ->middleware('throttle:portal-verify');
 
+// Student change photo (verified via student_number + password; 5 changes/hour/student)
+Route::post('/portal/photo/change', [\App\Http\Controllers\StudentPhotoController::class, 'change'])
+    ->middleware('throttle:portal-verify');
+
 Route::get('/dashboard', function () {
     return redirect('/paulo');
 })->middleware(['auth', 'verified'])->name('dashboard');

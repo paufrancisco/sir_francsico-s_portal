@@ -407,6 +407,7 @@ export function useDashboardState(props) {
         gradesModalOpen.value = false;
         gradesResult.value = null;
         selectedSectionId.value = null;
+        photoChangeMessage.value = '';
         gradesForm.value = { student_number: '', password: '' };
         gradesError.value = '';
         gradesPeriod.value = 'prelim';
@@ -517,6 +518,48 @@ export function useDashboardState(props) {
             photoGate.value.loading = false;
         }
     };
+    // ---- Change photo (from the grades modal) ----
+    const photoChanging = ref(false);
+    const photoChangeMessage = ref('');
+    const photoChangeError = ref(false);
+
+    const changePhoto = async (file) => {
+        if (!file || photoChanging.value) return;
+        photoChanging.value = true;
+        photoChangeMessage.value = '';
+        photoChangeError.value = false;
+        try {
+            let blob;
+            try {
+                blob = await compressPhoto(file);
+            } catch (e) {
+                photoChangeError.value = true;
+                photoChangeMessage.value = 'Could not read that image. Please use a JPG or PNG.';
+                return;
+            }
+            if (!blob) {
+                photoChangeError.value = true;
+                photoChangeMessage.value = 'Could not shrink the photo to 40KB. Try a different one.';
+                return;
+            }
+            const form = new FormData();
+            form.append('student_number', gradesForm.value.student_number);
+            form.append('password', gradesForm.value.password);
+            form.append('photo', blob, 'photo.jpg');
+            await axios.post('/portal/photo/change', form);
+            await refetchGradesResult();
+            photoChangeMessage.value = 'Photo updated!';
+        } catch (err) {
+            const errs = err.response?.data?.errors;
+            photoChangeError.value = true;
+            photoChangeMessage.value = (errs && Object.values(errs)[0]?.[0])
+                ?? err.response?.data?.message
+                ?? 'Upload failed, please try again.';
+        } finally {
+            photoChanging.value = false;
+        }
+    };
+    // ---- End change photo ----
     // ---- End photo gate ----
 
     // ---- Set an appointment modal state ----
@@ -909,6 +952,7 @@ export function useDashboardState(props) {
         showChatLoginPassword, chatMustChangePassword, chatMessages, chatInput,
         chatSending, chatScrollEl, signInChat, sendChatMessage,
         photoGate, submitPhotoGate, closePhotoGate,
+        photoChanging, photoChangeMessage, photoChangeError, changePhoto,
 
         // grades modal
         gradesModalOpen, gradesForm, gradesError, gradesLoading,

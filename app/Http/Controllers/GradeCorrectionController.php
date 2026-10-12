@@ -70,6 +70,27 @@ class GradeCorrectionController extends Controller
             if (! isset($item['category'], $item['title'], $item['claimed_score'])) {
                 return response()->json(['message' => 'One of the edited items is missing required details.'], 422);
             }
+
+            if (! is_numeric($item['claimed_score']) || (float) $item['claimed_score'] < 0) {
+                return response()->json([
+                    'message' => 'The score for "' . $item['title'] . '" must be a number that is not negative.',
+                ], 422);
+            }
+
+            $max = Grade::where('student_id', $student->id)
+                ->where('section_id', $sectionId)
+                ->where('period', $request->period)
+                ->where('category', $item['category'])
+                ->where('title', $item['title'])
+                ->max('max_score');
+
+            if ($max !== null && (float) $item['claimed_score'] > (float) $max) {
+                $shownMax = rtrim(rtrim(number_format((float) $max, 2, '.', ''), '0'), '.');
+
+                return response()->json([
+                    'message' => 'The score for "' . $item['title'] . '" cannot be higher than its maximum of ' . $shownMax . '.',
+                ], 422);
+            }
         }
 
         $existing = GradeCorrection::where('student_id', $student->id)

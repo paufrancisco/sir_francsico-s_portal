@@ -231,11 +231,35 @@ export function useDashboardState(props) {
             : (activeGrades.value?.scores[key]?.score ?? '');
     };
 
+    // A student may not claim a score higher than the maximum of the item
+    const MAX_SCORE_MSG = 'The score cannot be higher than the maximum of ';
+    const maxScoreOf = (key) => {
+        const max = Number(activeGrades.value?.scores[key]?.max_score);
+        return Number.isFinite(max) && max > 0 ? max : null;
+    };
+
+    // Live warning while typing
+    watch(editDraftScore, (v) => {
+        const key = editingItemKey.value;
+        const max = key ? maxScoreOf(key) : null;
+        const val = parseFloat(v);
+        if (max !== null && !Number.isNaN(val) && val > max) {
+            correctionError.value = MAX_SCORE_MSG + max + '.';
+        } else if (String(correctionError.value ?? '').startsWith(MAX_SCORE_MSG)) {
+            correctionError.value = '';
+        }
+    });
+
     const confirmEditItem = (item) => {
         const key = itemKeyOf(item);
         const val = parseFloat(editDraftScore.value);
         if (Number.isNaN(val) || val < 0) {
             correctionError.value = 'Invalid score.';
+            return;
+        }
+        const max = maxScoreOf(key);
+        if (max !== null && val > max) {
+            correctionError.value = MAX_SCORE_MSG + max + '.';
             return;
         }
         editedItems.value = {
@@ -350,6 +374,14 @@ export function useDashboardState(props) {
         if (type === 'recheck') {
             if (Object.keys(editedItems.value).length === 0) {
                 correctionError.value = 'Edit the incorrect score first before submitting.';
+                return;
+            }
+            const tooHigh = Object.entries(editedItems.value).find(([key, i]) => {
+                const max = maxScoreOf(key);
+                return max !== null && Number(i.claimed_score) > max;
+            });
+            if (tooHigh) {
+                correctionError.value = MAX_SCORE_MSG + maxScoreOf(tooHigh[0]) + '.';
                 return;
             }
             if (!correctionAttachment.value && !hasExistingAttachment.value) {

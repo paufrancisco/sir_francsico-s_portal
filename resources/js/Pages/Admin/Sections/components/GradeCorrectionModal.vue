@@ -4,7 +4,7 @@
         class="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm"
         @click.self="$emit('close')"
     >
-        <div class="w-full max-w-sm rounded-2xl p-5 bg-[#1e2d42] border border-white/15 ring-1 ring-black/40 shadow-2xl shadow-black/60">
+        <div class="grade-modal w-full max-h-[92vh] overflow-y-auto rounded-2xl p-5 bg-[#1e2d42] border border-white/15 ring-1 ring-black/40 shadow-2xl shadow-black/60" :data-cols="cols">
 
             <div class="flex items-start justify-between mb-3">
                 <div class="min-w-0">
@@ -44,12 +44,12 @@
                     Items with a proposed change from the student are highlighted. You can still adjust them before approving.
                 </p>
 
-                <div class="divide-y divide-white/10 border-t border-white/10">
+                <div class="grade-grid border-t border-white/10" :style="{ '--cols': cols }">
                     <div
                         v-for="g in grades"
                         :key="g.id"
-                        class="flex items-center gap-2 py-2 text-sm"
-                        :class="g.hasProposal ? 'bg-amber-400/10 -mx-2 px-2 rounded-lg' : ''"
+                        class="flex items-center gap-2 py-2 px-2 text-sm border-b border-white/10"
+                        :class="g.hasProposal ? 'bg-amber-400/10 rounded-lg' : ''"
                     >
                         <div class="flex-1 min-w-0">
                             <div class="truncate text-[#dbe5f2]">{{ g.title ?? g.category }}</div>
@@ -126,7 +126,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 
 const props = defineProps({
     open: Boolean,
@@ -144,6 +144,9 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close', 'approve', 'reject']);
+
+// Wider modal and more columns as the number of items grows
+const cols = computed(() => (props.grades.length > 12 ? 3 : props.grades.length > 6 ? 2 : 1));
 
 const comment = ref('');
 const attachment = ref(null);
@@ -193,6 +196,13 @@ const submitReject = () => {
 </script>
 
 <style scoped>
+.grade-modal { max-width: 24rem; }
+.grade-grid { display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 1rem; }
+@media (min-width: 768px) {
+    .grade-modal[data-cols="2"] { max-width: 44rem; }
+    .grade-modal[data-cols="3"] { max-width: 64rem; }
+    .grade-grid { grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); }
+}
 .grade-score-input {
     -moz-appearance: textfield;
 }

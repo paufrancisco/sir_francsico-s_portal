@@ -90,7 +90,7 @@ export function useDashboardState(props) {
             await loadChatHistory();
             chatPollTimer = setInterval(loadChatHistory, 6000);
         } catch (err) {
-            chatLoginError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
+            if (!handleNeedsPhoto(err, 'chat')) chatLoginError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
         } finally {
             chatLoginLoading.value = false;
         }
@@ -157,7 +157,7 @@ export function useDashboardState(props) {
             });
             gradesResult.value = data;
         } catch (err) {
-            gradesError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
+            if (!handleNeedsPhoto(err, 'grades')) gradesError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
         } finally {
             gradesLoading.value = false;
         }
@@ -396,12 +396,90 @@ export function useDashboardState(props) {
             }
             gradesResult.value = data;
         } catch (err) {
-            gradesError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
+            if (!handleNeedsPhoto(err, 'grades')) gradesError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
         } finally {
             gradesLoading.value = false;
         }
     };
     // ---- End grades modal state ----
+
+    // ---- Photo gate: students without a photo must upload one (max 40KB) ----
+    const PHOTO_MAX_BYTES = 38 * 1024;
+    const photoGate = ref({
+        open: false, context: '', student_number: '', password: '',
+        loading: false, error: '',
+    });
+
+    const handleNeedsPhoto = (err, context) => {
+        if (!err?.response?.data?.needs_photo) return false;
+        const creds = context === 'chat' ? chatLogin.value
+            : context === 'appointment' ? apptForm.value
+            : gradesForm.value;
+        photoGate.value = {
+            open: true, context,
+            student_number: creds.student_number,
+            password: creds.password,
+            loading: false, error: '',
+        };
+        return true;
+    };
+
+    const closePhotoGate = () => { photoGate.value.open = false; };
+
+    const compressPhoto = async (file) => {
+        const bitmap = await createImageBitmap(file);
+        let scale = Math.min(1, 480 / Math.max(bitmap.width, bitmap.height));
+        for (let i = 0; i < 8; i++) {
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+            canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+            canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+            for (const q of [0.85, 0.7, 0.55, 0.4]) {
+                const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', q));
+                if (blob && blob.size <= PHOTO_MAX_BYTES) return blob;
+            }
+            scale *= 0.8;
+        }
+        return null;
+    };
+
+    const submitPhotoGate = async (file) => {
+        if (!file) return;
+        photoGate.value.loading = true;
+        photoGate.value.error = '';
+        try {
+            let blob;
+            try {
+                blob = await compressPhoto(file);
+            } catch (e) {
+                photoGate.value.error = 'Could not read that image. Please use a JPG or PNG.';
+                return;
+            }
+            if (!blob) {
+                photoGate.value.error = 'Could not shrink the photo to 40KB. Try a different one.';
+                return;
+            }
+            const form = new FormData();
+            form.append('student_number', photoGate.value.student_number);
+            form.append('password', photoGate.value.password);
+            form.append('photo', blob, 'photo.jpg');
+            await axios.post('/portal/photo/upload', form);
+
+            const ctx = photoGate.value.context;
+            photoGate.value.open = false;
+            if (ctx === 'chat') await signInChat();
+            else if (ctx === 'appointment') await submitAppointmentLogin();
+            else gradesError.value = 'Photo saved! Please sign in again.';
+        } catch (err) {
+            const errs = err.response?.data?.errors;
+            photoGate.value.error = (errs && Object.values(errs)[0]?.[0])
+                ?? err.response?.data?.message
+                ?? 'Upload failed, please try again.';
+        } finally {
+            photoGate.value.loading = false;
+        }
+    };
+    // ---- End photo gate ----
 
     // ---- Set an appointment modal state ----
     const appointmentModalOpen = ref(false);
@@ -472,7 +550,7 @@ export function useDashboardState(props) {
             apptStudent.value = data;
             await loadAppointmentData();
         } catch (err) {
-            apptLoginError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
+            if (!handleNeedsPhoto(err, 'appointment')) apptLoginError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
         } finally {
             apptLoginLoading.value = false;
         }
@@ -792,6 +870,7 @@ export function useDashboardState(props) {
         chatOpen, chatStudent, chatLogin, chatLoginError, chatLoginLoading,
         showChatLoginPassword, chatMustChangePassword, chatMessages, chatInput,
         chatSending, chatScrollEl, signInChat, sendChatMessage,
+        photoGate, submitPhotoGate, closePhotoGate,
 
         // grades modal
         gradesModalOpen, gradesForm, gradesError, gradesLoading,

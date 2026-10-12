@@ -973,12 +973,14 @@
                 </div>
             </div>
         </div>
+        <StudentPhotoGate :gate="photoGate" @close="closePhotoGate" @submit="submitPhotoGate" />
     </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useDashboardState } from '../../composables/useDashboardState';
+import StudentPhotoGate from '../../Components/StudentPhotoGate.vue';
 import { useClassmateMessages, MESSAGE_MAX_LENGTH } from '../../composables/useClassmateMessages';
 import { useStudentFrame, frameFor, FRAME_OPTIONS } from '../../composables/useStudentFrame';
 import { useFreedomWall, stickerStyle, WALL_COLORS, WALL_MAX_LENGTH } from '../../composables/useFreedomWall';
@@ -1039,6 +1041,7 @@ const {
 
     // misc
     liveClock, formatEventDate, formatPostedDate,
+photoGate, submitPhotoGate, closePhotoGate,
 } = useDashboardState(props);
 
 // Message-a-classmate modal

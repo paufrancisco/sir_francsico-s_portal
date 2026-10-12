@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\LogController;
 use App\Http\Middleware\LogStudentPortalAccess;
+use App\Http\Middleware\RequireStudentPhoto;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StudentDashboardController;
 use Illuminate\Support\Facades\Route;
@@ -30,18 +31,6 @@ use App\Http\Controllers\ClassmateMessageController;
 // naiwan ito nakabukas - kahit sino pwedeng mag-reset ng
 // admin password kung malaman nila itong URL na ito.
 // =========================================================
-Route::get('/fix-admin-password', function () {
-    $user = \App\Models\User::where('email', 'admin@example.com')->first();
-
-    if (!$user) {
-        return 'User not found';
-    }
-
-    $user->password = \Illuminate\Support\Facades\Hash::make('bagongpassword123');
-    $user->save();
-
-    return 'Fixed! Password is now: bagongpassword123';
-});
 // =========================================================
 // END TEMPORARY ROUTE
 // =========================================================
@@ -128,12 +117,12 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
     Route::patch('appointments/{appointment}/resolve', [AdminFacultyAvailabilityController::class, 'resolve'])->name('appointments.resolve');
 });
 
-Route::post('/portal/chat/verify', [ChatController::class, 'verify'])->middleware(['throttle:portal-verify', LogStudentPortalAccess::class.':chat']);
+Route::post('/portal/chat/verify', [ChatController::class, 'verify'])->middleware(['throttle:portal-verify', LogStudentPortalAccess::class.':chat', RequireStudentPhoto::class]);
 Route::post('/portal/chat/send', [ChatController::class, 'send'])->middleware('throttle:20,1');
 Route::get('/portal/chat/history', [ChatController::class, 'history'])->middleware('throttle:300,1');
 
 Route::post('/portal/grades/verify', [StudentDashboardController::class, 'verifyGrades'])
-    ->middleware(['throttle:portal-verify', LogStudentPortalAccess::class.':grades']) // Reminder: per-student limit, see portal-verify in AppServiceProvider
+    ->middleware(['throttle:portal-verify', LogStudentPortalAccess::class.':grades', RequireStudentPhoto::class]) // Reminder: per-student limit, see portal-verify in AppServiceProvider
     ->name('portal.grades.verify');
 Route::post('/portal/grades/change-password', [StudentDashboardController::class, 'changePassword'])
     ->middleware('throttle:portal-verify')
@@ -146,7 +135,7 @@ Route::delete('/portal/grades/correction/{gradeCorrection}', [GradeCorrectionCon
 
 // Student-facing "Set an appointment" (public, verified via student_number+password sa request body)
 Route::post('/portal/appointments/verify', [PortalAppointmentController::class, 'verify'])
-    ->middleware(['throttle:portal-verify', LogStudentPortalAccess::class.':appointments']);
+    ->middleware(['throttle:portal-verify', LogStudentPortalAccess::class.':appointments', RequireStudentPhoto::class]);
 Route::post('/portal/appointments/available', [PortalAppointmentController::class, 'available'])
     ->middleware('throttle:portal-verify');
 Route::post('/portal/appointments/book', [PortalAppointmentController::class, 'book'])
@@ -177,6 +166,10 @@ Route::post('/portal/freedom-wall', [\App\Http\Controllers\FreedomWallController
 Route::post('/portal/freedom-wall/{freedomWallPost}/like', [\App\Http\Controllers\FreedomWallController::class, 'like'])
     ->middleware('throttle:60,1');
 Route::get('/', [StudentDashboardController::class, 'index']);
+
+// Student photo upload (required before sign-in; max 40KB)
+Route::post('/portal/photo/upload', [\App\Http\Controllers\StudentPhotoController::class, 'store'])
+    ->middleware('throttle:portal-verify');
 
 Route::get('/dashboard', function () {
     return redirect('/paulo');

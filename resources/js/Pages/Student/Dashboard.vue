@@ -133,9 +133,21 @@
                 <!-- Class ledger: top 1 (left) + top 10 (right) -->
                 <div v-show="activeView === 'rankings'" class="ink-panel rounded-[1.75rem] p-5 lg:p-7 flex flex-col lg:flex-1 min-w-0">
                     <div class="text-sm font-semibold text-white mb-5" style="font-family:var(--font-display);">Class ledger · {{ activeSectionLabel }}</div>
+                    <div class="flex flex-wrap gap-1.5 mb-5">
+                        <button
+                            v-for="p in periods"
+                            :key="p.value"
+                            type="button"
+                            @click="topPeriod = p.value; currentIndex = 0"
+                            class="px-3 py-1 rounded-full text-[11px] font-semibold transition"
+                            :style="topPeriod === p.value
+                                ? { background: 'var(--gold)', color: 'var(--navy-deep)' }
+                                : { background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)' }"
+                        >{{ p.label }}</button>
+                    </div>
 
                     <p v-if="filteredStudents.length === 0" class="text-xs text-white/35 text-center py-8">
-                        No grades have been recorded yet for this section.
+                        No grades recorded yet for this period.
                     </p>
 
                     <div v-else class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-5 gap-8" @click="slideStopped = true">
@@ -1021,7 +1033,7 @@ const {
     // grades modal
     gradesModalOpen, gradesForm, gradesError, gradesLoading,
     showGradesLoginPassword, gradesResult, gradesPeriod, gradesMustChangePassword,
-    periods, switchGradesPeriod, openGradesModal, closeGradesModal, submitGradesLogin,
+    topPeriod, periods, switchGradesPeriod, openGradesModal, closeGradesModal, submitGradesLogin,
 
     // grade correction / recheck
     showRecheckForm, recheckNotes, correctionLoading, correctionError, correctionSuccessMessage,

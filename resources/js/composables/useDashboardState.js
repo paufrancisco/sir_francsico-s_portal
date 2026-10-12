@@ -43,7 +43,8 @@ export function useDashboardState(props) {
 
     const filteredAnnouncements = computed(() => props.announcementsBySection[activeSectionId.value] ?? []);
     const filteredTopics = computed(() => props.topicsBySection[activeSectionId.value] ?? []);
-    const filteredStudents = computed(() => props.top10BySection[activeSectionId.value] ?? []);
+    const topPeriod = ref('midterm');
+    const filteredStudents = computed(() => props.top10BySection[activeSectionId.value]?.[topPeriod.value] ?? []);
 
     const currentStudent = computed(() => filteredStudents.value[currentIndex.value] ?? filteredStudents.value[0]);
 
@@ -875,7 +876,7 @@ export function useDashboardState(props) {
         // grades modal
         gradesModalOpen, gradesForm, gradesError, gradesLoading,
         showGradesLoginPassword, gradesResult, gradesPeriod, gradesMustChangePassword,
-        periods, switchGradesPeriod, openGradesModal, closeGradesModal, submitGradesLogin,
+        topPeriod, periods, switchGradesPeriod, openGradesModal, closeGradesModal, submitGradesLogin,
 
         // grade correction / recheck
         showRecheckForm, recheckNotes, correctionLoading, correctionError, correctionSuccessMessage,

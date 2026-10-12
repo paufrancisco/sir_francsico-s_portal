@@ -43,45 +43,55 @@ class StudentDashboardController extends Controller
         $weights = ['long_quiz' => 0.20, 'tp' => 0.30, 'exam' => 0.50];
 
         $top10BySection = [];
+        $rankPeriods = ['prelim', 'midterm', 'prefinal', 'finals'];
+
         foreach ($sections as $section) {
             $students = Student::whereHas('sections', fn ($q) => $q->where('sections.id', $section->id))->with('grades')->get();
 
-            $allRanked = $students->map(function ($student) use ($weights, $section) {
-                $weighted = 0;
+            foreach ($rankPeriods as $rankPeriod) {
+                $allRanked = $students->map(function ($student) use ($weights, $section, $rankPeriod) {
+                    $periodGrades = $student->grades
+                        ->where('section_id', $section->id)
+                        ->where('period', $rankPeriod);
 
-                foreach ($weights as $category => $weight) {
-                    $catGrades = $student->grades->where('section_id', $section->id)->where('category', $category);
-                    if ($catGrades->isEmpty()) {
-                        continue;
+                    // walang grades sa period na ito = hindi isasama sa ranking
+                    if ($periodGrades->isEmpty()) {
+                        return null;
                     }
-                    $avgPercent = $catGrades->avg(
-                        fn ($g) => $g->max_score > 0 ? ($g->score / $g->max_score) * 100 : 0
-                    );
-                    $weighted += $avgPercent * $weight;
-                }
 
-                return [
-                    'id' => $student->id,
-                    'name' => $student->full_name,
-                    'grade' => round($weighted, 2),
-                    'photo_url' => $student->photo_url,
-                    'frame' => $student->frame,
-                ];
-            })
-            ->sortByDesc('grade')
-            ->values();
+                    $weighted = 0;
+                    foreach ($weights as $category => $weight) {
+                        $catGrades = $periodGrades->where('category', $category);
+                        if ($catGrades->isEmpty()) {
+                            continue;
+                        }
+                        $avgPercent = $catGrades->avg(
+                            fn ($g) => $g->max_score > 0 ? ($g->score / $g->max_score) * 100 : 0
+                        );
+                        $weighted += $avgPercent * $weight;
+                    }
 
-            // I-compute muna ang rank base sa BUONG listahan (hindi pa nakatop-10)
-            $grades = $allRanked->pluck('grade');
-            $allRanked = $allRanked->map(function ($row) use ($grades) {
-                $row['rank'] = $grades->filter(fn ($g) => $g > $row['grade'])->unique()->count() + 1;
-                return $row;
-            });
+                    return [
+                        'id' => $student->id,
+                        'name' => $student->full_name,
+                        'grade' => round($weighted, 2),
+                        'photo_url' => $student->photo_url,
+                        'frame' => $student->frame,
+                    ];
+                })
+                ->filter()
+                ->sortByDesc('grade')
+                ->values();
 
-            // Kunin lahat ng estudyanteng rank 1-10 (kahit lumagpas sa 10 rows dahil sa ties)
-            $ranked = $allRanked->filter(fn ($row) => $row['rank'] <= 10)->values();
+                $gradeList = $allRanked->pluck('grade');
+                $allRanked = $allRanked->map(function ($row) use ($gradeList) {
+                    $row['rank'] = $gradeList->filter(fn ($g) => $g > $row['grade'])->unique()->count() + 1;
+                    return $row;
+                });
 
-            $top10BySection[$section->id] = $ranked;
+                // rank 1-10 (kasama ang ties)
+                $top10BySection[$section->id][$rankPeriod] = $allRanked->filter(fn ($row) => $row['rank'] <= 10)->values();
+            }
         }
 
         return Inertia::render('Student/Dashboard', [

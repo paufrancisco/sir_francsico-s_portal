@@ -136,6 +136,31 @@ export function useDashboardState(props) {
     const gradesResult = ref(null);
     const gradesPeriod = ref('prelim');
     const gradesMustChangePassword = ref(false);
+    const selectedSectionId = ref(null);
+
+    // data ng napiling subject; fallback sa top-level kung walang sections
+    const activeGrades = computed(() => {
+        const r = gradesResult.value;
+        if (!r) return null;
+        const list = r.sections ?? [];
+        const sec = list.find((s) => s.section_id === selectedSectionId.value) ?? list[0];
+        if (!sec) {
+            return { section_id: null, items: [], scores: {}, breakdown: [], total_percentage: 0, pending_correction: null };
+        }
+        const scores = {};
+        (sec.items ?? []).forEach((i) => {
+            scores[i.category + '|' + i.title] = { score: i.score, max_score: i.max_score };
+        });
+        return { ...sec, scores };
+    });
+
+    // panatilihin ang napiling subject kung nandoon pa; kung wala, unang section
+    const syncSelectedSection = () => {
+        const list = gradesResult.value?.sections ?? [];
+        if (!list.some((s) => s.section_id === selectedSectionId.value)) {
+            selectedSectionId.value = list[0]?.section_id ?? null;
+        }
+    };
 
     const periods = [
         { value: 'prelim', label: 'Prelim' },
@@ -157,11 +182,19 @@ export function useDashboardState(props) {
                 period,
             });
             gradesResult.value = data;
+            syncSelectedSection();
         } catch (err) {
             if (!handleNeedsPhoto(err, 'grades')) gradesError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
         } finally {
             gradesLoading.value = false;
         }
+    };
+
+    const selectGradesSection = (id) => {
+        if (id === selectedSectionId.value) return;
+        selectedSectionId.value = id;
+        cancelEditingRecheckForm();
+        correctionSuccessMessage.value = '';
     };
 
     // ---- Grade correction state ----
@@ -180,12 +213,12 @@ export function useDashboardState(props) {
     const correctionAttachment = ref(null);
     const correctionAttachmentError = ref('');
 
-    const hasExistingAttachment = computed(() => !!gradesResult.value?.pending_correction?.attachment_url);
+    const hasExistingAttachment = computed(() => !!activeGrades.value?.pending_correction?.attachment_url);
 
     // idle | editing | pending
     const correctionUiState = computed(() => {
         if (showRecheckForm.value) return 'editing';
-        return gradesResult.value?.pending_correction ? 'pending' : 'idle';
+        return activeGrades.value?.pending_correction ? 'pending' : 'idle';
     });
 
     const itemKeyOf = (item) => item.category + '|' + item.title;
@@ -195,7 +228,7 @@ export function useDashboardState(props) {
         editingItemKey.value = key;
         editDraftScore.value = editedItems.value[key]
             ? editedItems.value[key].claimed_score
-            : (gradesResult.value.scores[key]?.score ?? '');
+            : (activeGrades.value?.scores[key]?.score ?? '');
     };
 
     const confirmEditItem = (item) => {
@@ -260,7 +293,7 @@ export function useDashboardState(props) {
     };
 
     const startEditExistingCorrection = () => {
-        const c = gradesResult.value.pending_correction;
+        const c = activeGrades.value.pending_correction;
         const map = {};
         (c.edited_items ?? []).forEach((item) => {
             const key = item.category + '|' + item.title;
@@ -283,6 +316,7 @@ export function useDashboardState(props) {
             });
             if (!data.must_change_password) {
                 gradesResult.value = data;
+                syncSelectedSection();
             }
         } catch (err) {
             // silent — keep the current view if refetch fails
@@ -290,7 +324,7 @@ export function useDashboardState(props) {
     };
 
     const cancelCorrection = async () => {
-        const c = gradesResult.value?.pending_correction;
+        const c = activeGrades.value?.pending_correction;
         if (!c) return;
         correctionLoading.value = true;
         correctionError.value = '';
@@ -331,6 +365,7 @@ export function useDashboardState(props) {
             formData.append('password', gradesForm.value.password);
             formData.append('type', type);
             formData.append('period', gradesPeriod.value);
+            if (activeGrades.value?.section_id) formData.append('section_id', activeGrades.value.section_id);
 
             if (type === 'recheck') {
                 formData.append('notes', recheckNotes.value);
@@ -371,6 +406,7 @@ export function useDashboardState(props) {
     const closeGradesModal = () => {
         gradesModalOpen.value = false;
         gradesResult.value = null;
+        selectedSectionId.value = null;
         gradesForm.value = { student_number: '', password: '' };
         gradesError.value = '';
         gradesPeriod.value = 'prelim';
@@ -396,6 +432,7 @@ export function useDashboardState(props) {
                 return;
             }
             gradesResult.value = data;
+            syncSelectedSection();
         } catch (err) {
             if (!handleNeedsPhoto(err, 'grades')) gradesError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
         } finally {
@@ -876,6 +913,7 @@ export function useDashboardState(props) {
         // grades modal
         gradesModalOpen, gradesForm, gradesError, gradesLoading,
         showGradesLoginPassword, gradesResult, gradesPeriod, gradesMustChangePassword,
+        selectedSectionId, activeGrades, selectGradesSection,
         topPeriod, periods, switchGradesPeriod, openGradesModal, closeGradesModal, submitGradesLogin,
 
         // grade correction / recheck

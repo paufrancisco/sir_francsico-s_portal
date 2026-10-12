@@ -545,6 +545,22 @@
                             <button @click="closeGradesModal" class="text-[var(--text-muted)] hover:text-[var(--text-body)]">✕</button>
                         </div>
 
+                        <!-- Subject tabs (lalabas lang kapag higit sa isa ang subject) -->
+                        <div v-if="gradesResult.sections && gradesResult.sections.length > 1" class="flex flex-wrap items-center gap-1 rounded-lg p-1 w-fit mb-2" style="background: rgba(255,255,255,0.08);">
+                            <button
+                                v-for="s in gradesResult.sections"
+                                :key="s.section_id"
+                                @click="selectGradesSection(s.section_id)"
+                                :disabled="gradesLoading"
+                                class="text-xs font-medium px-3 py-1 rounded-md transition disabled:opacity-50"
+                                :style="activeGrades.section_id === s.section_id
+                                    ? 'background: rgba(255,255,255,0.15); color: #ffffff !important;'
+                                    : 'color: rgba(255,255,255,0.5) !important;'"
+                            >
+                                {{ s.subject }}
+                            </button>
+                        </div>
+
                         <!-- Period tabs + loading indicator -->
                         <div class="flex items-center gap-2 mb-3">
                             <div class="flex items-center gap-1 rounded-lg p-1 w-fit" style="background: rgba(255,255,255,0.08);">
@@ -573,20 +589,20 @@
                         <!-- Content area with fade + spinner overlay while loading -->
                         <div class="relative" style="min-height: 80px;">
                             <div :class="gradesLoading ? 'opacity-30 pointer-events-none transition' : 'transition'">
-                                <p v-if="gradesResult.items.length === 0" class="text-xs text-[var(--text-muted)] py-4">
+                                <p v-if="activeGrades.items.length === 0" class="text-xs text-[var(--text-muted)] py-4">
                                     You don't have any recorded grades yet.
                                 </p>
 
                                 <div v-else class="mt-3 border-t border-[var(--surface-border-soft)]">
                                     <div
-                                        v-for="item in gradesResult.items"
+                                        v-for="item in activeGrades.items"
                                         :key="item.category + item.title"
                                         class="ledger-row py-2 text-sm border-b border-[var(--surface-border-soft)]"
                                     >
                                         <span class="text-[var(--text-body)] shrink-0">{{ item.title }}</span>
                                         <span class="leader leader--light"></span>
 
-                                        <template v-if="gradesResult.scores[item.category + '|' + item.title]">
+                                        <template v-if="activeGrades.scores[item.category + '|' + item.title]">
                                             <!-- inline editing this row -->
                                             <template v-if="showRecheckForm && editingItemKey === item.category + '|' + item.title">
                                                 <input
@@ -595,7 +611,7 @@
                                                     class="w-14 text-xs text-right rounded px-1.5 py-0.5"
                                                     style="border: 1px solid var(--surface-border); background: var(--surface); color: var(--text-body);"
                                                 />
-                                                <span class="text-xs text-[var(--text-muted)] shrink-0">/{{ gradesResult.scores[item.category + '|' + item.title].max_score }}</span>
+                                                <span class="text-xs text-[var(--text-muted)] shrink-0">/{{ activeGrades.scores[item.category + '|' + item.title].max_score }}</span>
                                                 <button type="button" @click="confirmEditItem(item)" class="shrink-0 hover:opacity-70" style="color: var(--teal, #1a7f37);" title="Confirm">
                                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
                                                 </button>
@@ -607,11 +623,11 @@
                                             <!-- already has a pending edit — show original → proposal comparison -->
                                             <template v-else-if="showRecheckForm && editedItems[item.category + '|' + item.title]">
                                                 <span class="text-xs text-[var(--text-muted)] line-through shrink-0" style="font-family:var(--font-mono);">
-                                                    {{ gradesResult.scores[item.category + '|' + item.title].score }}
+                                                    {{ activeGrades.scores[item.category + '|' + item.title].score }}
                                                 </span>
                                                 <span class="text-xs text-[var(--text-muted)] shrink-0">→</span>
                                                 <span class="font-medium text-xs shrink-0 tabular-nums" style="font-family:var(--font-mono); color: #cf222e;">
-                                                    {{ editedItems[item.category + '|' + item.title].claimed_score }}/{{ gradesResult.scores[item.category + '|' + item.title].max_score }}
+                                                    {{ editedItems[item.category + '|' + item.title].claimed_score }}/{{ activeGrades.scores[item.category + '|' + item.title].max_score }}
                                                 </span>
                                                 <button type="button" @click="startEditItem(item)" class="shrink-0 text-[var(--text-muted)] hover:text-[var(--text-body)]" title="Edit again">
                                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -624,7 +640,7 @@
                                             <!-- normal display -->
                                             <template v-else>
                                                 <span class="font-medium text-[var(--text-body)] shrink-0 tabular-nums" style="font-family:var(--font-mono);">
-                                                    {{ gradesResult.scores[item.category + '|' + item.title].score }}/{{ gradesResult.scores[item.category + '|' + item.title].max_score }}
+                                                    {{ activeGrades.scores[item.category + '|' + item.title].score }}/{{ activeGrades.scores[item.category + '|' + item.title].max_score }}
                                                 </span>
                                                 <button v-if="showRecheckForm" type="button" @click="startEditItem(item)" class="shrink-0 text-[var(--text-muted)] hover:text-[var(--text-body)]" title="Edit">
                                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -637,9 +653,9 @@
                                 </div>
 
 
-                                <div v-if="gradesResult.breakdown" class="mt-3 pt-3 border-t border-[var(--surface-border-soft)] space-y-1.5">
+                                <div v-if="activeGrades.breakdown" class="mt-3 pt-3 border-t border-[var(--surface-border-soft)] space-y-1.5">
                                     <div
-                                        v-for="cat in gradesResult.breakdown"
+                                        v-for="cat in activeGrades.breakdown"
                                         :key="cat.category"
                                         class="flex items-center justify-between text-xs"
                                     >
@@ -663,7 +679,7 @@
 
                         <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
                             <span class="text-sm font-semibold" style="color: #3b82f6 !important;">Total</span>
-                            <span class="text-lg font-bold" style="color: #3b82f6 !important;">{{ gradesResult.total_percentage }}%</span>
+                            <span class="text-lg font-bold" style="color: #3b82f6 !important;">{{ activeGrades.total_percentage }}%</span>
                         </div>
 
                         <!-- Confirm / Recheck actions -->
@@ -678,17 +694,17 @@
                             <template v-if="correctionUiState === 'pending'">
                                 <div class="text-xs font-semibold mb-2" style="color: var(--gold);">You have a pending recheck request</div>
                                 <div class="space-y-1 text-xs mb-2">
-                                    <div v-for="edit in gradesResult.pending_correction.edited_items" :key="edit.category + edit.title" class="flex items-center justify-between">
+                                    <div v-for="edit in activeGrades.pending_correction.edited_items" :key="edit.category + edit.title" class="flex items-center justify-between">
                                         <span class="text-[var(--text-secondary)]">{{ edit.title }}</span>
                                         <span class="tabular-nums" style="font-family:var(--font-mono);">
-                                            <span class="text-[var(--text-muted)] line-through">{{ gradesResult.scores[edit.category + '|' + edit.title]?.score }}</span>
+                                            <span class="text-[var(--text-muted)] line-through">{{ activeGrades.scores[edit.category + '|' + edit.title]?.score }}</span>
                                             <span class="text-[var(--text-muted)]">→</span>
                                             <span class="font-medium" style="color:var(--text-body);">{{ edit.claimed_score }}</span>
                                         </span>
                                     </div>
                                 </div>
-                                <p v-if="gradesResult.pending_correction.notes" class="text-xs text-[var(--text-secondary)] mb-2">{{ gradesResult.pending_correction.notes }}</p>
-                                <a v-if="gradesResult.pending_correction.attachment_url" :href="gradesResult.pending_correction.attachment_url" target="_blank" class="text-xs hover:underline" style="color:var(--gold);">View attachment</a>
+                                <p v-if="activeGrades.pending_correction.notes" class="text-xs text-[var(--text-secondary)] mb-2">{{ activeGrades.pending_correction.notes }}</p>
+                                <a v-if="activeGrades.pending_correction.attachment_url" :href="activeGrades.pending_correction.attachment_url" target="_blank" class="text-xs hover:underline" style="color:var(--gold);">View attachment</a>
                                 <div class="flex gap-2 mt-3">
                                     <button
                                         v-if="!gradesResult.correction_locked"
@@ -753,7 +769,7 @@
                                     <div v-for="edit in Object.values(editedItems)" :key="edit.category + edit.title" class="flex items-center justify-between py-0.5">
                                         <span class="text-[var(--text-secondary)]">{{ edit.title }}</span>
                                         <span class="tabular-nums" style="font-family:var(--font-mono);">
-                                            <span class="text-[var(--text-muted)] line-through">{{ gradesResult.scores[edit.category + '|' + edit.title]?.score }}</span>
+                                            <span class="text-[var(--text-muted)] line-through">{{ activeGrades.scores[edit.category + '|' + edit.title]?.score }}</span>
                                             <span class="text-[var(--text-muted)]">→</span>
                                             <span class="font-medium" style="color:var(--text-body);">{{ edit.claimed_score }}</span>
                                         </span>
@@ -1033,6 +1049,7 @@ const {
     // grades modal
     gradesModalOpen, gradesForm, gradesError, gradesLoading,
     showGradesLoginPassword, gradesResult, gradesPeriod, gradesMustChangePassword,
+    selectedSectionId, activeGrades, selectGradesSection,
     topPeriod, periods, switchGradesPeriod, openGradesModal, closeGradesModal, submitGradesLogin,
 
     // grade correction / recheck

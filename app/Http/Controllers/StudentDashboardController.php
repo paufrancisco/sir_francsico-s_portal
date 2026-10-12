@@ -158,84 +158,95 @@ class StudentDashboardController extends Controller
         $weights = ['long_quiz' => 0.20, 'tp' => 0.30, 'exam' => 0.50];
         $categoryLabels = ['long_quiz' => 'Quizzes', 'tp' => 'Task Performance', 'exam' => 'Exams'];
 
-        $grades = $student->grades()->where('period', $period)->get();
-
         $categoryOrder = ['long_quiz' => 0, 'tp' => 1, 'exam' => 2];
+        $deadline = Setting::get('grade_correction_deadline');
 
-        $items = $grades
-            ->unique(fn ($g) => $g->category . '|' . $g->title)
-            ->sortBy(fn ($g) => $categoryOrder[$g->category] ?? 99)
-            ->values()
-            ->map(fn ($g) => ['category' => $g->category, 'title' => $g->title]);
+        $sections = $student->sections()
+            ->orderBy('name')
+            ->get(['sections.id', 'sections.name', 'sections.subject']);
 
-        $scores = $items->mapWithKeys(function ($item) use ($grades) {
-            $g = $grades->first(fn ($gr) => $gr->category === $item['category'] && $gr->title === $item['title']);
-            return [
-                $item['category'] . '|' . $item['title'] => $g
-                    ? ['score' => $g->score, 'max_score' => $g->max_score]
-                    : null,
-            ];
-        });
+        $result = $sections->map(function ($section) use ($student, $period, $weights, $categoryLabels, $categoryOrder) {
+            $grades = $student->grades()
+                ->where('section_id', $section->id)
+                ->where('period', $period)
+                ->get();
 
-        $weighted = 0;
-        $breakdown = [];
+            $items = $grades
+                ->sortBy(fn ($g) => $categoryOrder[$g->category] ?? 99)
+                ->values()
+                ->map(fn ($g) => [
+                    'category' => $g->category,
+                    'title' => $g->title,
+                    'score' => $g->score,
+                    'max_score' => $g->max_score,
+                ]);
 
-        foreach ($weights as $category => $weight) {
-            $catGrades = $grades->where('category', $category);
-            $weightPercent = $weight * 100;
+            $weighted = 0;
+            $breakdown = [];
+            foreach ($weights as $category => $weight) {
+                $cat = $grades->where('category', $category);
+                $max = $cat->sum('max_score');
 
-            if ($catGrades->isEmpty()) {
+                // sum-based, kapareho ng admin GradesTab
+                $percent = $max > 0 ? ($cat->sum('score') / $max) * 100 : null;
+                $contribution = ($percent ?? 0) * $weight;
+                $weighted += $contribution;
+
                 $breakdown[] = [
                     'category' => $category,
                     'label' => $categoryLabels[$category],
-                    'weight_percent' => $weightPercent,
-                    'avg_percent' => null,
-                    'contribution' => 0,
+                    'weight_percent' => $weight * 100,
+                    'avg_percent' => $percent !== null ? round($percent, 2) : null,
+                    'contribution' => round($contribution, 2),
                 ];
-                continue;
             }
 
-            $avgPercent = $catGrades->avg(fn ($g) => $g->max_score > 0 ? ($g->score / $g->max_score) * 100 : 0);
-            $contribution = $avgPercent * $weight;
-            $weighted += $contribution;
+            $pending = GradeCorrection::where('student_id', $student->id)
+                ->where('section_id', $section->id)
+                ->where('period', $period)
+                ->where('type', 'recheck')
+                ->where('status', 'pending')
+                ->latest()
+                ->first();
 
-            $breakdown[] = [
-                'category' => $category,
-                'label' => $categoryLabels[$category],
-                'weight_percent' => $weightPercent,
-                'avg_percent' => round($avgPercent, 2),
-                'contribution' => round($contribution, 2),
+            return [
+                'section_id' => $section->id,
+                'subject' => $section->subject,
+                'section_name' => $section->name,
+                'items' => $items,
+                'breakdown' => $breakdown,
+                'total_percentage' => round($weighted, 2),
+                'has_grades' => $grades->isNotEmpty(),
+                'pending_correction' => $pending ? [
+                    'id' => $pending->id,
+                    'notes' => $pending->notes,
+                    'edited_items' => $pending->edited_items,
+                    'attachment_url' => $pending->attachment_path
+                        ? Storage::disk('supabase')->temporaryUrl($pending->attachment_path, now()->addMinutes(30))
+                        : null,
+                    'created_at' => $pending->created_at,
+                ] : null,
             ];
-        }
+        })->values();
 
-        $pendingCorrection = GradeCorrection::where('student_id', $student->id)
-            ->where('section_id', $student->section_id)
-            ->where('period', $period)
-            ->where('type', 'recheck')
-            ->where('status', 'pending')
-            ->latest()
-            ->first();
-
-        $deadline = Setting::get('grade_correction_deadline');
+        // TEMPORARY compat: ibalik pa rin ang lumang shape (unang subject lang)
+        // para gumana ang kasalukuyang modal hanggang ma-update ang Dashboard.vue.
+        $first = $result->first();
 
         return response()->json([
             'name' => $student->full_name,
             'period' => $period,
-            'items' => $items,
-            'scores' => $scores,
-            'breakdown' => $breakdown,
-            'total_percentage' => round($weighted, 2),
+            'sections' => $result,
             'correction_deadline' => $deadline,
             'correction_locked' => $deadline ? now()->gt(\Carbon\Carbon::parse($deadline)->endOfDay()) : false,
-            'pending_correction' => $pendingCorrection ? [
-                'id' => $pendingCorrection->id,
-                'notes' => $pendingCorrection->notes,
-                'edited_items' => $pendingCorrection->edited_items,
-                'attachment_url' => $pendingCorrection->attachment_path
-                    ? Storage::disk('supabase')->temporaryUrl($pendingCorrection->attachment_path, now()->addMinutes(30))
-                    : null,
-                'created_at' => $pendingCorrection->created_at,
-            ] : null,
+
+            'items' => $first ? $first['items']->map(fn ($i) => ['category' => $i['category'], 'title' => $i['title']])->values() : [],
+            'scores' => $first ? $first['items']->mapWithKeys(fn ($i) => [
+                $i['category'] . '|' . $i['title'] => ['score' => $i['score'], 'max_score' => $i['max_score']],
+            ]) : [],
+            'breakdown' => $first['breakdown'] ?? [],
+            'total_percentage' => $first['total_percentage'] ?? 0,
+            'pending_correction' => $first['pending_correction'] ?? null,
         ]);
     }
 }

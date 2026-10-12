@@ -20,6 +20,7 @@ class GradeCorrectionController extends Controller
             'password' => 'required|string',
             'type' => 'required|in:confirmed,recheck',
             'period' => 'nullable|in:prelim,midterm,prefinal,finals',
+            'section_id' => 'nullable|exists:sections,id',
             'notes' => 'nullable|string|max:1000',
             'edited_items' => 'required_if:type,recheck|nullable|string',
             'attachment' => 'nullable|image|max:5120',
@@ -31,10 +32,16 @@ class GradeCorrectionController extends Controller
             return response()->json(['message' => 'Incorrect student number or password.'], 422);
         }
 
+        $sectionId = $request->section_id ?? $student->section_id;
+
+        if ($request->section_id && ! $student->sections()->where('sections.id', $sectionId)->exists()) {
+            return response()->json(['message' => 'You are not enrolled in that section.'], 422);
+        }
+
         if ($request->type === 'confirmed') {
             GradeCorrection::create([
                 'student_id' => $student->id,
-                'section_id' => $student->section_id,
+                'section_id' => $sectionId,
                 'type' => 'confirmed',
                 'period' => $request->period,
                 'status' => 'resolved',
@@ -66,7 +73,7 @@ class GradeCorrectionController extends Controller
         }
 
         $existing = GradeCorrection::where('student_id', $student->id)
-            ->where('section_id', $student->section_id)
+            ->where('section_id', $sectionId)
             ->where('period', $request->period)
             ->where('type', 'recheck')
             ->where('status', 'pending')
@@ -98,7 +105,7 @@ class GradeCorrectionController extends Controller
 
         GradeCorrection::create([
             'student_id' => $student->id,
-            'section_id' => $student->section_id,
+            'section_id' => $sectionId,
             'type' => 'recheck',
             'period' => $request->period,
             'notes' => $request->notes,

@@ -329,7 +329,7 @@
                         <button type="button" @click.stop="openWallModal()" class="text-xs font-semibold px-3 py-1.5 rounded-lg shrink-0" style="background:var(--gold);color:var(--navy-deep);">+ Add a note</button>
                     </div>
                     <div class="flex-1 min-h-0 overflow-y-auto rounded-xl">
-                        <div class="wall-board h-full" :style="{ minHeight: Math.max(320, Math.ceil(wallPosts.length / 2) * 150 + 90) + 'px' }">
+                        <div class="wall-board h-full" :style="{ minHeight: Math.max(320, Math.min(wallPosts.length, 10) * 150 + 90) + 'px' }">
                             <p v-if="!wallPosts.length" class="absolute inset-0 flex items-center justify-center text-xs text-white/80 text-center px-4">
                                 {{ wallStatus === 'error' ? "Couldn't load the wall." : wallStatus === 'loading' ? 'Loading notes...' : 'No notes yet. Be the first to post.' }}
                             </p>
@@ -541,6 +541,14 @@
                             <div>
                                 <div class="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Report of grades</div>
                                 <div class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">{{ gradesResult.name }}</div>
+                                <div class="flex items-center gap-2 mt-2">
+                                    <img v-if="gradesResult.photo_url" :src="gradesResult.photo_url" alt="" class="w-8 h-8 rounded-full object-cover" />
+                                    <label class="text-[11px] font-medium cursor-pointer hover:underline" :class="photoChanging ? 'opacity-50 pointer-events-none' : ''" style="color: #3b82f6 !important;">
+                                        {{ photoChanging ? 'Uploading...' : 'Change photo' }}
+                                        <input type="file" accept="image/png,image/jpeg" class="hidden" :disabled="photoChanging" @change="changePhoto($event.target.files[0]); $event.target.value = ''" />
+                                    </label>
+                                    <span v-if="photoChangeMessage" class="text-[11px]" :style="photoChangeError ? 'color:#cf222e;' : 'color:#3fb950;'">{{ photoChangeMessage }}</span>
+                                </div>
                             </div>
                             <button @click="closeGradesModal" class="text-[var(--text-muted)] hover:text-[var(--text-body)]">✕</button>
                         </div>
@@ -1050,6 +1058,7 @@ const {
     gradesModalOpen, gradesForm, gradesError, gradesLoading,
     showGradesLoginPassword, gradesResult, gradesPeriod, gradesMustChangePassword,
     selectedSectionId, activeGrades, selectGradesSection,
+    photoChanging, photoChangeMessage, photoChangeError, changePhoto,
     topPeriod, periods, switchGradesPeriod, openGradesModal, closeGradesModal, submitGradesLogin,
 
     // grade correction / recheck
@@ -1757,10 +1766,14 @@ watch([activeView, activeSectionId], ([view, id]) => {
 /* ---- Freedom wall ---- */
 .wall-board {
     position: relative;
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.4rem 1rem;
+    /* 10 notes per column; the 11th note starts a new column */
+    grid-template-rows: repeat(10, auto);
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(7.5rem, 1fr);
+    gap: 0 1rem;
     padding: 1.4rem 1rem;
     align-content: start;
     border-radius: 1rem;
@@ -1771,6 +1784,7 @@ watch([activeView, activeSectionId], ([view, id]) => {
 }
 .wall-note {
     position: relative;
+    margin-bottom: 1.4rem;
     min-height: 7rem;
     padding: 1.15rem 0.9rem 0.8rem;
     border-radius: 3px;

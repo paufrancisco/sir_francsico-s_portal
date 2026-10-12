@@ -71,6 +71,7 @@ class FreedomWallController extends Controller
             'section_id' => $student->section_id,
             'body' => trim($data['body']),
             'color' => $data['color'] ?? 'yellow',
+            'author_first_name' => $this->firstName($student->full_name),
         ]);
 
         StudentActivity::record(
@@ -127,8 +128,22 @@ class FreedomWallController extends Controller
             'created_at' => $p->created_at,
             'likes_count' => $p->likes_count ?? $p->likes()->count(),
             'liked' => $liked,
-            'can_delete' => auth()->check(),
+            'author' => $p->author_first_name,
         ];
+    }
+
+    // Names are stored as "Last, First Middle": keep only the first given name
+    private function firstName(?string $fullName): ?string
+    {
+        $fullName = trim((string) $fullName);
+        if ($fullName === '') {
+            return null;
+        }
+
+        $given = str_contains($fullName, ',') ? trim(explode(',', $fullName, 2)[1]) : $fullName;
+        $first = explode(' ', $given)[0];
+
+        return $first !== '' ? mb_substr($first, 0, 40) : null;
     }
 
     private function verify(string $studentNumber, string $password): Student

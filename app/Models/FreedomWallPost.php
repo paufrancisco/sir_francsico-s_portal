@@ -8,7 +8,7 @@ class FreedomWallPost extends Model
 {
     const UPDATED_AT = null;
 
-    protected $fillable = ['student_id', 'section_id', 'body', 'color'];
+    protected $fillable = ['student_id', 'section_id', 'body', 'color', 'author_first_name'];
 
     public function likes()
     {

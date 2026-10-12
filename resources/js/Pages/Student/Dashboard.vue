@@ -341,9 +341,7 @@
                                         <svg width="14" height="14" viewBox="0 0 24 24" :fill="p.liked ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
                                         <span>{{ p.likes_count || 0 }}</span>
                                     </button>
-                                    <button v-if="p.can_delete" type="button" class="wall-del" title="Delete note" aria-label="Delete note" @click.stop="deletePost(p)">
-                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
-                                    </button>
+                                    <span v-if="p.author" class="wall-author">{{ p.author }}</span>
                                     <div class="wall-date">{{ new Date(p.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) }}</div>
                                 </div>
                             </div>
@@ -816,7 +814,7 @@
                         <div class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">Add a note</div>
                         <button @click="closeWallModal" class="text-[var(--text-muted)] hover:text-[var(--text-body)]" aria-label="Close">✕</button>
                     </div>
-                    <p class="text-xs text-[var(--text-muted)] mb-3">Sign in to post. Your name is never shown on the wall.</p>
+                    <p class="text-xs text-[var(--text-muted)] mb-3">Sign in to post. Your first name will be shown on your note.</p>
                     <form @submit.prevent="submitWallPost(activeSectionId)" class="space-y-3">
                         <input v-model="wallForm.student_number" type="text" placeholder="Student number" class="portal-input" />
                         <div class="flex items-center gap-2">
@@ -1811,6 +1809,7 @@ watch([activeView, activeSectionId], ([view, id]) => {
 .wall-like--on { color: #d6243c; background: rgba(214, 36, 60, 0.14); }
 .wall-del { display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem; border-radius: 999px; color: #b42318; background: rgba(180, 35, 24, 0.12); transition: background 0.15s ease; }
 .wall-del:hover { background: rgba(180, 35, 24, 0.28); }
+.wall-author { min-width: 0; flex: 1; text-align: center; font-size: 0.7rem; font-weight: 600; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wall-date { margin-top: 0; font-size: 0.65rem; opacity: 0.6; text-align: right; }
 @keyframes wall-pop { from { opacity: 0; scale: 0.6; } to { opacity: 1; scale: 1; } }
 @media (prefers-reduced-motion: reduce) { .wall-note { animation: none; } }

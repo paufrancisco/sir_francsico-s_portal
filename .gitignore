@@ -24,3 +24,4 @@ Homestead.yaml
 Thumbs.db
 *.bak.*
 *.bak
+app/Console/Commands/ExportStudentCredentials.php

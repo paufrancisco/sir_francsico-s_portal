@@ -80,7 +80,17 @@ export function useGradeCorrections(sectionId, currentPeriod) {
         correctionModalOpen.value = false;
     };
 
-    const approveCorrectionInline = async () => {
+    const buildResolveForm = (decision, payload = {}) => {
+        const form = new FormData();
+        // Laravel reads multipart only on POST, so spoof the PATCH verb.
+        form.append('_method', 'PATCH');
+        form.append('decision', decision);
+        if (payload.comment) form.append('review_comment', payload.comment);
+        if (payload.attachment) form.append('review_attachment', payload.attachment);
+        return form;
+    };
+
+    const approveCorrectionInline = async (payload = {}) => {
         correctionResolving.value = true;
         correctionErrorMsg.value = '';
 
@@ -90,9 +100,10 @@ export function useGradeCorrections(sectionId, currentPeriod) {
                 await axios.patch(`/paulo/grades/${g.id}`, { score: g.editValue });
             }
 
-            await axios.patch(`/paulo/grade-corrections/${correctionId.value}/resolve`, {
-                decision: 'approved',
-            });
+            await axios.post(
+                `/paulo/grade-corrections/${correctionId.value}/resolve`,
+                buildResolveForm('approved', payload)
+            );
 
             correctionStatus.value = 'resolved';
             correctionDecision.value = 'approved';
@@ -108,14 +119,15 @@ export function useGradeCorrections(sectionId, currentPeriod) {
         }
     };
 
-    const rejectCorrectionInline = async () => {
+    const rejectCorrectionInline = async (payload = {}) => {
         correctionResolving.value = true;
         correctionErrorMsg.value = '';
 
         try {
-            await axios.patch(`/paulo/grade-corrections/${correctionId.value}/resolve`, {
-                decision: 'rejected',
-            });
+            await axios.post(
+                `/paulo/grade-corrections/${correctionId.value}/resolve`,
+                buildResolveForm('rejected', payload)
+            );
 
             correctionStatus.value = 'resolved';
             correctionDecision.value = 'rejected';
@@ -123,7 +135,9 @@ export function useGradeCorrections(sectionId, currentPeriod) {
             closeCorrectionModal();
             router.reload({ only: ['gradesBreakdown'] });
         } catch (e) {
-            correctionErrorMsg.value = e.response?.data?.message ?? 'Failed to reject, please try again.';
+            correctionErrorMsg.value = Object.values(e.response?.data?.errors ?? {}).flat().join(' ')
+                || e.response?.data?.message
+                || 'Failed to reject, please try again.';
         } finally {
             correctionResolving.value = false;
         }

@@ -71,18 +71,49 @@
                     </div>
                 </div>
 
+                <div class="mt-4 space-y-3">
+                    <div>
+                        <label class="block text-xs font-medium text-[#dbe5f2] mb-1">
+                            Comment
+                            <span class="font-normal text-[#9fb0c6]">(optional for approve, required for reject)</span>
+                        </label>
+                        <textarea
+                            v-model="comment"
+                            rows="3"
+                            maxlength="1000"
+                            placeholder="Explain your decision to the student..."
+                            class="w-full px-2.5 py-2 text-sm text-white bg-[#121e30] border border-white/15 hover:border-white/30 focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-400/50 rounded-lg placeholder:text-[#6b7f99]"
+                        ></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-[#dbe5f2] mb-1">
+                            Attachment
+                            <span class="font-normal text-[#9fb0c6]">(optional, image or PDF, max 5MB)</span>
+                        </label>
+                        <input
+                            ref="fileInput"
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.pdf"
+                            @change="onFileChange"
+                            class="block w-full text-xs text-[#9fb0c6] file:mr-2 file:rounded-lg file:border-0 file:bg-white/10 file:px-2.5 file:py-1.5 file:text-xs file:text-white hover:file:bg-white/20"
+                        />
+                    </div>
+                </div>
+
+                <p v-if="localError" class="text-xs text-red-300 mt-3">{{ localError }}</p>
+
                 <p v-if="errorMsg" class="text-xs text-red-300 mt-3">{{ errorMsg }}</p>
 
                 <div class="flex gap-2 mt-4 pt-4 border-t border-white/10">
                     <button
-                        @click="$emit('approve')"
+                        @click="submitApprove"
                         :disabled="resolving"
                         class="flex-1 text-sm font-semibold py-2.5 rounded-xl text-white bg-emerald-600 hover:bg-emerald-500 border border-emerald-400/40 transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {{ resolving ? 'Processing...' : (decision === 'approved' ? 'Re-approve' : 'Approve') }}
                     </button>
                     <button
-                        @click="$emit('reject')"
+                        @click="submitReject"
                         :disabled="resolving"
                         class="flex-1 text-sm font-semibold py-2.5 rounded-xl text-red-200 bg-red-500/15 hover:bg-red-500/25 border border-red-400/40 transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -95,7 +126,9 @@
 </template>
 
 <script setup>
-defineProps({
+import { ref, watch } from 'vue';
+
+const props = defineProps({
     open: Boolean,
     loading: Boolean,
     studentName: String,
@@ -110,7 +143,53 @@ defineProps({
     badgeClass: Function,
 });
 
-defineEmits(['close', 'approve', 'reject']);
+const emit = defineEmits(['close', 'approve', 'reject']);
+
+const comment = ref('');
+const attachment = ref(null);
+const localError = ref('');
+const fileInput = ref(null);
+
+// Start every review with a clean form.
+watch(() => props.open, (isOpen) => {
+    if (!isOpen) return;
+    comment.value = '';
+    attachment.value = null;
+    localError.value = '';
+    if (fileInput.value) fileInput.value.value = '';
+});
+
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
+
+const onFileChange = (e) => {
+    localError.value = '';
+    const file = e.target.files?.[0] ?? null;
+
+    if (file && file.size > MAX_FILE_BYTES) {
+        localError.value = 'The attachment must be 5MB or smaller.';
+        e.target.value = '';
+        attachment.value = null;
+        return;
+    }
+
+    attachment.value = file;
+};
+
+const submitApprove = () => {
+    localError.value = '';
+    emit('approve', { comment: comment.value.trim(), attachment: attachment.value });
+};
+
+const submitReject = () => {
+    localError.value = '';
+
+    if (!comment.value.trim()) {
+        localError.value = 'A comment is required when rejecting a request.';
+        return;
+    }
+
+    emit('reject', { comment: comment.value.trim(), attachment: attachment.value });
+};
 </script>
 
 <style scoped>

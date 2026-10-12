@@ -209,6 +209,14 @@ class StudentDashboardController extends Controller
                 ->latest()
                 ->first();
 
+            $resolved = GradeCorrection::where('student_id', $student->id)
+                ->where('section_id', $section->id)
+                ->where('period', $period)
+                ->where('type', 'recheck')
+                ->where('status', 'resolved')
+                ->latest('resolved_at')
+                ->first();
+
             return [
                 'section_id' => $section->id,
                 'subject' => $section->subject,
@@ -225,6 +233,15 @@ class StudentDashboardController extends Controller
                         ? Storage::disk('supabase')->temporaryUrl($pending->attachment_path, now()->addMinutes(30))
                         : null,
                     'created_at' => $pending->created_at,
+                ] : null,
+                'resolved_correction' => $resolved ? [
+                    'id' => $resolved->id,
+                    'decision' => $resolved->decision,
+                    'review_comment' => $resolved->review_comment,
+                    'review_attachment_url' => $resolved->review_attachment_path
+                        ? Storage::disk('supabase')->temporaryUrl($resolved->review_attachment_path, now()->addMinutes(30))
+                        : null,
+                    'resolved_at' => $resolved->resolved_at,
                 ] : null,
             ];
         })->values();
@@ -248,6 +265,7 @@ class StudentDashboardController extends Controller
             'breakdown' => $first['breakdown'] ?? [],
             'total_percentage' => $first['total_percentage'] ?? 0,
             'pending_correction' => $first['pending_correction'] ?? null,
+            'resolved_correction' => $first['resolved_correction'] ?? null,
         ]);
     }
 }

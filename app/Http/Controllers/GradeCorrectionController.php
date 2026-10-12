@@ -143,6 +143,10 @@ class GradeCorrectionController extends Controller
                 'attachment_url' => $c->attachment_path
                     ? Storage::disk('supabase')->temporaryUrl($c->attachment_path, now()->addMinutes(30))
                     : null,
+                'review_comment' => $c->review_comment,
+                'review_attachment_url' => $c->review_attachment_path
+                    ? Storage::disk('supabase')->temporaryUrl($c->review_attachment_path, now()->addMinutes(30))
+                    : null,
                 'created_at' => $c->created_at,
                 'resolved_at' => $c->resolved_at,
             ]);
@@ -168,11 +172,31 @@ class GradeCorrectionController extends Controller
     {
         $request->validate([
             'decision' => 'required|in:approved,rejected',
+            'review_comment' => 'required_if:decision,rejected|nullable|string|max:1000',
+            'review_attachment' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+        ], [
+            'review_comment.required_if' => 'A comment is required when rejecting a request.',
         ]);
+
+        $reviewAttachmentPath = $gradeCorrection->review_attachment_path;
+
+        if ($request->hasFile('review_attachment')) {
+            if ($reviewAttachmentPath) {
+                Storage::disk('supabase')->delete($reviewAttachmentPath);
+            }
+            $reviewAttachmentPath = $request->file('review_attachment')
+                ->store('grade-correction-reviews', 'supabase');
+        } elseif ($reviewAttachmentPath && $gradeCorrection->decision && $gradeCorrection->decision !== $request->decision) {
+            // Decision changed and no new file: the old attachment belonged to the previous decision.
+            Storage::disk('supabase')->delete($reviewAttachmentPath);
+            $reviewAttachmentPath = null;
+        }
 
         $gradeCorrection->update([
             'status' => 'resolved',
             'decision' => $request->decision,
+            'review_comment' => $request->filled('review_comment') ? trim($request->review_comment) : null,
+            'review_attachment_path' => $reviewAttachmentPath,
             'resolved_at' => now(),
         ]);
 
@@ -181,6 +205,7 @@ class GradeCorrectionController extends Controller
                 'id' => $gradeCorrection->id,
                 'status' => $gradeCorrection->status,
                 'decision' => $gradeCorrection->decision,
+                'review_comment' => $gradeCorrection->review_comment,
                 'resolved_at' => $gradeCorrection->resolved_at,
             ],
         ]);

@@ -695,6 +695,30 @@
                         <!-- Confirm / Recheck actions -->
                         <div class="mt-4 pt-3 border-t border-[var(--surface-border-soft)]">
 
+                            <!-- latest review result from Sir Francisco -->
+                            <div
+                                v-if="activeGrades.resolved_correction && correctionUiState !== 'pending'"
+                                class="mb-3 rounded-xl p-3 text-xs"
+                                :style="{
+                                    border: '1px solid ' + (activeGrades.resolved_correction.decision === 'approved' ? 'rgba(26,127,55,0.4)' : 'rgba(207,34,46,0.4)'),
+                                }"
+                            >
+                                <div
+                                    class="font-semibold mb-1"
+                                    :style="{ color: activeGrades.resolved_correction.decision === 'approved' ? 'var(--teal, #1a7f37)' : '#cf222e' }"
+                                >
+                                    {{ activeGrades.resolved_correction.decision === 'approved' ? 'Your recheck request was approved' : 'Your recheck request was rejected' }}
+                                </div>
+                                <p v-if="activeGrades.resolved_correction.review_comment" class="text-[var(--text-secondary)] whitespace-pre-line">{{ activeGrades.resolved_correction.review_comment }}</p>
+                                <a
+                                    v-if="activeGrades.resolved_correction.review_attachment_url"
+                                    :href="activeGrades.resolved_correction.review_attachment_url"
+                                    target="_blank"
+                                    class="inline-block mt-1.5 hover:underline"
+                                    style="color:var(--gold);"
+                                >View attachment</a>
+                            </div>
+
                             <!-- deadline notice -->
                             <div v-if="gradesResult.correction_locked && correctionUiState !== 'pending'" class="text-xs mb-3" style="color:#cf222e;">
                                 The deadline for grade correction requests has passed{{ gradesResult.correction_deadline ? ' (' + formatEventDate(gradesResult.correction_deadline) + ')' : '' }}. Please get in touch with Sir Francisco directly.

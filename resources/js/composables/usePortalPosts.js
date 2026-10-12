@@ -24,9 +24,9 @@ function apiError(data, fallback, res) {
     return Object.values(data.errors ?? {})[0]?.[0] || data.message || fallback;
 }
 
-async function postJson(url, payload) {
+async function postJson(url, payload, method = 'POST') {
     const res = await fetch(url, {
-        method: 'POST',
+        method,
         headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...csrfHeaders() },
         body: JSON.stringify(payload),
     });
@@ -386,6 +386,53 @@ export function usePortalPosts({ getSectionId, withAuth, creds, touchAuth }) {
         else if (e.key === 'ArrowLeft') stepLightbox(-1);
     }
 
+    // ---- Edit (author or teacher): caption only
+    const editing = reactive({ id: null, text: '', saving: false, error: '' });
+
+    function startEdit(post) {
+        editing.id = post.id;
+        editing.text = post.caption ?? '';
+        editing.saving = false;
+        editing.error = '';
+    }
+
+    function cancelEdit() {
+        editing.id = null;
+        editing.text = '';
+        editing.saving = false;
+        editing.error = '';
+    }
+
+    function saveEdit(post) {
+        if (editing.id !== post.id || editing.saving) return;
+        const text = editing.text.trim();
+        if (!text && !post.images.length) {
+            editing.error = 'A post with no photo needs a caption.';
+            return;
+        }
+        return withAuth(async () => {
+            editing.saving = true;
+            editing.error = '';
+            try {
+                const { res, data } = await postJson(`${POSTS_URL}/${post.id}`, { ...creds(), caption: text }, 'PATCH');
+                if (!res.ok) {
+                    const authErr = data.errors?.student_number?.[0];
+                    if (authErr) return authErr;
+                    editing.error = apiError(data, 'Could not save. Please try again.', res);
+                    return null;
+                }
+                touchAuth();
+                post.caption = data.caption;
+                cancelEdit();
+            } catch (e) {
+                editing.error = 'Network error. Please try again.';
+            } finally {
+                editing.saving = false;
+            }
+            return null;
+        });
+    }
+
     // ---- Admin
     async function removePost(post) {
         if (!window.confirm('Delete this post? This cannot be undone.')) return;
@@ -412,6 +459,6 @@ export function usePortalPosts({ getSectionId, withAuth, creds, touchAuth }) {
         choices, effectiveLayout, setLayout, addFiles, removeFile, submitPost,
         pickerFor, pressStart, pressEnd, closePicker, onLikeClick, pickReaction,
         lightbox, openLightbox, closeLightbox, stepLightbox, onKey,
-        removePost,
+        removePost, editing, startEdit, cancelEdit, saveEdit,
     };
 }

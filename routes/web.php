@@ -167,6 +167,8 @@ Route::get('/portal/freedom-wall/me', [\App\Http\Controllers\FreedomWallControll
 Route::get('/portal/posts', [\App\Http\Controllers\PortalPostController::class, 'index']);
 Route::post('/portal/posts', [\App\Http\Controllers\PortalPostController::class, 'store'])->middleware('throttle:20,1');
 Route::post('/portal/posts/{portalPost}/react', [\App\Http\Controllers\PortalPostController::class, 'react'])->middleware('throttle:60,1');
+Route::patch('/portal/posts/{portalPost}', [\App\Http\Controllers\PortalPostController::class, 'update'])
+    ->whereNumber('portalPost')->middleware('throttle:20,1');
 Route::post('/portal/freedom-wall', [\App\Http\Controllers\FreedomWallController::class, 'store'])
     ->middleware('throttle:portal-verify');
 Route::post('/portal/freedom-wall/{freedomWallPost}/like', [\App\Http\Controllers\FreedomWallController::class, 'like'])

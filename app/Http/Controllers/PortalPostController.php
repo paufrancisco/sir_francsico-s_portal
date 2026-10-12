@@ -220,6 +220,43 @@ class PortalPostController extends Controller
         return response()->json(['deleted' => true]);
     }
 
+    // PATCH: edit a post's caption. Only the student who wrote it (verified by
+    // student number + password) or the teacher session can edit. Images stay as is.
+    public function update(Request $request, PortalPost $portalPost): JsonResponse
+    {
+        $teacher = $this->isTeacher($request);
+
+        $data = $request->validate([
+            'student_number' => $teacher ? ['nullable', 'string'] : ['required', 'string'],
+            'password' => $teacher ? ['nullable', 'string'] : ['required', 'string'],
+            'caption' => ['nullable', 'string', 'max:' . self::MAX_CAPTION],
+        ]);
+
+        if (! $teacher) {
+            $student = $this->verify($data['student_number'], $data['password']);
+
+            if ($portalPost->student_id === null || (int) $portalPost->student_id !== (int) $student->id) {
+                abort(403, 'You can only edit your own posts.');
+            }
+        }
+
+        $caption = trim((string) ($data['caption'] ?? ''));
+
+        if ($caption === '' && $portalPost->images()->count() === 0) {
+            throw ValidationException::withMessages(['caption' => 'A post with no photo needs a caption.']);
+        }
+
+        if ($caption !== '' && ProfanityFilter::contains($caption)) {
+            throw ValidationException::withMessages([
+                'caption' => 'Bawal ang masasamang salita. Pakipalitan ang caption mo.',
+            ]);
+        }
+
+        $portalPost->update(['caption' => $caption !== '' ? $caption : null]);
+
+        return response()->json(['caption' => $portalPost->caption]);
+    }
+
     private function present(PortalPost $p, array $counts, ?string $mine, array $likers): array
     {
         return [

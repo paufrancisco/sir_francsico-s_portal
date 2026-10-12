@@ -75,10 +75,25 @@
                         <div class="text-[13px] font-semibold text-white truncate">{{ p.author || 'Classmate' }}</div>
                         <div class="text-[11px] text-white/45">{{ timeAgo(p.created_at) }}</div>
                     </div>
+                    <button v-if="(isTeacher || !p.is_teacher) && editing.id !== p.id" type="button" class="text-[11px] text-white/60 hover:text-white px-2 py-1" @click="startEdit(p)">Edit</button>
                     <button v-if="isTeacher" type="button" class="text-[11px] text-red-300 hover:text-red-200 px-2 py-1" @click="removePost(p)">Delete</button>
                 </header>
 
-                <p v-if="p.caption" class="px-3.5 pb-2 text-[13px] text-white/90 whitespace-pre-line break-words">{{ p.caption }}</p>
+                <div v-if="editing.id === p.id" class="px-3.5 pb-2">
+                    <textarea
+                        v-model="editing.text"
+                        rows="3"
+                        maxlength="500"
+                        placeholder="Edit your caption"
+                        class="w-full rounded-xl bg-white/10 border border-white/15 px-3 py-2 text-[13px] text-white placeholder-white/40 focus:outline-none focus:border-white/40"
+                    ></textarea>
+                    <p v-if="editing.error" class="text-[11px] text-red-300 mt-1">{{ editing.error }}</p>
+                    <div class="flex justify-end gap-2 mt-2">
+                        <button type="button" class="text-[11px] text-white/60 hover:text-white px-3 py-1" :disabled="editing.saving" @click="cancelEdit">Cancel</button>
+                        <button type="button" class="text-[11px] font-semibold px-3 py-1 rounded-full disabled:opacity-50" style="background:var(--gold);color:var(--navy-deep);" :disabled="editing.saving" @click="saveEdit(p)">{{ editing.saving ? 'Saving...' : 'Save' }}</button>
+                    </div>
+                </div>
+                <p v-else-if="p.caption" class="px-3.5 pb-2 text-[13px] text-white/90 whitespace-pre-line break-words">{{ p.caption }}</p>
 
                 <div v-if="p.images.length" class="px-3.5 pb-2">
                     <PostCollage :images="p.images" :layout="p.layout" @open="(i) => openLightbox(p, i)" />
@@ -164,7 +179,7 @@ const {
     choices, effectiveLayout, setLayout, addFiles, removeFile, submitPost,
     pickerFor, pressStart, pressEnd, closePicker, onLikeClick, pickReaction,
     lightbox, openLightbox, closeLightbox, stepLightbox, onKey,
-    removePost,
+    removePost, editing, startEdit, cancelEdit, saveEdit,
 } = usePortalPosts({
     getSectionId: () => props.sectionId,
     withAuth: props.withAuth,

@@ -162,6 +162,11 @@ Route::post('/portal/student-frame', \App\Http\Controllers\StudentFrameControlle
 // Freedom wall: anonymous sticker notes per section (posting needs sign-in)
 Route::get('/portal/freedom-wall', [\App\Http\Controllers\FreedomWallController::class, 'index']);
 Route::get('/portal/freedom-wall/me', [\App\Http\Controllers\FreedomWallController::class, 'me']);
+
+// Class posts: photo posts with captions and reactions (posting needs sign-in)
+Route::get('/portal/posts', [\App\Http\Controllers\PortalPostController::class, 'index']);
+Route::post('/portal/posts', [\App\Http\Controllers\PortalPostController::class, 'store'])->middleware('throttle:20,1');
+Route::post('/portal/posts/{portalPost}/react', [\App\Http\Controllers\PortalPostController::class, 'react'])->middleware('throttle:60,1');
 Route::post('/portal/freedom-wall', [\App\Http\Controllers\FreedomWallController::class, 'store'])
     ->middleware('throttle:portal-verify');
 Route::post('/portal/freedom-wall/{freedomWallPost}/like', [\App\Http\Controllers\FreedomWallController::class, 'like'])
@@ -201,4 +206,6 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
 Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () {
     Route::delete('/freedom-wall/{freedomWallPost}', [\App\Http\Controllers\FreedomWallController::class, 'destroy'])
         ->name('wall.destroy');
+    Route::delete('/portal-posts/{portalPost}', [\App\Http\Controllers\PortalPostController::class, 'destroy'])
+        ->whereNumber('portalPost')->name('portal-posts.destroy');
 });

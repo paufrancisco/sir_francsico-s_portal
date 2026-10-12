@@ -129,6 +129,20 @@
             <div class="max-w-[1500px] mx-auto px-5 lg:px-10 py-6 lg:min-h-screen lg:flex lg:flex-col lg:justify-center">
 
                 <h1 class="typewriter-line" aria-label="Welcome to Francisco's Portal"><span class="typewriter">Welcome to Francisco's Portal</span></h1>
+                <div class="flex items-center gap-1.5 mb-4" role="tablist">
+                    <button
+                        v-for="t in [{ key: 'rankings', label: 'Ranking' }, { key: 'posts', label: 'Post' }]"
+                        :key="t.key"
+                        type="button"
+                        role="tab"
+                        :aria-selected="activeView === t.key"
+                        class="px-4 py-1.5 rounded-full text-xs font-semibold transition"
+                        :style="activeView === t.key
+                            ? { background: 'var(--gold)', color: 'var(--navy-deep)', border: '1px solid transparent' }
+                            : { background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--surface-border)' }"
+                        @click="activeView = t.key"
+                    >{{ t.label }}</button>
+                </div>
                 <div class="w-full flex flex-col lg:flex-row gap-5">
                 <!-- Class ledger: top 1 (left) + top 10 (right) -->
                 <div v-show="activeView === 'rankings'" class="ink-panel rounded-[1.75rem] p-5 lg:p-7 flex flex-col lg:flex-1 min-w-0">
@@ -319,6 +333,16 @@
                         </div>
                     </div>
                 </div>
+                <PostsPanel
+                    v-show="activeView === 'posts'"
+                    :active="activeView === 'posts'"
+                    :section-id="activeSectionId"
+                    :section-label="activeSectionLabel"
+                    :is-teacher="isTeacher"
+                    :with-auth="withAuth"
+                    :creds="creds"
+                    :touch-auth="touchAuth"
+                 />
                 <!-- Freedom wall: separate panel on the right -->
                 <aside class="wall-aside ink-panel rounded-[1.75rem] p-5 lg:w-[22rem] xl:w-[25rem] shrink-0 flex flex-col gap-3 min-h-[22rem]">
                     <div class="flex items-center justify-between gap-3">
@@ -1125,6 +1149,7 @@ import StudentPhotoGate from '../../Components/StudentPhotoGate.vue';
 import { useClassmateMessages, MESSAGE_MAX_LENGTH } from '../../composables/useClassmateMessages';
 import { useStudentFrame, frameFor, FRAME_OPTIONS } from '../../composables/useStudentFrame';
 import { useFreedomWall, stickerStyle, likersTitle, WALL_REACTIONS, reactionEmoji, topReactions, WALL_COLORS, WALL_MAX_LENGTH, WALL_REPLY_MAX_LENGTH } from '../../composables/useFreedomWall';
+import PostsPanel from './Components/PostsPanel.vue';
 
 const props = defineProps({
     sections: { type: Array, default: () => [] },
@@ -1215,7 +1240,7 @@ const activeSection = computed(() =>
 function selectSection(id) {
     activeSectionId.value = id;
     currentIndex.value = 0;
-    activeView.value = 'rankings';
+    if (activeView.value !== 'posts') activeView.value = 'rankings';
 }
 
 // Photo slideshow (top 10 of the active section)
@@ -1312,10 +1337,11 @@ const {
     authModalOpen, authLoading, authError, authForm, submitAuth, closeAuthModal,
     threadPost, threadReplies, threadLoading, threadText, threadError, threadSending,
     openThread, closeThread, sendReply,
+    isTeacher, withAuth, creds, touchAuth,
 } = useFreedomWall();
 
 watch([activeView, activeSectionId], ([view, id]) => {
-    if (view === 'wall' || view === 'rankings') loadWall(id);
+    if (view === 'wall' || view === 'rankings' || view === 'posts') loadWall(id);
 }, { immediate: true });
 </script>
 

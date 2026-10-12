@@ -455,7 +455,7 @@ export function useFreedomWall() {
     }
 
     return {
-        wallPosts, wallStatus, wallModalOpen, wallLoading, wallError, wallSuccess, deletePost, isTeacher,
+        wallPosts, wallStatus, wallModalOpen, wallLoading, wallError, wallSuccess, deletePost, isTeacher, withAuth, creds, touchAuth,
         showWallPassword, wallForm,
         loadWall, openWallModal, closeWallModal, submitWallPost, toggleLike,
         pickerFor, pressStart, pressEnd, closePicker, onLikeClick, pickReaction,

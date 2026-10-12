@@ -337,9 +337,13 @@
                                 <span class="wall-tape"></span>
                                 <p class="wall-text">{{ p.body }}</p>
                                 <div class="wall-foot">
-                                    <button type="button" class="wall-like" :class="p.liked ? 'wall-like--on' : ''" @click.stop="toggleLike(p)" :aria-label="p.liked ? 'Unlike' : 'Like'">
+                                    <button type="button" class="wall-like" :class="p.liked ? 'wall-like--on' : ''" @click.stop="toggleLike(p)" :title="likersTitle(p)" :aria-label="p.liked ? 'Unlike' : 'Like'">
                                         <svg width="14" height="14" viewBox="0 0 24 24" :fill="p.liked ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
                                         <span>{{ p.likes_count || 0 }}</span>
+                                    </button>
+                                    <button type="button" class="wall-like" @click.stop="openThread(p)" :title="p.replies_count ? 'View replies' : 'Reply'" aria-label="Replies">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                        <span>{{ p.replies_count || 0 }}</span>
                                     </button>
                                     <span v-if="p.author" class="wall-author">{{ p.author }}</span>
                                     <div class="wall-date">{{ new Date(p.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) }}</div>
@@ -807,6 +811,58 @@
                 </div>
             </div>
 
+            <!-- Freedom wall: sign-in prompt for like / reply -->
+            <div v-if="authModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center px-4" style="z-index:60;">
+                <div class="rounded-2xl p-5 w-full max-w-sm shadow-xl" style="background:var(--navy-deep,#0b1f33);border:1px solid rgba(255,255,255,.12);">
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="text-base font-semibold text-white">Sign in to continue</h3>
+                        <button @click="closeAuthModal" class="text-white/60 hover:text-white" aria-label="Close">✕</button>
+                    </div>
+                    <p class="text-xs text-white/60 mb-3">Your first name shows on your likes and replies. You only sign in once until you refresh or stay idle for 5 minutes.</p>
+                    <form @submit.prevent="submitAuth" class="space-y-3">
+                        <input v-model="authForm.student_number" type="text" placeholder="Student number" class="portal-input" />
+                        <div class="flex items-center gap-2">
+                            <input v-model="authForm.password" :type="authForm.show ? 'text' : 'password'" placeholder="Password" class="portal-input" />
+                            <button type="button" @click="authForm.show = !authForm.show" class="text-xs text-white/60 shrink-0">{{ authForm.show ? 'Hide' : 'Show' }}</button>
+                        </div>
+                        <p v-if="authError" class="text-xs" style="color: var(--coral);">{{ authError }}</p>
+                        <button type="submit" :disabled="authLoading" class="w-full text-white text-sm font-semibold py-2 rounded-xl disabled:opacity-60" style="background:var(--navy);">{{ authLoading ? 'Checking...' : 'Continue' }}</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Freedom wall: note thread (replies are hidden until opened) -->
+            <div v-if="threadPost" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" @click.self="closeThread">
+                <div class="rounded-2xl w-full max-w-md shadow-xl flex flex-col" style="max-height:85vh;background:var(--navy-deep,#0b1f33);border:1px solid rgba(255,255,255,.12);">
+                    <div class="flex items-start justify-between gap-3 p-4 border-b border-white/10">
+                        <div class="min-w-0">
+                            <p class="text-sm text-white whitespace-pre-wrap break-words">{{ threadPost.body }}</p>
+                            <p class="text-[11px] text-white/60 mt-1">{{ threadPost.author || 'Anonymous' }} · {{ new Date(threadPost.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) }}</p>
+                        </div>
+                        <button @click="closeThread" class="text-white/60 hover:text-white shrink-0" aria-label="Close">✕</button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-4 space-y-3">
+                        <p v-if="threadLoading" class="text-xs text-white/60">Loading replies...</p>
+                        <p v-else-if="!threadReplies.length" class="text-xs text-white/60">No replies yet. Start the thread.</p>
+                        <div v-for="r in threadReplies" :key="r.id" class="text-sm">
+                            <div class="flex items-baseline gap-2">
+                                <span class="font-semibold" style="color:var(--gold);">{{ r.author || 'Student' }}</span>
+                                <span class="text-[11px] text-white/60">{{ new Date(r.created_at).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) }}</span>
+                            </div>
+                            <p class="whitespace-pre-wrap break-words text-white">{{ r.body }}</p>
+                        </div>
+                    </div>
+                    <form @submit.prevent="sendReply" class="p-3 border-t border-white/10 space-y-2">
+                        <textarea v-model="threadText" :maxlength="WALL_REPLY_MAX_LENGTH" rows="2" placeholder="Write a reply..." class="portal-input"></textarea>
+                        <p v-if="threadError" class="text-xs" style="color: var(--coral);">{{ threadError }}</p>
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-[11px] text-white/60">{{ threadText.length }} / {{ WALL_REPLY_MAX_LENGTH }}</span>
+                            <button type="submit" :disabled="threadSending" class="text-white text-sm font-semibold px-4 py-1.5 rounded-xl disabled:opacity-60" style="background:var(--navy);">{{ threadSending ? 'Sending...' : 'Reply' }}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <!-- Freedom wall modal (sign-in required) -->
             <div v-if="wallModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
                 <div class="surface-card w-full max-w-sm shadow-xl p-5" style="border-radius: 1.5rem;">
@@ -1017,7 +1073,7 @@ import { useDashboardState } from '../../composables/useDashboardState';
 import StudentPhotoGate from '../../Components/StudentPhotoGate.vue';
 import { useClassmateMessages, MESSAGE_MAX_LENGTH } from '../../composables/useClassmateMessages';
 import { useStudentFrame, frameFor, FRAME_OPTIONS } from '../../composables/useStudentFrame';
-import { useFreedomWall, stickerStyle, WALL_COLORS, WALL_MAX_LENGTH } from '../../composables/useFreedomWall';
+import { useFreedomWall, stickerStyle, likersTitle, WALL_COLORS, WALL_MAX_LENGTH, WALL_REPLY_MAX_LENGTH } from '../../composables/useFreedomWall';
 
 const props = defineProps({
     sections: { type: Array, default: () => [] },
@@ -1202,6 +1258,9 @@ const {
     wallPosts, wallStatus, wallModalOpen, wallLoading, wallError, wallSuccess,
     showWallPassword, wallForm,
     loadWall, openWallModal, closeWallModal, submitWallPost, toggleLike, deletePost,
+    authModalOpen, authLoading, authError, authForm, submitAuth, closeAuthModal,
+    threadPost, threadReplies, threadLoading, threadText, threadError, threadSending,
+    openThread, closeThread, sendReply,
 } = useFreedomWall();
 
 watch([activeView, activeSectionId], ([view, id]) => {

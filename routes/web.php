@@ -164,7 +164,10 @@ Route::get('/portal/freedom-wall', [\App\Http\Controllers\FreedomWallController:
 Route::post('/portal/freedom-wall', [\App\Http\Controllers\FreedomWallController::class, 'store'])
     ->middleware('throttle:portal-verify');
 Route::post('/portal/freedom-wall/{freedomWallPost}/like', [\App\Http\Controllers\FreedomWallController::class, 'like'])
-    ->middleware('throttle:60,1');
+    ->middleware('throttle:30,1');
+Route::get('/portal/freedom-wall/{freedomWallPost}/replies', [\App\Http\Controllers\FreedomWallController::class, 'replies']);
+Route::post('/portal/freedom-wall/{freedomWallPost}/reply', [\App\Http\Controllers\FreedomWallController::class, 'reply'])
+    ->middleware('throttle:portal-verify');
 Route::get('/', [StudentDashboardController::class, 'index']);
 
 // Student photo upload (required before sign-in; max 40KB)

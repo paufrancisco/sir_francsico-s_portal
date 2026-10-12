@@ -15,6 +15,11 @@ class FreedomWallPost extends Model
         return $this->hasMany(FreedomWallLike::class, 'post_id');
     }
 
+    public function replies()
+    {
+        return $this->hasMany(FreedomWallReply::class, 'post_id');
+    }
+
     public function student()
     {
         return $this->belongsTo(Student::class);

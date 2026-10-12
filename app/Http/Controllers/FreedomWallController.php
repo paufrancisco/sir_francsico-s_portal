@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\FreedomWallLike;
 use App\Models\FreedomWallPost;
+use App\Models\FreedomWallReply;
 use App\Models\StudentActivity;
 use App\Models\Student;
 use Illuminate\Http\JsonResponse;
@@ -16,13 +17,15 @@ class FreedomWallController extends Controller
 {
     public const COLORS = ['yellow', 'pink', 'blue', 'green', 'orange', 'purple'];
     public const MAX_LENGTH = 280;
+    public const MAX_REPLY_LENGTH = 200;
 
     // GET: latest notes of a section (query: section_id). Notes are anonymous, no author is exposed.
     public function index(Request $request): JsonResponse
     {
         $posts = FreedomWallPost::query()
             ->whereNull('hidden_at')
-            ->withCount('likes')
+            ->withCount(['likes', 'replies'])
+            ->with(['likes' => fn ($q) => $q->whereNotNull('author_first_name')->orderBy('id')])
             ->when($request->filled('section_id'), fn ($q) => $q->where('section_id', $request->integer('section_id')))
             ->latest('created_at')->latest('id')
             ->take(40)
@@ -87,27 +90,109 @@ class FreedomWallController extends Controller
         ], 201);
     }
 
-    // POST: toggle a like for a device (client_id). No sign-in, one like per device per note.
+    // POST: sign in (student_number + password) to like or unlike a note. liked=true likes, liked=false unlikes.
     public function like(Request $request, FreedomWallPost $freedomWallPost): JsonResponse
     {
         $data = $request->validate([
-            'client_id' => ['required', 'string', 'min:8', 'max:64'],
+            'student_number' => ['required', 'string'],
+            'password' => ['required', 'string'],
+            'liked' => ['required', 'boolean'],
+            'client_id' => ['nullable', 'string', 'max:64'],
         ]);
 
-        $existing = FreedomWallLike::where('post_id', $freedomWallPost->id)
-            ->where('client_id', $data['client_id'])
-            ->first();
+        $student = $this->verify($data['student_number'], $data['password']);
+        $key = 's' . $student->id;
+        $device = $data['client_id'] ?? null;
+        $want = $request->boolean('liked');
 
-        if ($existing) {
-            $existing->delete();
+        if ($want) {
+            // An old anonymous like from this device becomes a named like
+            if ($device) {
+                FreedomWallLike::where('post_id', $freedomWallPost->id)->where('client_id', $device)->delete();
+            }
+            FreedomWallLike::firstOrCreate(
+                ['post_id' => $freedomWallPost->id, 'client_id' => $key],
+                ['student_id' => $student->id, 'author_first_name' => $this->firstName($student->full_name)]
+            );
         } else {
-            FreedomWallLike::create(['post_id' => $freedomWallPost->id, 'client_id' => $data['client_id']]);
+            FreedomWallLike::where('post_id', $freedomWallPost->id)
+                ->where(function ($q) use ($key, $device) {
+                    $q->where('client_id', $key);
+                    if ($device) {
+                        $q->orWhere('client_id', $device);
+                    }
+                })->delete();
         }
 
         return response()->json([
-            'liked' => ! $existing,
+            'liked' => $want,
             'likes_count' => $freedomWallPost->likes()->count(),
+            'likers' => $freedomWallPost->likes()->whereNotNull('author_first_name')
+                ->orderBy('id')->limit(30)->pluck('author_first_name')->all(),
         ]);
+    }
+
+    // GET: replies of one note, oldest first (loaded only when the thread is opened)
+    public function replies(FreedomWallPost $freedomWallPost): JsonResponse
+    {
+        abort_if($freedomWallPost->hidden_at !== null, 404);
+
+        $replies = $freedomWallPost->replies()->orderBy('id')->take(100)->get()
+            ->map(fn ($r) => $this->presentReply($r));
+
+        return response()->json(['replies' => $replies]);
+    }
+
+    // POST: student_number + password + body. The reply shows the sender's first name.
+    public function reply(Request $request, FreedomWallPost $freedomWallPost): JsonResponse
+    {
+        abort_if($freedomWallPost->hidden_at !== null, 404);
+
+        $data = $request->validate([
+            'student_number' => ['required', 'string'],
+            'password' => ['required', 'string'],
+            'body' => ['required', 'string', 'max:' . self::MAX_REPLY_LENGTH],
+        ]);
+
+        $student = $this->verify($data['student_number'], $data['password']);
+
+        if (\App\Support\ProfanityFilter::contains($data['body'])) {
+            throw ValidationException::withMessages([
+                'body' => 'Bawal ang masasamang salita sa Freedom Wall. Pakipalitan ang reply mo.',
+            ]);
+        }
+
+        $recent = FreedomWallReply::where('student_id', $student->id)
+            ->where('created_at', '>=', now()->subMinutes(10))
+            ->count();
+
+        if ($recent >= 10) {
+            throw ValidationException::withMessages([
+                'body' => 'You can send up to 10 replies every 10 minutes.',
+            ]);
+        }
+
+        $reply = FreedomWallReply::create([
+            'post_id' => $freedomWallPost->id,
+            'student_id' => $student->id,
+            'author_first_name' => $this->firstName($student->full_name),
+            'body' => trim($data['body']),
+        ]);
+
+        return response()->json([
+            'reply' => $this->presentReply($reply),
+            'replies_count' => $freedomWallPost->replies()->count(),
+        ], 201);
+    }
+
+    private function presentReply(FreedomWallReply $r): array
+    {
+        return [
+            'id' => $r->id,
+            'body' => $r->body,
+            'author' => $r->author_first_name,
+            'created_at' => $r->created_at,
+        ];
     }
 
     // DELETE (admin only, route is inside the auth group): remove a note and its likes
@@ -128,6 +213,8 @@ class FreedomWallController extends Controller
             'created_at' => $p->created_at,
             'likes_count' => $p->likes_count ?? $p->likes()->count(),
             'liked' => $liked,
+            'likers' => $p->relationLoaded('likes') ? $p->likes->pluck('author_first_name')->take(30)->values()->all() : [],
+            'replies_count' => $p->replies_count ?? $p->replies()->count(),
             'author' => $p->author_first_name,
         ];
     }

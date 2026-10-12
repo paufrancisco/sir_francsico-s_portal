@@ -18,6 +18,7 @@ class FreedomWallController extends Controller
     public const COLORS = ['yellow', 'pink', 'blue', 'green', 'orange', 'purple'];
     public const MAX_LENGTH = 280;
     public const MAX_REPLY_LENGTH = 200;
+    public const TEACHER_NAME = 'Sir Francisco';
 
     // GET: latest notes of a section (query: section_id). Notes are anonymous, no author is exposed.
     public function index(Request $request): JsonResponse
@@ -31,8 +32,13 @@ class FreedomWallController extends Controller
             ->take(40)
             ->get();
 
-        $liked = $request->filled('client_id')
-            ? FreedomWallLike::where('client_id', (string) $request->query('client_id'))
+        $likeKeys = array_values(array_filter([
+            $request->filled('client_id') ? (string) $request->query('client_id') : null,
+            auth()->check() ? 'teacher' : null,
+        ]));
+
+        $liked = $likeKeys
+            ? FreedomWallLike::whereIn('client_id', $likeKeys)
                 ->whereIn('post_id', $posts->pluck('id'))->pluck('post_id')->all()
             : [];
 
@@ -93,16 +99,18 @@ class FreedomWallController extends Controller
     // POST: sign in (student_number + password) to like or unlike a note. liked=true likes, liked=false unlikes.
     public function like(Request $request, FreedomWallPost $freedomWallPost): JsonResponse
     {
+        $teacher = $this->isTeacher($request);
+
         $data = $request->validate([
-            'student_number' => ['required', 'string'],
-            'password' => ['required', 'string'],
+            'student_number' => $teacher ? ['nullable', 'string'] : ['required', 'string'],
+            'password' => $teacher ? ['nullable', 'string'] : ['required', 'string'],
             'liked' => ['required', 'boolean'],
             'client_id' => ['nullable', 'string', 'max:64'],
         ]);
 
-        $student = $this->verify($data['student_number'], $data['password']);
-        $key = 's' . $student->id;
-        $device = $data['client_id'] ?? null;
+        $student = $teacher ? null : $this->verify($data['student_number'], $data['password']);
+        $key = $teacher ? 'teacher' : 's' . $student->id;
+        $device = $teacher ? null : ($data['client_id'] ?? null);
         $want = $request->boolean('liked');
 
         if ($want) {
@@ -112,7 +120,9 @@ class FreedomWallController extends Controller
             }
             FreedomWallLike::firstOrCreate(
                 ['post_id' => $freedomWallPost->id, 'client_id' => $key],
-                ['student_id' => $student->id, 'author_first_name' => $this->firstName($student->full_name)]
+                $teacher
+                    ? ['student_id' => null, 'author_first_name' => self::TEACHER_NAME]
+                    : ['student_id' => $student->id, 'author_first_name' => $this->firstName($student->full_name)]
             );
         } else {
             FreedomWallLike::where('post_id', $freedomWallPost->id)
@@ -148,11 +158,27 @@ class FreedomWallController extends Controller
     {
         abort_if($freedomWallPost->hidden_at !== null, 404);
 
+        $teacher = $this->isTeacher($request);
+
         $data = $request->validate([
-            'student_number' => ['required', 'string'],
-            'password' => ['required', 'string'],
+            'student_number' => $teacher ? ['nullable', 'string'] : ['required', 'string'],
+            'password' => $teacher ? ['nullable', 'string'] : ['required', 'string'],
             'body' => ['required', 'string', 'max:' . self::MAX_REPLY_LENGTH],
         ]);
+
+        if ($teacher) {
+            $reply = FreedomWallReply::create([
+                'post_id' => $freedomWallPost->id,
+                'student_id' => null,
+                'author_first_name' => self::TEACHER_NAME,
+                'body' => trim($data['body']),
+            ]);
+
+            return response()->json([
+                'reply' => $this->presentReply($reply),
+                'replies_count' => $freedomWallPost->replies()->count(),
+            ], 201);
+        }
 
         $student = $this->verify($data['student_number'], $data['password']);
 
@@ -183,6 +209,18 @@ class FreedomWallController extends Controller
             'reply' => $this->presentReply($reply),
             'replies_count' => $freedomWallPost->replies()->count(),
         ], 201);
+    }
+
+    // GET: tells the portal whether an admin session is active (likes and replies then go out as the teacher)
+    public function me(): JsonResponse
+    {
+        return response()->json(['teacher' => auth()->check(), 'name' => self::TEACHER_NAME]);
+    }
+
+    // An admin session without student credentials in the request acts as the teacher
+    private function isTeacher(Request $request): bool
+    {
+        return auth()->check() && ! $request->filled('student_number');
     }
 
     private function presentReply(FreedomWallReply $r): array

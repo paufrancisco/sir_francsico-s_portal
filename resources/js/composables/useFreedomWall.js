@@ -94,6 +94,19 @@ export function useFreedomWall() {
     const showWallPassword = ref(false);
     const wallForm = reactive({ student_number: '', password: '', body: '', color: 'yellow' });
 
+    // True when an admin session is active: likes and replies are posted as Sir Francisco
+    const isTeacher = ref(false);
+
+    async function checkTeacher() {
+        try {
+            const res = await fetch(`${WALL_URL}/me`, { headers: { Accept: 'application/json' } });
+            const data = res.ok ? await res.json() : {};
+            isTeacher.value = !!data.teacher;
+        } catch (e) {
+            isTeacher.value = false;
+        }
+    }
+
     // ---- Sign-in for likes and replies: kept in memory only, expires after 5 idle minutes
     const wallAuth = reactive({ student_number: '', password: '', lastUsed: 0 });
     const authModalOpen = ref(false);
@@ -104,6 +117,12 @@ export function useFreedomWall() {
 
     const isSignedIn = () =>
         !!(wallAuth.student_number && wallAuth.password && Date.now() - wallAuth.lastUsed < AUTH_IDLE_MS);
+
+    // Credentials sent with likes and replies; empty in teacher mode so the server uses the admin session
+    function creds() {
+        if (isTeacher.value && !isSignedIn()) return { student_number: '', password: '' };
+        return { student_number: wallAuth.student_number, password: wallAuth.password };
+    }
 
     function touchAuth() {
         wallAuth.lastUsed = Date.now();
@@ -124,6 +143,11 @@ export function useFreedomWall() {
 
     // An action returns an error string only when the login was rejected; any other result means it handled itself.
     async function withAuth(action) {
+        // A logged-in admin acts as Sir Francisco, no student sign-in needed
+        if (isTeacher.value && !isSignedIn()) {
+            await action();
+            return;
+        }
         if (!isSignedIn()) {
             pendingAction = action;
             resetAuthForm();
@@ -176,6 +200,7 @@ export function useFreedomWall() {
 
     // ---- Wall
     async function loadWall(sectionId) {
+        checkTeacher();
         wallStatus.value = 'loading';
         try {
             const params = new URLSearchParams();
@@ -260,8 +285,7 @@ export function useFreedomWall() {
             post._liking = true;
             try {
                 const { res, data } = await postJson(`${WALL_URL}/${post.id}/like`, {
-                    student_number: wallAuth.student_number,
-                    password: wallAuth.password,
+                    ...creds(),
                     liked: want,
                     client_id: getClientId(),
                 });
@@ -327,8 +351,7 @@ export function useFreedomWall() {
             threadSending.value = true;
             try {
                 const { res, data } = await postJson(`${WALL_URL}/${post.id}/reply`, {
-                    student_number: wallAuth.student_number,
-                    password: wallAuth.password,
+                    ...creds(),
                     body,
                 });
                 if (!res.ok) {
@@ -367,7 +390,7 @@ export function useFreedomWall() {
     }
 
     return {
-        wallPosts, wallStatus, wallModalOpen, wallLoading, wallError, wallSuccess, deletePost,
+        wallPosts, wallStatus, wallModalOpen, wallLoading, wallError, wallSuccess, deletePost, isTeacher,
         showWallPassword, wallForm,
         loadWall, openWallModal, closeWallModal, submitWallPost, toggleLike,
         authModalOpen, authLoading, authError, authForm, submitAuth, closeAuthModal,

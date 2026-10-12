@@ -161,6 +161,7 @@ Route::post('/portal/student-frame', \App\Http\Controllers\StudentFrameControlle
     ->middleware('throttle:portal-verify');
 // Freedom wall: anonymous sticker notes per section (posting needs sign-in)
 Route::get('/portal/freedom-wall', [\App\Http\Controllers\FreedomWallController::class, 'index']);
+Route::get('/portal/freedom-wall/me', [\App\Http\Controllers\FreedomWallController::class, 'me']);
 Route::post('/portal/freedom-wall', [\App\Http\Controllers\FreedomWallController::class, 'store'])
     ->middleware('throttle:portal-verify');
 Route::post('/portal/freedom-wall/{freedomWallPost}/like', [\App\Http\Controllers\FreedomWallController::class, 'like'])

@@ -8,5 +8,5 @@ class FreedomWallLike extends Model
 {
     const UPDATED_AT = null;
 
-    protected $fillable = ['post_id', 'client_id', 'student_id', 'author_first_name'];
+    protected $fillable = ['post_id', 'client_id', 'student_id', 'author_first_name', 'reaction'];
 }

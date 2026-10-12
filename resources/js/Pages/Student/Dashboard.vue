@@ -337,10 +337,37 @@
                                 <span class="wall-tape"></span>
                                 <p class="wall-text">{{ p.body }}</p>
                                 <div class="wall-foot">
-                                    <button type="button" class="wall-like" :class="p.liked ? 'wall-like--on' : ''" @click.stop="toggleLike(p)" :title="likersTitle(p)" :aria-label="p.liked ? 'Unlike' : 'Like'">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" :fill="p.liked ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
-                                        <span>{{ p.likes_count || 0 }}</span>
-                                    </button>
+                                    <div class="wall-react" :class="{ 'wall-react--open': pickerFor === p.id }" @mouseleave="closePicker">
+                                        <div class="wall-react__bar" role="menu">
+                                            <button
+                                                v-for="r in WALL_REACTIONS"
+                                                :key="r.key"
+                                                type="button"
+                                                class="wall-react__opt"
+                                                :class="{ 'wall-react__opt--on': p.my_reaction === r.key }"
+                                                :title="r.label"
+                                                :aria-label="r.label"
+                                                @click.stop="pickReaction(p, r.key)"
+                                            >{{ r.emoji }}</button>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            class="wall-like"
+                                            :class="p.liked ? 'wall-like--on' : ''"
+                                            @click.stop="onLikeClick(p)"
+                                            @touchstart.passive="pressStart(p)"
+                                            @touchend="pressEnd"
+                                            @touchcancel="pressEnd"
+                                            @contextmenu.prevent
+                                            :title="likersTitle(p)"
+                                            :aria-label="p.liked ? 'Remove reaction' : 'React'"
+                                        >
+                                            <span v-if="p.liked" class="wall-react__current">{{ reactionEmoji(p.my_reaction) }}</span>
+                                            <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+                                            <span v-if="topReactions(p).length" class="wall-react__tops">{{ topReactions(p).join('') }}</span>
+                                            <span>{{ p.likes_count || 0 }}</span>
+                                        </button>
+                                    </div>
                                     <button type="button" class="wall-like" @click.stop="openThread(p)" :title="p.replies_count ? 'View replies' : 'Reply'" aria-label="Replies">
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                                         <span>{{ p.replies_count || 0 }}</span>
@@ -1097,7 +1124,7 @@ import { useDashboardState } from '../../composables/useDashboardState';
 import StudentPhotoGate from '../../Components/StudentPhotoGate.vue';
 import { useClassmateMessages, MESSAGE_MAX_LENGTH } from '../../composables/useClassmateMessages';
 import { useStudentFrame, frameFor, FRAME_OPTIONS } from '../../composables/useStudentFrame';
-import { useFreedomWall, stickerStyle, likersTitle, WALL_COLORS, WALL_MAX_LENGTH, WALL_REPLY_MAX_LENGTH } from '../../composables/useFreedomWall';
+import { useFreedomWall, stickerStyle, likersTitle, WALL_REACTIONS, reactionEmoji, topReactions, WALL_COLORS, WALL_MAX_LENGTH, WALL_REPLY_MAX_LENGTH } from '../../composables/useFreedomWall';
 
 const props = defineProps({
     sections: { type: Array, default: () => [] },
@@ -1281,7 +1308,7 @@ onBeforeUnmount(() => {
 const {
     wallPosts, wallStatus, wallModalOpen, wallLoading, wallError, wallSuccess,
     showWallPassword, wallForm,
-    loadWall, openWallModal, closeWallModal, submitWallPost, toggleLike, deletePost,
+    loadWall, openWallModal, closeWallModal, submitWallPost, toggleLike, deletePost, pickerFor, pressStart, pressEnd, closePicker, onLikeClick, pickReaction,
     authModalOpen, authLoading, authError, authForm, submitAuth, closeAuthModal,
     threadPost, threadReplies, threadLoading, threadText, threadError, threadSending,
     openThread, closeThread, sendReply,

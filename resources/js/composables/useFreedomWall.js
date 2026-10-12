@@ -84,6 +84,29 @@ export function likersTitle(post) {
     return others ? `${list} and ${others} other${others > 1 ? 's' : ''}` : list;
 }
 
+export const WALL_REACTIONS = [
+    { key: 'heart', emoji: '\u2764\uFE0F', label: 'Love' },
+    { key: 'like', emoji: '\uD83D\uDC4D', label: 'Like' },
+    { key: 'haha', emoji: '\uD83D\uDE06', label: 'Haha' },
+    { key: 'wow', emoji: '\uD83D\uDE2E', label: 'Wow' },
+    { key: 'sad', emoji: '\uD83D\uDE22', label: 'Sad' },
+    { key: 'angry', emoji: '\uD83D\uDE21', label: 'Angry' },
+];
+
+export function reactionEmoji(key) {
+    return (WALL_REACTIONS.find((r) => r.key === key) ?? WALL_REACTIONS[0]).emoji;
+}
+
+// Up to three most used reactions on a note, most used first
+export function topReactions(post) {
+    const counts = post.reaction_counts ?? {};
+    return WALL_REACTIONS
+        .filter((r) => counts[r.key] > 0)
+        .sort((a, b) => counts[b.key] - counts[a.key])
+        .slice(0, 3)
+        .map((r) => r.emoji);
+}
+
 export function useFreedomWall() {
     const wallPosts = ref([]);
     const wallStatus = ref('idle'); // idle | loading | ready | error
@@ -278,15 +301,18 @@ export function useFreedomWall() {
     }
 
     // ---- Likes (named)
-    function toggleLike(post) {
+    // reaction = null: the main button (heart, or remove my reaction).
+    // reaction = key: picked from the bar (set it, or remove it if it is already mine).
+    function toggleLike(post, reaction = null) {
         if (post._liking) return;
-        const want = !post.liked;
+        const want = reaction ? post.my_reaction !== reaction : !post.liked;
         return withAuth(async () => {
             post._liking = true;
             try {
                 const { res, data } = await postJson(`${WALL_URL}/${post.id}/like`, {
                     ...creds(),
                     liked: want,
+                    reaction: reaction ?? 'heart',
                     client_id: getClientId(),
                 });
                 if (!res.ok) {
@@ -294,6 +320,8 @@ export function useFreedomWall() {
                 }
                 touchAuth();
                 post.liked = data.liked;
+                post.my_reaction = data.reaction ?? null;
+                post.reaction_counts = data.reaction_counts ?? {};
                 post.likes_count = data.likes_count;
                 post.likers = data.likers ?? [];
             } catch (e) {
@@ -303,6 +331,43 @@ export function useFreedomWall() {
             }
             return null;
         });
+    }
+
+    // ---- Reaction picker: opens on hover (CSS) or long-press (touch)
+    const pickerFor = ref(null);
+    let pressTimer = null;
+    let longPressed = false;
+
+    function pressStart(post) {
+        longPressed = false;
+        clearTimeout(pressTimer);
+        pressTimer = setTimeout(() => {
+            longPressed = true;
+            pickerFor.value = post.id;
+        }, 450);
+    }
+
+    function pressEnd() {
+        clearTimeout(pressTimer);
+    }
+
+    function closePicker() {
+        pickerFor.value = null;
+    }
+
+    function onLikeClick(post) {
+        // The click that follows a long-press only opened the picker, so ignore it
+        if (longPressed) {
+            longPressed = false;
+            return;
+        }
+        pickerFor.value = null;
+        return toggleLike(post);
+    }
+
+    function pickReaction(post, key) {
+        pickerFor.value = null;
+        return toggleLike(post, key);
     }
 
     // ---- Reply thread (opens on click)
@@ -393,6 +458,7 @@ export function useFreedomWall() {
         wallPosts, wallStatus, wallModalOpen, wallLoading, wallError, wallSuccess, deletePost, isTeacher,
         showWallPassword, wallForm,
         loadWall, openWallModal, closeWallModal, submitWallPost, toggleLike,
+        pickerFor, pressStart, pressEnd, closePicker, onLikeClick, pickReaction,
         authModalOpen, authLoading, authError, authForm, submitAuth, closeAuthModal,
         threadPost, threadReplies, threadLoading, threadText, threadError, threadSending,
         openThread, closeThread, sendReply,

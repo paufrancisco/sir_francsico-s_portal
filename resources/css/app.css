@@ -5,3 +5,37 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+/* Freedom Wall reactions */
+.wall-react { position: relative; display: inline-flex; }
+.wall-react__bar {
+    position: absolute;
+    left: -6px;
+    bottom: calc(100% + 4px);
+    display: flex;
+    gap: 2px;
+    padding: 4px 6px;
+    background: #fff;
+    border-radius: 999px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(6px) scale(0.9);
+    transform-origin: left bottom;
+    transition: opacity 0.15s, transform 0.15s, visibility 0.15s;
+    z-index: 60;
+}
+/* Invisible bridge so the bar stays open while the pointer moves up to it */
+.wall-react__bar::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 8px; }
+.wall-react--open .wall-react__bar { opacity: 1; visibility: visible; transform: none; }
+@media (hover: hover) {
+    .wall-react:hover .wall-react__bar { opacity: 1; visibility: visible; transform: none; transition-delay: 0.25s; }
+}
+.wall-react__opt {
+    width: 30px; height: 30px; font-size: 20px; line-height: 1;
+    border: 0; border-radius: 50%; background: transparent; cursor: pointer;
+    transition: transform 0.12s;
+}
+.wall-react__opt:hover { transform: translateY(-4px) scale(1.35); }
+.wall-react__opt--on { background: rgba(0, 0, 0, 0.08); }
+.wall-react__current { font-size: 14px; line-height: 1; }
+.wall-react__tops { font-size: 12px; letter-spacing: -2px; margin-right: 2px; }

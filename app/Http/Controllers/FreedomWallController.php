@@ -19,6 +19,7 @@ class FreedomWallController extends Controller
     public const MAX_LENGTH = 280;
     public const MAX_REPLY_LENGTH = 200;
     public const TEACHER_NAME = 'Sir Francisco';
+    public const REACTIONS = ['heart', 'like', 'haha', 'wow', 'sad', 'angry'];
 
     // GET: latest notes of a section (query: section_id). Notes are anonymous, no author is exposed.
     public function index(Request $request): JsonResponse
@@ -37,12 +38,26 @@ class FreedomWallController extends Controller
             auth()->check() ? 'teacher' : null,
         ]));
 
-        $liked = $likeKeys
+        $mine = $likeKeys
             ? FreedomWallLike::whereIn('client_id', $likeKeys)
-                ->whereIn('post_id', $posts->pluck('id'))->pluck('post_id')->all()
+                ->whereIn('post_id', $posts->pluck('id'))->pluck('reaction', 'post_id')->all()
             : [];
 
-        $posts = $posts->map(fn ($p) => $this->present($p, in_array($p->id, $liked, true)));
+        $counts = [];
+        $rows = FreedomWallLike::whereIn('post_id', $posts->pluck('id'))
+            ->selectRaw('post_id, reaction, count(*) as total')
+            ->groupBy('post_id', 'reaction')
+            ->get();
+        foreach ($rows as $row) {
+            $counts[$row->post_id][$row->reaction ?? 'heart'] = (int) $row->total;
+        }
+
+        $posts = $posts->map(fn ($p) => $this->present(
+            $p,
+            array_key_exists($p->id, $mine),
+            array_key_exists($p->id, $mine) ? ($mine[$p->id] ?? 'heart') : null,
+            $counts[$p->id] ?? []
+        ));
 
         return response()->json(['posts' => $posts]);
     }
@@ -106,23 +121,25 @@ class FreedomWallController extends Controller
             'password' => $teacher ? ['nullable', 'string'] : ['required', 'string'],
             'liked' => ['required', 'boolean'],
             'client_id' => ['nullable', 'string', 'max:64'],
+            'reaction' => ['nullable', 'string', Rule::in(self::REACTIONS)],
         ]);
 
         $student = $teacher ? null : $this->verify($data['student_number'], $data['password']);
         $key = $teacher ? 'teacher' : 's' . $student->id;
         $device = $teacher ? null : ($data['client_id'] ?? null);
         $want = $request->boolean('liked');
+        $reaction = $data['reaction'] ?? 'heart';
 
         if ($want) {
             // An old anonymous like from this device becomes a named like
             if ($device) {
                 FreedomWallLike::where('post_id', $freedomWallPost->id)->where('client_id', $device)->delete();
             }
-            FreedomWallLike::firstOrCreate(
+            FreedomWallLike::updateOrCreate(
                 ['post_id' => $freedomWallPost->id, 'client_id' => $key],
                 $teacher
-                    ? ['student_id' => null, 'author_first_name' => self::TEACHER_NAME]
-                    : ['student_id' => $student->id, 'author_first_name' => $this->firstName($student->full_name)]
+                    ? ['student_id' => null, 'author_first_name' => self::TEACHER_NAME, 'reaction' => $reaction]
+                    : ['student_id' => $student->id, 'author_first_name' => $this->firstName($student->full_name), 'reaction' => $reaction]
             );
         } else {
             FreedomWallLike::where('post_id', $freedomWallPost->id)
@@ -136,6 +153,8 @@ class FreedomWallController extends Controller
 
         return response()->json([
             'liked' => $want,
+            'reaction' => $want ? $reaction : null,
+            'reaction_counts' => $this->reactionCounts($freedomWallPost->id),
             'likes_count' => $freedomWallPost->likes()->count(),
             'likers' => $freedomWallPost->likes()->whereNotNull('author_first_name')
                 ->orderBy('id')->limit(30)->pluck('author_first_name')->all(),
@@ -241,7 +260,7 @@ class FreedomWallController extends Controller
         return response()->json(['deleted' => true]);
     }
 
-    private function present(FreedomWallPost $p, bool $liked = false): array
+    private function present(FreedomWallPost $p, bool $liked = false, ?string $myReaction = null, ?array $counts = null): array
     {
         return [
             'id' => $p->id,
@@ -251,10 +270,22 @@ class FreedomWallController extends Controller
             'created_at' => $p->created_at,
             'likes_count' => $p->likes_count ?? $p->likes()->count(),
             'liked' => $liked,
+            'my_reaction' => $myReaction,
+            'reaction_counts' => $counts ?? $this->reactionCounts($p->id),
             'likers' => $p->relationLoaded('likes') ? $p->likes->pluck('author_first_name')->take(30)->values()->all() : [],
             'replies_count' => $p->replies_count ?? $p->replies()->count(),
             'author' => $p->author_first_name,
         ];
+    }
+
+    private function reactionCounts(int $postId): array
+    {
+        return FreedomWallLike::where('post_id', $postId)
+            ->selectRaw('reaction, count(*) as total')
+            ->groupBy('reaction')
+            ->get()
+            ->mapWithKeys(fn ($r) => [($r->reaction ?? 'heart') => (int) $r->total])
+            ->all();
     }
 
     // Names are stored as "Last, First Middle": keep only the first given name

@@ -134,7 +134,7 @@ export function useDashboardState(props) {
     const gradesLoading = ref(false);
     const showGradesLoginPassword = ref(false);
     const gradesResult = ref(null);
-    const gradesPeriod = ref('prelim');
+    const gradesPeriod = ref(props.defaultPeriod ?? 'prelim');
     const gradesMustChangePassword = ref(false);
     const selectedSectionId = ref(null);
 
@@ -442,7 +442,7 @@ export function useDashboardState(props) {
         photoChangeMessage.value = '';
         gradesForm.value = { student_number: '', password: '' };
         gradesError.value = '';
-        gradesPeriod.value = 'prelim';
+        gradesPeriod.value = props.defaultPeriod ?? 'prelim';
         showGradesLoginPassword.value = false;
         gradesMustChangePassword.value = false;
         cancelEditingRecheckForm();
@@ -453,11 +453,11 @@ export function useDashboardState(props) {
     const submitGradesLogin = async () => {
         gradesLoading.value = true;
         gradesError.value = '';
-        gradesPeriod.value = 'prelim';
+        gradesPeriod.value = props.defaultPeriod ?? 'prelim';
         try {
             const { data } = await axios.post('/portal/grades/verify', {
                 ...gradesForm.value,
-                period: 'prelim',
+                period: gradesPeriod.value,
             });
             if (data.must_change_password) {
                 gradesMustChangePassword.value = true;

@@ -95,6 +95,7 @@ class StudentDashboardController extends Controller
         }
 
         return Inertia::render('Student/Dashboard', [
+            'defaultPeriod' => $this->defaultPeriod(),
             'sections' => $sections,
             'announcementsBySection' => $announcementsBySection,
             'topicsBySection' => $topicsBySection,
@@ -103,6 +104,14 @@ class StudentDashboardController extends Controller
             'top10BySection' => $top10BySection,
             'lastCalendarUpdate' => $allEvents->max('updated_at'),
         ]);
+    }
+
+    // reminder: default period na bubungad sa students (galing sa admin setting)
+    private function defaultPeriod(): string
+    {
+        $period = Setting::get('student_default_period', 'prelim');
+
+        return in_array($period, ['prelim', 'midterm', 'prefinal', 'finals'], true) ? $period : 'prelim';
     }
 
     public function changePassword(Request $request)
@@ -153,7 +162,7 @@ class StudentDashboardController extends Controller
 
         $period = in_array($request->period, ['prelim', 'midterm', 'prefinal', 'finals'], true)
             ? $request->period
-            : 'prelim';
+            : $this->defaultPeriod();
 
         $weights = ['long_quiz' => 0.20, 'tp' => 0.30, 'exam' => 0.50];
         $categoryLabels = ['long_quiz' => 'Quizzes', 'tp' => 'Task Performance', 'exam' => 'Exams'];

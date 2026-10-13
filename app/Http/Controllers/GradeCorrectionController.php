@@ -175,6 +175,7 @@ class GradeCorrectionController extends Controller
         return Inertia::render('Admin/GradeCorrections/Index', [
             'corrections' => $corrections,
             'deadline' => Setting::get('grade_correction_deadline'),
+            'defaultPeriod' => Setting::get('student_default_period', 'prelim'),
         ]);
     }
 
@@ -187,6 +188,15 @@ class GradeCorrectionController extends Controller
         return back()->with('success', $request->deadline
             ? 'Deadline set to ' . \Carbon\Carbon::parse($request->deadline)->format('M d, Y') . '.'
             : 'Deadline removed (no limit for now).');
+    }
+
+    public function setDefaultPeriod(Request $request)
+    {
+        $request->validate(['period' => 'required|in:prelim,midterm,prefinal,finals']);
+
+        Setting::set('student_default_period', $request->period);
+
+        return response()->json(['message' => 'Default tab saved.', 'period' => $request->period]);
     }
 
     public function resolve(Request $request, GradeCorrection $gradeCorrection)

@@ -76,6 +76,7 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
     Route::post('grade-corrections/archive', [GradeCorrectionController::class, 'archiveMany'])->name('grade-corrections.archive');
     Route::post('grade-corrections/unarchive', [GradeCorrectionController::class, 'unarchiveMany'])->name('grade-corrections.unarchive');
     Route::post('grade-corrections/deadline', [GradeCorrectionController::class, 'setDeadline'])->name('grade-corrections.deadline');
+    Route::post('grade-corrections/default-period', [GradeCorrectionController::class, 'setDefaultPeriod'])->name('grade-corrections.default-period');
     Route::get('students/{student}/grades', [GradeController::class, 'forStudent'])->name('students.grades');
     Route::patch('grades/{grade}', [GradeController::class, 'update'])->name('grades.update');
 

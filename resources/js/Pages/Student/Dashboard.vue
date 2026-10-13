@@ -1153,6 +1153,7 @@ import { useFreedomWall, stickerStyle, likersTitle, WALL_REACTIONS, reactionEmoj
 import PostsPanel from './Components/PostsPanel.vue';
 
 const props = defineProps({
+    defaultPeriod: { type: String, default: 'prelim' },
     sections: { type: Array, default: () => [] },
     announcementsBySection: { type: Object, default: () => ({}) },
     topicsBySection: { type: Object, default: () => ({}) },

@@ -65,6 +65,31 @@
             </div>
         </div>
 
+        <!-- Default tab na bubungad sa students -->
+        <div class="bg-white border border-slate-200 rounded-xl p-4 mb-4 flex flex-wrap items-end gap-3">
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1.5">Default grades tab for students</label>
+                <select
+                    v-model="selectedDefaultPeriod"
+                    class="text-sm border border-slate-200 rounded-lg px-3 py-2 text-slate-700 bg-white"
+                >
+                    <option value="prelim">Prelim</option>
+                    <option value="midterm">Midterm</option>
+                    <option value="prefinal">Prefinal</option>
+                    <option value="finals">Finals</option>
+                </select>
+            </div>
+            <button
+                @click="saveDefaultPeriod"
+                :disabled="savingPeriod"
+                class="text-sm font-medium px-4 py-2 rounded-lg text-white disabled:opacity-50"
+                style="background:#003399;"
+            >
+                {{ savingPeriod ? 'Saving...' : 'Save' }}
+            </button>
+            <p v-if="periodMsg" class="text-xs text-slate-500">{{ periodMsg }}</p>
+        </div>
+
         <div v-if="selectedIds.length > 0" class="flex items-center gap-2 mb-3">
             <span class="text-xs text-slate-500">{{ selectedIds.length }} selected</span>
             <button
@@ -484,6 +509,7 @@ defineOptions({ layout: AdminLayout });
 
 const props = defineProps({
     corrections: { type: Array, default: () => [] },
+    defaultPeriod: { type: String, default: 'prelim' },
 });
 
 const localCorrections = ref([...props.corrections]);
@@ -785,6 +811,27 @@ const closeModal = () => {
     showModal.value = false;
 };
 // ---- End Edit Grades / Review modal ----
+
+// ---- Default period para sa students ----
+const selectedDefaultPeriod = ref(props.defaultPeriod ?? 'prelim');
+const savingPeriod = ref(false);
+const periodMsg = ref('');
+
+const saveDefaultPeriod = async () => {
+    savingPeriod.value = true;
+    periodMsg.value = '';
+    try {
+        const { data } = await axios.post('/paulo/grade-corrections/default-period', {
+            period: selectedDefaultPeriod.value,
+        });
+        periodMsg.value = data.message;
+    } catch (e) {
+        periodMsg.value = e.response?.data?.message ?? 'Failed to save, please try again.';
+    } finally {
+        savingPeriod.value = false;
+    }
+};
+// ---- End default period ----
 
 // ---- View History modal ----
 const showHistoryModal = ref(false);

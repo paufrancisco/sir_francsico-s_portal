@@ -222,13 +222,14 @@
         </div>
 
         <!-- Edit Grades / Review Modal -->
-        <div v-if="showModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 px-4" @click.self="closeModal">
-            <div class="bg-white rounded-xl p-5 w-full max-w-sm shadow-xl">
+        <div v-if="showModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-3 sm:p-6" @click.self="closeModal">
+            <div class="bg-white rounded-xl w-full max-w-md max-h-[90dvh] flex flex-col overflow-hidden shadow-xl">
 
-                <div class="flex items-center justify-between mb-3">
-                    <div>
-                        <div class="text-sm font-semibold text-slate-700">{{ activeStudentName }}</div>
-                        <div class="text-xs text-slate-400">{{ activeNotes ?? 'No notes' }}</div>
+                <!-- Header: laging visible -->
+                <div class="shrink-0 flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-slate-100">
+                    <div class="min-w-0">
+                        <div class="text-sm font-semibold text-slate-700 break-words">{{ activeStudentName }}</div>
+                        <div class="text-xs text-slate-400 break-words">{{ activeNotes ?? 'No notes' }}</div>
                         <a
                             v-if="activeAttachmentUrl"
                             :href="activeAttachmentUrl" @click.prevent="openPreview(activeAttachmentUrl)"
@@ -238,50 +239,53 @@
                             📎 View attachment
                         </a>
                     </div>
-                    <button @click="closeModal" class="text-slate-400 hover:text-slate-600">✕</button>
+                    <button @click="closeModal" class="shrink-0 text-slate-400 hover:text-slate-600">✕</button>
                 </div>
 
-                <p v-if="loadingGrades" class="text-xs text-slate-400 py-4">Loading...</p>
+                <p v-if="loadingGrades" class="text-xs text-slate-400 px-5 py-4">Loading...</p>
 
-                <p v-else-if="grades.length === 0" class="text-xs text-slate-400 py-4">
+                <p v-else-if="grades.length === 0" class="text-xs text-slate-400 px-5 py-4">
                     No grades recorded yet.
                 </p>
 
                 <template v-else>
-                    <p class="text-[11px] text-amber-700 bg-amber-50 rounded-lg px-2.5 py-1.5 mb-2">
-                        Items with a proposed change from the student are highlighted. You can still adjust them before approving.
-                    </p>
+                    <!-- Body: dito lang nag-i-scroll -->
+                    <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-3">
+                        <p class="text-[11px] text-amber-700 bg-amber-50 rounded-lg px-2.5 py-1.5 mb-2">
+                            Items with a proposed change from the student are highlighted. You can still adjust them before approving.
+                        </p>
 
-                    <div class="divide-y divide-slate-100 border-t border-slate-100">
-                        <div
-                            v-for="g in grades"
-                            :key="g.id"
-                            class="flex items-center gap-2 py-2 text-sm"
-                            :class="g.hasProposal ? 'bg-amber-50 -mx-2 px-2 rounded-lg' : ''"
-                        >
-                            <div class="flex-1 min-w-0">
-                                <div class="truncate text-slate-600">{{ g.title ?? g.category }}</div>
-                                <div v-if="g.hasProposal" class="text-[11px] text-amber-700 mt-0.5">
-                                    Original: <span class="font-medium">{{ Number(g.score).toFixed(2) }}</span>
-                                    → Proposal: <span class="font-medium">{{ Number(g.editValue).toFixed(2) }}</span>
+                        <div class="divide-y divide-slate-100 border-t border-slate-100">
+                            <div
+                                v-for="g in grades"
+                                :key="g.id"
+                                class="flex items-center gap-2 py-2 text-sm"
+                                :class="g.hasProposal ? 'bg-amber-50 -mx-2 px-2 rounded-lg' : ''"
+                            >
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-slate-600 break-words">{{ g.title ?? g.category }}</div>
+                                    <div v-if="g.hasProposal" class="text-[11px] text-amber-700 mt-0.5">
+                                        Original: <span class="font-medium">{{ Number(g.score).toFixed(2) }}</span>
+                                        → Proposal: <span class="font-medium">{{ Number(g.editValue).toFixed(2) }}</span>
+                                    </div>
                                 </div>
+                                <input
+                                    type="number"
+                                    v-model="g.editValue"
+                                    :max="g.max_score"
+                                    min="0"
+                                    step="0.01"
+                                    class="grade-score-input shrink-0 w-20 sm:w-[92px] px-1.5 text-right font-medium text-slate-700 bg-transparent border border-transparent hover:border-slate-200 focus:border-[#003399] focus:outline-none rounded transition"
+                                />
+                                <span class="w-12 sm:w-14 shrink-0 text-right text-slate-400">/{{ g.max_score }}</span>
                             </div>
-                            <input
-                                type="number"
-                                v-model="g.editValue"
-                                :max="g.max_score"
-                                min="0"
-                                step="0.01"
-                                style="width: 92px;"
-                                class="grade-score-input shrink-0 px-1.5 text-right font-medium text-slate-700 bg-transparent border border-transparent hover:border-slate-200 focus:border-[#003399] focus:outline-none rounded transition"
-                            />
-                            <span class="w-14 shrink-0 text-right text-slate-400">/{{ g.max_score }}</span>
                         </div>
+
+                        <p v-if="errorMsg" class="text-xs text-red-500 mt-3">{{ errorMsg }}</p>
                     </div>
 
-                    <p v-if="errorMsg" class="text-xs text-red-500 mt-3">{{ errorMsg }}</p>
-
-                    <div v-if="activeStatus === 'pending'" class="flex gap-2 mt-4 pt-3 border-t border-slate-100">
+                    <!-- Footer: laging visible -->
+                    <div v-if="activeStatus === 'pending'" class="shrink-0 flex gap-2 px-5 py-3 border-t border-slate-100">
                         <button
                             @click="approveCorrection"
                             :disabled="resolving"
@@ -298,7 +302,7 @@
                             Reject
                         </button>
                     </div>
-                    <p v-else class="text-xs text-slate-400 mt-4 pt-3 border-t border-slate-100 text-center">
+                    <p v-else class="shrink-0 text-xs text-slate-400 px-5 py-3 border-t border-slate-100 text-center">
                         This has already been resolved ({{ activeDecision }}).
                     </p>
                 </template>
@@ -307,7 +311,7 @@
 
         <!-- View History Modal -->
         <div v-if="showHistoryModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 px-4" @click.self="closeHistoryModal">
-            <div class="bg-white rounded-xl p-5 w-full max-w-sm shadow-xl">
+            <div class="bg-white rounded-xl p-5 w-full max-w-sm max-h-[90dvh] overflow-y-auto shadow-xl">
                 <div class="flex items-center justify-between mb-3">
                     <div>
                         <div class="text-sm font-semibold text-slate-700">{{ historyCorrection?.student_name }}</div>

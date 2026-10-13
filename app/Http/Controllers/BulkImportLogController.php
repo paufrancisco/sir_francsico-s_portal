@@ -19,6 +19,7 @@ class BulkImportLogController extends Controller
         ]);
 
         $data['first_name'] = trim($data['first_name']);
+        $data['ip_address'] = $request->ip();
 
         BulkImportLog::create($data);
 

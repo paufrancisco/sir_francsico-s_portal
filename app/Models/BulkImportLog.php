@@ -12,6 +12,7 @@ class BulkImportLog extends Model
         'period',
         'student_count',
         'dry_run',
+        'ip_address',
     ];
 
     protected $casts = [

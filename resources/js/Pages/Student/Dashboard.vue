@@ -512,7 +512,7 @@
             </button>
 
             <!-- View my grades modal -->
-            <div v-if="gradesModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div v-if="gradesModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-2 sm:p-4" @click.self="gradesMustAnswer && attemptCloseGrades()">
                 <div class="surface-card w-full max-w-sm shadow-xl p-5" style="border-radius: 1.5rem; max-height: calc(100dvh - 1rem); overflow-y: auto; overscroll-behavior: contain;">
 
                     <!-- Force change password (first login) -->
@@ -604,7 +604,7 @@
                                     <span v-if="photoChangeMessage" class="text-[11px]" :style="photoChangeError ? 'color:#cf222e;' : 'color:#3fb950;'">{{ photoChangeMessage }}</span>
                                 </div>
                             </div>
-                            <button @click="closeGradesModal" class="text-[var(--text-muted)] hover:text-[var(--text-body)]">✕</button>
+                            <button @click="attemptCloseGrades" class="text-[var(--text-muted)] hover:text-[var(--text-body)]">✕</button>
                         </div>
 
                         <!-- Subject tabs (lalabas lang kapag higit sa isa ang subject) -->
@@ -746,6 +746,30 @@
 
                         <!-- Confirm / Recheck actions -->
                         <div class="mt-4 pt-3 border-t border-[var(--surface-border-soft)]">
+                            <div
+                                v-if="gradesMustAnswer"
+                                class="mb-3 rounded-xl p-3 text-xs"
+                                :class="{ 'grades-shake': nudgeShake }"
+                                style="border:1px solid rgba(212,175,55,0.5);"
+                            >
+                                <div class="font-semibold" style="color: var(--gold);">
+                                    {{ closeNudge ? 'Before you leave: are your grades correct?' : 'Please confirm your grades' }}
+                                </div>
+                                <div class="mt-1 text-[var(--text-secondary)]">
+                                    Please respond for your {{ periods.find(p => p.value === gradesResult.gate_period)?.label }}
+                                    grades in: {{ gradesResult.unanswered_sections.map(sec => sec.subject).join(', ') }}
+                                </div>
+                                <button
+                                    v-if="gradesResult.period !== gradesResult.gate_period"
+                                    type="button"
+                                    @click="switchGradesPeriod(gradesResult.gate_period)"
+                                    class="mt-2 underline font-medium"
+                                    style="color: var(--gold);"
+                                >
+                                    Go to {{ periods.find(p => p.value === gradesResult.gate_period)?.label }}
+                                </button>
+                            </div>
+
 
                             <!-- latest review result from Sir Francisco -->
                             <div
@@ -1191,7 +1215,7 @@ const {
     showGradesLoginPassword, gradesResult, gradesPeriod, gradesMustChangePassword,
     selectedSectionId, activeGrades, selectGradesSection,
     photoChanging, photoChangeMessage, photoChangeError, changePhoto,
-    topPeriod, periods, switchGradesPeriod, openGradesModal, closeGradesModal, submitGradesLogin,
+    topPeriod, periods, switchGradesPeriod, openGradesModal, closeGradesModal, attemptCloseGrades, gradesMustAnswer, closeNudge, nudgeShake, submitGradesLogin,
 
     // grade correction / recheck
     showRecheckForm, recheckNotes, correctionLoading, correctionError, correctionSuccessMessage,
@@ -1972,4 +1996,10 @@ watch([activeView, activeSectionId], ([view, id]) => {
 }
 @keyframes tw-type { from { width: 0; } to { width: 29ch; } }
 @keyframes tw-caret { 50% { border-color: transparent; } }
+.grades-shake { animation: grades-shake .4s; }
+@keyframes grades-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+}
 </style>

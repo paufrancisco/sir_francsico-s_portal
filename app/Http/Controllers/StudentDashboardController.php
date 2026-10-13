@@ -255,6 +255,30 @@ class StudentDashboardController extends Controller
             ];
         })->values();
 
+        // ---- Gate: unanswered subjects para sa current period ----
+        $gatePeriod = $this->defaultPeriod();
+        $locked = $deadline ? now()->gt(\Carbon\Carbon::parse($deadline)->endOfDay()) : false;
+
+        $unanswered = $sections->filter(function ($section) use ($student, $gatePeriod) {
+            $hasGrades = $student->grades()
+                ->where('section_id', $section->id)
+                ->where('period', $gatePeriod)
+                ->exists();
+            if (! $hasGrades) return false;
+
+            $answered = GradeCorrection::where('student_id', $student->id)
+                ->where('section_id', $section->id)
+                ->where('period', $gatePeriod)
+                ->where(function ($q) {
+                    $q->where('type', 'confirmed')
+                      ->orWhere(fn ($q2) => $q2->where('type', 'recheck')
+                          ->whereIn('status', ['pending', 'resolved']));
+                })
+                ->exists();
+
+            return ! $answered;
+        })->values();
+
         // TEMPORARY compat: ibalik pa rin ang lumang shape (unang subject lang)
         // para gumana ang kasalukuyang modal hanggang ma-update ang Dashboard.vue.
         $first = $result->first();
@@ -265,7 +289,13 @@ class StudentDashboardController extends Controller
             'period' => $period,
             'sections' => $result,
             'correction_deadline' => $deadline,
-            'correction_locked' => $deadline ? now()->gt(\Carbon\Carbon::parse($deadline)->endOfDay()) : false,
+            'correction_locked' => $locked,
+            'needs_answer' => ! $locked && $unanswered->isNotEmpty(),
+            'gate_period' => $gatePeriod,
+            'unanswered_sections' => $unanswered->map(fn ($s) => [
+                'section_id' => $s->id,
+                'subject' => $s->subject,
+            ])->values(),
 
             'items' => $first ? $first['items']->map(fn ($i) => ['category' => $i['category'], 'title' => $i['title']])->values() : [],
             'scores' => $first ? $first['items']->mapWithKeys(fn ($i) => [

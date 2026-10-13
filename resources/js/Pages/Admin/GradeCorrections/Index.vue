@@ -281,6 +281,38 @@
                             </div>
                         </div>
 
+                        <!-- Reply + attachment: pending requests lang -->
+                        <div v-if="activeStatus === 'pending'" class="mt-4 space-y-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-1">
+                                    Reply to student
+                                    <span class="font-normal text-slate-400">(optional for approve, required for reject)</span>
+                                </label>
+                                <textarea
+                                    v-model="reviewComment"
+                                    rows="3"
+                                    maxlength="1000"
+                                    placeholder="Explain your decision to the student..."
+                                    class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 text-slate-700 focus:border-[#003399] focus:outline-none"
+                                ></textarea>
+                                <div class="text-[10px] text-slate-400 text-right">{{ reviewComment.length }}/1000</div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-1">
+                                    Attachment
+                                    <span class="font-normal text-slate-400">(optional, image or PDF, max 5MB)</span>
+                                </label>
+                                <input
+                                    ref="reviewFileInput"
+                                    type="file"
+                                    accept=".jpg,.jpeg,.png,.pdf"
+                                    @change="onReviewFileChange"
+                                    class="block w-full text-xs text-slate-500 file:mr-2 file:rounded-lg file:border-0 file:bg-slate-100 file:px-2.5 file:py-1.5 file:text-xs file:text-slate-700 hover:file:bg-slate-200"
+                                />
+                            </div>
+                        </div>
+
+                        <p v-if="localError" class="text-xs text-red-500 mt-3">{{ localError }}</p>
                         <p v-if="errorMsg" class="text-xs text-red-500 mt-3">{{ errorMsg }}</p>
                     </div>
 
@@ -362,6 +394,25 @@
                                 <span class="font-medium text-slate-700">→ {{ item.claimed_score }}</span>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Admin reply: lalabas lang kung may comment o attachment -->
+                    <div v-if="historyCorrection?.review_comment || historyCorrection?.review_attachment_url">
+                        <span class="text-slate-500 block mb-1">Admin reply</span>
+                        <p
+                            v-if="historyCorrection?.review_comment"
+                            class="text-slate-700 bg-slate-50 rounded-lg px-2.5 py-1.5 whitespace-pre-line"
+                        >{{ historyCorrection.review_comment }}</p>
+                        <!-- reminder: pwedeng PDF kaya hindi dumadaan sa image preview -->
+                        <a
+                            v-if="historyCorrection?.review_attachment_url"
+                            :href="historyCorrection.review_attachment_url"
+                            target="_blank"
+                            rel="noopener"
+                            class="text-[11px] text-[#003399] inline-block mt-1"
+                        >
+                            📎 View reply attachment
+                        </a>
                     </div>
 
                     <div class="pt-2 border-t border-slate-100">
@@ -598,6 +649,7 @@ const openGrades = async (correction) => {
     showModal.value = true;
     loadingGrades.value = true;
     errorMsg.value = '';
+    resetReviewForm();
     activeCorrectionId.value = correction.id;
     activeStudentName.value = correction.student_name;
     activeNotes.value = correction.notes;
@@ -626,9 +678,53 @@ const openGrades = async (correction) => {
     }
 };
 
+// Reply + attachment ng admin (para sa approve/reject)
+const reviewComment = ref('');
+const reviewAttachment = ref(null);
+const reviewFileInput = ref(null);
+const localError = ref('');
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
+
+const resetReviewForm = () => {
+    reviewComment.value = '';
+    reviewAttachment.value = null;
+    localError.value = '';
+    if (reviewFileInput.value) reviewFileInput.value.value = '';
+};
+
+const onReviewFileChange = (e) => {
+    localError.value = '';
+    const file = e.target.files?.[0] ?? null;
+
+    if (file && file.size > MAX_FILE_BYTES) {
+        localError.value = 'The attachment must be 5MB or smaller.';
+        e.target.value = '';
+        reviewAttachment.value = null;
+        return;
+    }
+
+    reviewAttachment.value = file;
+};
+
+const buildResolveForm = (decision) => {
+    const form = new FormData();
+    // reminder: Laravel nagbabasa lang ng multipart sa POST, kaya i-spoof ang PATCH
+    form.append('_method', 'PATCH');
+    form.append('decision', decision);
+    if (reviewComment.value.trim()) form.append('review_comment', reviewComment.value.trim());
+    if (reviewAttachment.value) form.append('review_attachment', reviewAttachment.value);
+    return form;
+};
+
+const resolveErrorMessage = (e, fallback) =>
+    Object.values(e.response?.data?.errors ?? {}).flat().join(' ')
+    || e.response?.data?.message
+    || fallback;
+
 const approveCorrection = async () => {
     resolving.value = true;
     errorMsg.value = '';
+    localError.value = '';
 
     try {
         // 1. Save all changed entries (whether proposed by the student or admin-adjusted)
@@ -637,34 +733,42 @@ const approveCorrection = async () => {
             await axios.patch(`/paulo/grades/${g.id}`, { score: g.editValue });
         }
 
-        // 2. Mark the correction as approved
-        const { data } = await axios.patch(`/paulo/grade-corrections/${activeCorrectionId.value}/resolve`, {
-            decision: 'approved',
-        });
+        // 2. Mark the correction as approved (kasama ang reply at attachment)
+        const { data } = await axios.post(
+            `/paulo/grade-corrections/${activeCorrectionId.value}/resolve`,
+            buildResolveForm('approved')
+        );
         applyResolution(data.correction);
         closeModal();
     } catch (e) {
-        errorMsg.value = e.response?.data?.message
-            || Object.values(e.response?.data?.errors ?? {}).flat().join(' ')
-            || 'Failed to approve, please try again.';
+        errorMsg.value = resolveErrorMessage(e, 'Failed to approve, please try again.');
     } finally {
         resolving.value = false;
     }
 };
 
 const rejectCorrection = async () => {
-    resolving.value = true;
+    localError.value = '';
     errorMsg.value = '';
+
+    // Required ang reply kapag nire-reject (may backend validation din)
+    if (!reviewComment.value.trim()) {
+        localError.value = 'A comment is required when rejecting a request.';
+        return;
+    }
+
+    resolving.value = true;
 
     try {
         // Reject = no grade changes, just mark as rejected
-        const { data } = await axios.patch(`/paulo/grade-corrections/${activeCorrectionId.value}/resolve`, {
-            decision: 'rejected',
-        });
+        const { data } = await axios.post(
+            `/paulo/grade-corrections/${activeCorrectionId.value}/resolve`,
+            buildResolveForm('rejected')
+        );
         applyResolution(data.correction);
         closeModal();
     } catch (e) {
-        errorMsg.value = e.response?.data?.message ?? 'Failed to reject, please try again.';
+        errorMsg.value = resolveErrorMessage(e, 'Failed to reject, please try again.');
     } finally {
         resolving.value = false;
     }

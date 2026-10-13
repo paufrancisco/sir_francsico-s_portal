@@ -227,6 +227,9 @@ class GradeCorrectionController extends Controller
                 'status' => $gradeCorrection->status,
                 'decision' => $gradeCorrection->decision,
                 'review_comment' => $gradeCorrection->review_comment,
+                'review_attachment_url' => $gradeCorrection->review_attachment_path
+                    ? Storage::disk('supabase')->temporaryUrl($gradeCorrection->review_attachment_path, now()->addMinutes(30))
+                    : null,
                 'resolved_at' => $gradeCorrection->resolved_at,
             ],
         ]);

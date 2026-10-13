@@ -512,8 +512,8 @@
             </button>
 
             <!-- View my grades modal -->
-            <div v-if="gradesModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-                <div class="surface-card w-full max-w-sm shadow-xl p-5" style="border-radius: 1.5rem;">
+            <div v-if="gradesModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-2 sm:p-4">
+                <div class="surface-card w-full max-w-sm shadow-xl p-5" style="border-radius: 1.5rem; max-height: calc(100dvh - 1rem); overflow-y: auto; overscroll-behavior: contain;">
 
                     <!-- Force change password (first login) -->
                     <template v-if="gradesMustChangePassword">

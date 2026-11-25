@@ -1,3 +1,4 @@
+import { usePortalSession } from './usePortalSession';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import axios from 'axios';
@@ -12,6 +13,7 @@ import axios from 'axios';
  */
 export function useDashboardState(props) {
     const showFullList = ref(false);
+    const { student: portalStudent, login: portalLogin } = usePortalSession();
     const chatOpen = ref(false);
     const paused = ref(false);
     const currentIndex = ref(0);
@@ -125,6 +127,10 @@ export function useDashboardState(props) {
             chatSending.value = false;
         }
     };
+    watch(chatOpen, (open) => {
+        if (open && portalStudent.value && !chatStudent.value) signInChat();
+    });
+
     // ---- End chat widget state ----
 
     // ---- Grades modal state ----
@@ -435,6 +441,10 @@ export function useDashboardState(props) {
         gradesModalOpen.value = true;
     };
 
+    watch(gradesModalOpen, (open) => {
+        if (open && portalStudent.value && !gradesResult.value) submitGradesLogin();
+    });
+
     const closeGradesModal = () => {
         gradesModalOpen.value = false;
         gradesResult.value = null;
@@ -616,6 +626,10 @@ export function useDashboardState(props) {
         appointmentModalOpen.value = true;
     };
 
+    watch(appointmentModalOpen, (open) => {
+        if (open && portalStudent.value && !apptStudent.value) submitAppointmentLogin();
+    });
+
     const closeAppointmentModal = () => {
         appointmentModalOpen.value = false;
         apptStudent.value = null;
@@ -741,7 +755,7 @@ export function useDashboardState(props) {
     const submitChangePassword = async () => {
         cpError.value = '';
 
-        if (!cpForm.value.student_number.trim() || !cpForm.value.current_password) {
+        if (!portalStudent.value && (!cpForm.value.student_number.trim() || !cpForm.value.current_password)) {
             cpError.value = 'Please fill in your student number and current password.';
             return;
         }
@@ -831,6 +845,7 @@ export function useDashboardState(props) {
                 new_password: newPasswordForm.value.new_password,
                 new_password_confirmation: newPasswordForm.value.confirm_password,
             });
+            await portalLogin(studentNumber, newPasswordForm.value.new_password).catch(() => {});
 
             if (context === 'grades') {
                 gradesForm.value.password = newPasswordForm.value.new_password;

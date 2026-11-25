@@ -1,3 +1,4 @@
+import { usePortalSession } from './usePortalSession';
 import { reactive, ref } from 'vue';
 
 // GET  /portal/freedom-wall?section_id=ID&client_id=X -> { posts: [{ id, body, color, created_at, author, likes_count, likers, replies_count, liked }] }
@@ -131,6 +132,7 @@ export function useFreedomWall() {
     }
 
     // ---- Sign-in for likes and replies: kept in memory only, expires after 5 idle minutes
+    const { student: portalStudent } = usePortalSession();
     const wallAuth = reactive({ student_number: '', password: '', lastUsed: 0 });
     const authModalOpen = ref(false);
     const authLoading = ref(false);
@@ -139,10 +141,11 @@ export function useFreedomWall() {
     let pendingAction = null;
 
     const isSignedIn = () =>
-        !!(wallAuth.student_number && wallAuth.password && Date.now() - wallAuth.lastUsed < AUTH_IDLE_MS);
+        !!portalStudent.value || !!(wallAuth.student_number && wallAuth.password && Date.now() - wallAuth.lastUsed < AUTH_IDLE_MS);
 
     // Credentials sent with likes and replies; empty in teacher mode so the server uses the admin session
     function creds() {
+        if (portalStudent.value) return { student_number: '', password: '' };
         if (isTeacher.value && !isSignedIn()) return { student_number: '', password: '' };
         return { student_number: wallAuth.student_number, password: wallAuth.password };
     }

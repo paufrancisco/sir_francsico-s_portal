@@ -225,5 +225,5 @@ Route::get('/bulk-import', fn () => \Inertia\Inertia::render('BulkImport'))
     ->name('bulk-import');
 
 Route::post('/bulk-import/log', [\App\Http\Controllers\BulkImportLogController::class, 'store'])
-    ->middleware('throttle:30,1')
+    ->middleware('throttle:10,1')
     ->name('bulk-import.log');

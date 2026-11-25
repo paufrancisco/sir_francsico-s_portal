@@ -62,6 +62,7 @@ COPY --from=node_builder /app/public/build ./public/build
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Nginx + PHP-FPM + Supervisor config
+COPY docker/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
 COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/start.sh /start.sh

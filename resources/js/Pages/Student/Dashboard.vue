@@ -1,6 +1,6 @@
 <template>
     <div
-        class="portal-root min-h-screen relative overflow-hidden transition-colors duration-300"
+        class="portal-root min-h-screen lg:h-screen relative overflow-hidden transition-colors duration-300"
         :class="isDarkMode ? 'dark' : ''"
     >
         <!-- Ambient background: paper grain + soft ink blobs -->
@@ -154,7 +154,7 @@
 
         <!-- Main content (offset for sidebar on lg) -->
         <main class="lg:pl-64 relative z-10">
-            <div class="max-w-[1500px] mx-auto px-5 lg:px-10 py-6 lg:min-h-screen lg:flex lg:flex-col lg:justify-center">
+            <div class="max-w-[1500px] mx-auto px-5 lg:px-10 py-6 lg:h-screen lg:flex lg:flex-col lg:overflow-hidden">
 
                 <h1 class="typewriter-line" aria-label="Welcome to Francisco's Portal"><span class="typewriter">Welcome to Francisco's Portal</span></h1>
                 <div class="flex items-center gap-1.5 mb-4" role="tablist">
@@ -171,9 +171,9 @@
                         @click="activeView = t.key"
                     >{{ t.label }}</button>
                 </div>
-                <div class="w-full flex flex-col lg:flex-row gap-5">
+                <div class="w-full flex flex-col lg:flex-row gap-5 lg:flex-1 lg:min-h-0">
                 <!-- Class ledger: top 1 (left) + top 10 (right) -->
-                <div v-show="activeView === 'rankings'" class="ink-panel rounded-[1.75rem] p-5 lg:p-7 flex flex-col lg:flex-1 min-w-0">
+                <div v-show="activeView === 'rankings'" class="ink-panel rounded-[1.75rem] p-5 lg:p-7 flex flex-col lg:flex-1 min-w-0 lg:min-h-0">
                     <div class="text-sm font-semibold text-white mb-5" style="font-family:var(--font-display);">Class ledger · {{ activeSectionLabel }}</div>
                     <div class="flex flex-wrap gap-1.5 mb-5">
                         <button
@@ -192,12 +192,12 @@
                         No grades recorded yet for this period.
                     </p>
 
-                    <div v-else class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-5 gap-8" @click="slideStopped = true">
+                    <div v-else class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-5 gap-8 lg:grid-rows-[minmax(0,1fr)]" @click="slideStopped = true">
                         <!-- Photo slideshow: top 10 -->
                         <div class="md:col-span-2 flex flex-col items-center text-center min-h-0">
                             <div class="rank-ribbon" :class="rankRibbonClass(slideIndex)">TOP {{ currentSlide.rank }}</div>
                             <div
-                                class="relative w-full max-w-[17rem] h-[26rem] mx-auto shrink-0 rounded-2xl shadow-lg fx-wrap"
+                                class="relative w-full max-w-[17rem] h-[26rem] lg:h-[min(26rem,calc(100vh-30rem))] mx-auto shrink-0 rounded-2xl shadow-lg fx-wrap"
                                 :class="'fx-' + frameFor(currentSlide)"
                                 @mouseenter="slidePaused = true"
                                 @mouseleave="slidePaused = false"
@@ -337,16 +337,16 @@
                         </div>
 
                         <!-- Right column: top 10 list -->
-                        <div class="md:col-span-3 w-full flex flex-col justify-center gap-4 min-h-0">
+                        <div class="md:col-span-3 w-full flex flex-col justify-center gap-4 min-h-0 lg:overflow-hidden">
 
                             <!-- Top 10 list (click a row to jump to that photo) -->
-                            <div class="flex-1 min-h-0 flex flex-col justify-between gap-0.5">
+                            <div class="flex-1 min-h-0 overflow-y-auto flex flex-col justify-between gap-0.5">
                                 <button
                                     v-for="(s, i) in slides"
                                     :key="s.name"
                                     type="button"
                                     @click="goToSlide(i)"
-                                    class="ledger-row ledger-row--btn w-full py-1.5 px-2 rounded-lg text-left"
+                                    class="ledger-row ledger-row--btn w-full shrink-0 py-1.5 px-2 rounded-lg text-left"
                                     :class="i === slideIndex ? 'ledger-row--current' : ''"
                                 >
                                     <span class="rank-num">{{ s.rank }}</span>
@@ -373,7 +373,7 @@
                     :touch-auth="touchAuth"
                  />
                 <!-- Freedom wall: separate panel on the right -->
-                <aside class="wall-aside ink-panel rounded-[1.75rem] p-5 lg:w-[22rem] xl:w-[25rem] shrink-0 flex flex-col gap-3 min-h-[22rem]">
+                <aside class="wall-aside ink-panel rounded-[1.75rem] p-5 lg:w-[22rem] xl:w-[25rem] shrink-0 flex flex-col gap-3 min-h-[22rem] lg:min-h-0">
                     <div class="flex items-center justify-between gap-3">
                         <div class="min-w-0">
                             <div class="text-sm font-semibold text-white" style="font-family:var(--font-display);">Freedom Wall</div>
@@ -541,7 +541,7 @@
             </button>
 
             <!-- View my grades modal -->
-            <div v-if="gradesModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div v-if="gradesModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-2 sm:p-4" @click.self="gradesMustAnswer && attemptCloseGrades()">
                 <div class="surface-card w-full max-w-sm shadow-xl p-5" style="border-radius: 1.5rem; max-height: calc(100dvh - 1rem); overflow-y: auto; overscroll-behavior: contain;">
 
                     <!-- Force change password (first login) -->
@@ -634,7 +634,7 @@
                                     <span v-if="photoChangeMessage" class="text-[11px]" :style="photoChangeError ? 'color:#cf222e;' : 'color:#3fb950;'">{{ photoChangeMessage }}</span>
                                 </div>
                             </div>
-                            <button @click="closeGradesModal" class="text-[var(--text-muted)] hover:text-[var(--text-body)]">✕</button>
+                            <button @click="attemptCloseGrades" class="text-[var(--text-muted)] hover:text-[var(--text-body)]">✕</button>
                         </div>
 
                         <!-- Subject tabs (lalabas lang kapag higit sa isa ang subject) -->
@@ -776,6 +776,30 @@
 
                         <!-- Confirm / Recheck actions -->
                         <div class="mt-4 pt-3 border-t border-[var(--surface-border-soft)]">
+                            <div
+                                v-if="gradesMustAnswer"
+                                class="mb-3 rounded-xl p-3 text-xs"
+                                :class="{ 'grades-shake': nudgeShake }"
+                                style="border:1px solid rgba(212,175,55,0.5);"
+                            >
+                                <div class="font-semibold" style="color: var(--gold);">
+                                    {{ closeNudge ? 'Before you leave: are your grades correct?' : 'Please confirm your grades' }}
+                                </div>
+                                <div class="mt-1 text-[var(--text-secondary)]">
+                                    Please respond for your {{ periods.find(p => p.value === gradesResult.gate_period)?.label }}
+                                    grades in: {{ gradesResult.unanswered_sections.map(sec => sec.subject).join(', ') }}
+                                </div>
+                                <button
+                                    v-if="gradesResult.period !== gradesResult.gate_period"
+                                    type="button"
+                                    @click="switchGradesPeriod(gradesResult.gate_period)"
+                                    class="mt-2 underline font-medium"
+                                    style="color: var(--gold);"
+                                >
+                                    Go to {{ periods.find(p => p.value === gradesResult.gate_period)?.label }}
+                                </button>
+                            </div>
+
 
                             <!-- latest review result from Sir Francisco -->
                             <div
@@ -1254,7 +1278,7 @@ const {
     showGradesLoginPassword, gradesResult, gradesPeriod, gradesMustChangePassword,
     selectedSectionId, activeGrades, selectGradesSection,
     photoChanging, photoChangeMessage, photoChangeError, changePhoto,
-    topPeriod, periods, switchGradesPeriod, openGradesModal, closeGradesModal, submitGradesLogin,
+    topPeriod, periods, switchGradesPeriod, openGradesModal, closeGradesModal, attemptCloseGrades, gradesMustAnswer, closeNudge, nudgeShake, submitGradesLogin,
 
     // grade correction / recheck
     showRecheckForm, recheckNotes, correctionLoading, correctionError, correctionSuccessMessage,
@@ -2035,4 +2059,10 @@ watch([activeView, activeSectionId], ([view, id]) => {
 }
 @keyframes tw-type { from { width: 0; } to { width: 29ch; } }
 @keyframes tw-caret { 50% { border-color: transparent; } }
+.grades-shake { animation: grades-shake .4s; }
+@keyframes grades-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+}
 </style>

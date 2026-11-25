@@ -1,5 +1,5 @@
 import { usePortalSession } from './usePortalSession';
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch, onBeforeUnmount } from 'vue';
 import { router } from '@inertiajs/vue3';
 import axios from 'axios';
 
@@ -445,8 +445,37 @@ export function useDashboardState(props) {
         if (open && portalStudent.value && !gradesResult.value) submitGradesLogin();
     });
 
+    // ---- Grades gate: sumagot muna bago makalabas ----
+    const closeNudge = ref(false);
+    const nudgeShake = ref(false);
+
+    const gradesMustAnswer = computed(() =>
+        !!gradesResult.value?.needs_answer && !gradesResult.value?.correction_locked
+    );
+
+    const attemptCloseGrades = () => {
+        if (gradesMustAnswer.value) {
+            closeNudge.value = true;
+            nudgeShake.value = true;
+            setTimeout(() => (nudgeShake.value = false), 450);
+            return;
+        }
+        closeGradesModal();
+    };
+
+    const onGradesEsc = (e) => {
+        if (e.key === 'Escape' && gradesModalOpen.value) {
+            e.preventDefault();
+            e.stopPropagation();
+            attemptCloseGrades();
+        }
+    };
+    onMounted(() => window.addEventListener('keydown', onGradesEsc, true));
+    onBeforeUnmount(() => window.removeEventListener('keydown', onGradesEsc, true));
+
     const closeGradesModal = () => {
         gradesModalOpen.value = false;
+        closeNudge.value = false;
         gradesResult.value = null;
         selectedSectionId.value = null;
         photoChangeMessage.value = '';
@@ -1005,7 +1034,7 @@ export function useDashboardState(props) {
         gradesModalOpen, gradesForm, gradesError, gradesLoading,
         showGradesLoginPassword, gradesResult, gradesPeriod, gradesMustChangePassword,
         selectedSectionId, activeGrades, selectGradesSection,
-        topPeriod, periods, switchGradesPeriod, openGradesModal, closeGradesModal, submitGradesLogin,
+        topPeriod, periods, switchGradesPeriod, openGradesModal, closeGradesModal, attemptCloseGrades, gradesMustAnswer, closeNudge, nudgeShake, submitGradesLogin,
 
         // grade correction / recheck
         showRecheckForm, recheckNotes, correctionLoading, correctionError, correctionSuccessMessage,

@@ -39,3 +39,17 @@
 .wall-react__opt--on { background: rgba(0, 0, 0, 0.08); }
 .wall-react__current { font-size: 14px; line-height: 1; }
 .wall-react__tops { font-size: 12px; letter-spacing: -2px; margin-right: 2px; }
+
+/* portal: no page scroll on desktop, hidden scrollbars */
+@media (min-width: 1024px) {
+  html:has(.portal-root), body:has(.portal-root) { overflow: hidden; }
+}
+.portal-root * { scrollbar-width: none; }
+.portal-root *::-webkit-scrollbar { display: none; }
+
+/* portal: no page scroll on desktop, hidden scrollbars */
+@media (min-width: 1024px) {
+  html:has(.portal-root), body:has(.portal-root) { overflow: hidden; }
+}
+.portal-root * { scrollbar-width: none; }
+.portal-root *::-webkit-scrollbar { display: none; }

@@ -1,3 +1,4 @@
+import { usePortalSession } from './usePortalSession';
 import { reactive, ref } from 'vue';
 
 // Expects POST: student_number, password, optional frame
@@ -43,6 +44,7 @@ function csrfHeaders() {
 }
 
 export function useStudentFrame() {
+    const { student: portalStudent } = usePortalSession();
     const frameModalOpen = ref(false);
     const frameStep = ref('login'); // 'login' | 'pick'
     const frameLoading = ref(false);
@@ -81,6 +83,7 @@ export function useStudentFrame() {
     function openFrameModal() {
         resetFrameForm();
         frameModalOpen.value = true;
+        if (portalStudent.value) signInForFrame();
     }
 
     function closeFrameModal() {
@@ -90,7 +93,7 @@ export function useStudentFrame() {
 
     async function signInForFrame() {
         frameError.value = '';
-        if (!frameForm.student_number.trim() || !frameForm.password) {
+        if (!portalStudent.value && (!frameForm.student_number.trim() || !frameForm.password)) {
             frameError.value = 'Enter your student number and password.';
             return;
         }

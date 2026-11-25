@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\Admin\LogController;
 use App\Http\Middleware\LogStudentPortalAccess;
+use App\Http\Middleware\HydratePortalStudent;
 use App\Http\Middleware\RequireStudentPhoto;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StudentDashboardController;
+use App\Http\Controllers\PortalLoginController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\Admin\SectionController;
@@ -118,74 +120,80 @@ Route::middleware(['auth'])->prefix('paulo')->name('admin.')->group(function () 
     Route::patch('appointments/{appointment}/resolve', [AdminFacultyAvailabilityController::class, 'resolve'])->name('appointments.resolve');
 });
 
-Route::post('/portal/chat/verify', [ChatController::class, 'verify'])->middleware(['throttle:portal-verify', LogStudentPortalAccess::class.':chat', RequireStudentPhoto::class]);
-Route::post('/portal/chat/send', [ChatController::class, 'send'])->middleware('throttle:20,1');
-Route::get('/portal/chat/history', [ChatController::class, 'history'])->middleware('throttle:300,1');
+Route::post('/portal/login', [PortalLoginController::class, 'store'])
+    ->middleware(['throttle:portal-verify', LogStudentPortalAccess::class.':portal', RequireStudentPhoto::class]);
+Route::post('/portal/logout', [PortalLoginController::class, 'destroy']);
 
-Route::post('/portal/grades/verify', [StudentDashboardController::class, 'verifyGrades'])
-    ->middleware(['throttle:portal-verify', LogStudentPortalAccess::class.':grades', RequireStudentPhoto::class]) // Reminder: per-student limit, see portal-verify in AppServiceProvider
-    ->name('portal.grades.verify');
-Route::post('/portal/grades/change-password', [StudentDashboardController::class, 'changePassword'])
-    ->middleware('throttle:portal-verify')
-    ->name('portal.grades.change-password');
+Route::middleware(HydratePortalStudent::class)->group(function () {
+    Route::post('/portal/chat/verify', [ChatController::class, 'verify'])->middleware(['throttle:portal-verify', LogStudentPortalAccess::class.':chat', RequireStudentPhoto::class]);
+    Route::post('/portal/chat/send', [ChatController::class, 'send'])->middleware('throttle:20,1');
+    Route::get('/portal/chat/history', [ChatController::class, 'history'])->middleware('throttle:300,1');
 
-// Student-facing grade correction (public, verified via student_number+password sa request body)
-Route::post('/portal/grades/correction', [GradeCorrectionController::class, 'store'])->middleware('throttle:portal-verify');
-Route::delete('/portal/grades/correction/{gradeCorrection}', [GradeCorrectionController::class, 'cancel'])
-    ->middleware('throttle:portal-verify');
+    Route::post('/portal/grades/verify', [StudentDashboardController::class, 'verifyGrades'])
+        ->middleware(['throttle:portal-verify', LogStudentPortalAccess::class.':grades', RequireStudentPhoto::class]) // Reminder: per-student limit, see portal-verify in AppServiceProvider
+        ->name('portal.grades.verify');
+    Route::post('/portal/grades/change-password', [StudentDashboardController::class, 'changePassword'])
+        ->middleware('throttle:portal-verify')
+        ->name('portal.grades.change-password');
 
-// Student-facing "Set an appointment" (public, verified via student_number+password sa request body)
-Route::post('/portal/appointments/verify', [PortalAppointmentController::class, 'verify'])
-    ->middleware(['throttle:portal-verify', LogStudentPortalAccess::class.':appointments', RequireStudentPhoto::class]);
-Route::post('/portal/appointments/available', [PortalAppointmentController::class, 'available'])
-    ->middleware('throttle:portal-verify');
-Route::post('/portal/appointments/book', [PortalAppointmentController::class, 'book'])
-    ->middleware('throttle:portal-verify');
-Route::delete('/portal/appointments/{appointment}', [PortalAppointmentController::class, 'destroy'])
-    ->middleware('throttle:portal-verify');
+    // Student-facing grade correction (public, verified via student_number+password sa request body)
+    Route::post('/portal/grades/correction', [GradeCorrectionController::class, 'store'])->middleware('throttle:portal-verify');
+    Route::delete('/portal/grades/correction/{gradeCorrection}', [GradeCorrectionController::class, 'cancel'])
+        ->middleware('throttle:portal-verify');
 
-// Classmate messages under the photo slideshow (GET public list, POST verified via student_number+password sa request body)
-Route::get('/portal/classmate-messages', [ClassmateMessageController::class, 'index'])
-    ->middleware('throttle:600,1');
-Route::post('/portal/classmate-messages', [ClassmateMessageController::class, 'store'])
-    ->middleware('throttle:portal-verify');
-Route::patch('/portal/classmate-messages/{classmateMessage}', [ClassmateMessageController::class, 'update'])
-    ->middleware('throttle:portal-verify');
-Route::delete('/portal/classmate-messages/{classmateMessage}', [ClassmateMessageController::class, 'destroy'])
-    ->middleware('throttle:portal-verify');
+    // Student-facing "Set an appointment" (public, verified via student_number+password sa request body)
+    Route::post('/portal/appointments/verify', [PortalAppointmentController::class, 'verify'])
+        ->middleware(['throttle:portal-verify', LogStudentPortalAccess::class.':appointments', RequireStudentPhoto::class]);
+    Route::post('/portal/appointments/available', [PortalAppointmentController::class, 'available'])
+        ->middleware('throttle:portal-verify');
+    Route::post('/portal/appointments/book', [PortalAppointmentController::class, 'book'])
+        ->middleware('throttle:portal-verify');
+    Route::delete('/portal/appointments/{appointment}', [PortalAppointmentController::class, 'destroy'])
+        ->middleware('throttle:portal-verify');
+
+    // Classmate messages under the photo slideshow (GET public list, POST verified via student_number+password sa request body)
+    Route::get('/portal/classmate-messages', [ClassmateMessageController::class, 'index'])
+        ->middleware('throttle:600,1');
+    Route::post('/portal/classmate-messages', [ClassmateMessageController::class, 'store'])
+        ->middleware('throttle:portal-verify');
+    Route::patch('/portal/classmate-messages/{classmateMessage}', [ClassmateMessageController::class, 'update'])
+        ->middleware('throttle:portal-verify');
+    Route::delete('/portal/classmate-messages/{classmateMessage}', [ClassmateMessageController::class, 'destroy'])
+        ->middleware('throttle:portal-verify');
 
 
 
 
-// Student card frame: sign in, then choose (no frame in body = verify only)
-Route::post('/portal/student-frame', \App\Http\Controllers\StudentFrameController::class)
-    ->middleware('throttle:portal-verify');
-// Freedom wall: anonymous sticker notes per section (posting needs sign-in)
-Route::get('/portal/freedom-wall', [\App\Http\Controllers\FreedomWallController::class, 'index']);
-Route::get('/portal/freedom-wall/me', [\App\Http\Controllers\FreedomWallController::class, 'me']);
+    // Student card frame: sign in, then choose (no frame in body = verify only)
+    Route::post('/portal/student-frame', \App\Http\Controllers\StudentFrameController::class)
+        ->middleware('throttle:portal-verify');
+    // Freedom wall: anonymous sticker notes per section (posting needs sign-in)
+    Route::get('/portal/freedom-wall', [\App\Http\Controllers\FreedomWallController::class, 'index']);
+    Route::get('/portal/freedom-wall/me', [\App\Http\Controllers\FreedomWallController::class, 'me']);
 
-// Class posts: photo posts with captions and reactions (posting needs sign-in)
-Route::get('/portal/posts', [\App\Http\Controllers\PortalPostController::class, 'index']);
-Route::post('/portal/posts', [\App\Http\Controllers\PortalPostController::class, 'store'])->middleware('throttle:20,1');
-Route::post('/portal/posts/{portalPost}/react', [\App\Http\Controllers\PortalPostController::class, 'react'])->middleware('throttle:60,1');
-Route::patch('/portal/posts/{portalPost}', [\App\Http\Controllers\PortalPostController::class, 'update'])
-    ->whereNumber('portalPost')->middleware('throttle:20,1');
-Route::post('/portal/freedom-wall', [\App\Http\Controllers\FreedomWallController::class, 'store'])
-    ->middleware('throttle:portal-verify');
-Route::post('/portal/freedom-wall/{freedomWallPost}/like', [\App\Http\Controllers\FreedomWallController::class, 'like'])
-    ->middleware('throttle:30,1');
-Route::get('/portal/freedom-wall/{freedomWallPost}/replies', [\App\Http\Controllers\FreedomWallController::class, 'replies']);
-Route::post('/portal/freedom-wall/{freedomWallPost}/reply', [\App\Http\Controllers\FreedomWallController::class, 'reply'])
-    ->middleware('throttle:portal-verify');
-Route::get('/', [StudentDashboardController::class, 'index']);
+    // Class posts: photo posts with captions and reactions (posting needs sign-in)
+    Route::get('/portal/posts', [\App\Http\Controllers\PortalPostController::class, 'index']);
+    Route::post('/portal/posts', [\App\Http\Controllers\PortalPostController::class, 'store'])->middleware('throttle:20,1');
+    Route::post('/portal/posts/{portalPost}/react', [\App\Http\Controllers\PortalPostController::class, 'react'])->middleware('throttle:60,1');
+    Route::patch('/portal/posts/{portalPost}', [\App\Http\Controllers\PortalPostController::class, 'update'])
+        ->whereNumber('portalPost')->middleware('throttle:20,1');
+    Route::post('/portal/freedom-wall', [\App\Http\Controllers\FreedomWallController::class, 'store'])
+        ->middleware('throttle:portal-verify');
+    Route::post('/portal/freedom-wall/{freedomWallPost}/like', [\App\Http\Controllers\FreedomWallController::class, 'like'])
+        ->middleware('throttle:30,1');
+    Route::get('/portal/freedom-wall/{freedomWallPost}/replies', [\App\Http\Controllers\FreedomWallController::class, 'replies']);
+    Route::post('/portal/freedom-wall/{freedomWallPost}/reply', [\App\Http\Controllers\FreedomWallController::class, 'reply'])
+        ->middleware('throttle:portal-verify');
+    Route::get('/', [StudentDashboardController::class, 'index']);
 
-// Student photo upload (required before sign-in; max 40KB)
-Route::post('/portal/photo/upload', [\App\Http\Controllers\StudentPhotoController::class, 'store'])
-    ->middleware('throttle:portal-verify');
+    // Student photo upload (required before sign-in; max 40KB)
+    Route::post('/portal/photo/upload', [\App\Http\Controllers\StudentPhotoController::class, 'store'])
+        ->middleware('throttle:portal-verify');
 
-// Student change photo (verified via student_number + password; 5 changes/hour/student)
-Route::post('/portal/photo/change', [\App\Http\Controllers\StudentPhotoController::class, 'change'])
-    ->middleware('throttle:portal-verify');
+    // Student change photo (verified via student_number + password; 5 changes/hour/student)
+    Route::post('/portal/photo/change', [\App\Http\Controllers\StudentPhotoController::class, 'change'])
+        ->middleware('throttle:portal-verify');
+});
 
 Route::get('/dashboard', function () {
     return redirect('/paulo');

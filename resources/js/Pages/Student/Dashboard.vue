@@ -109,6 +109,18 @@
                 </div>
             </nav>
 
+            <div class="mt-2">
+                <button v-if="!portalStudent" @click="loginOpen = true; sidebarOpen = false" class="nav-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+                    <span>Sign in</span>
+                </button>
+                <div v-else class="px-3 py-2">
+                    <div class="text-[11px] text-white/50">Signed in as</div>
+                    <div class="text-sm text-white truncate">{{ portalStudent.full_name }}</div>
+                    <button @click="signOutPortal" class="text-xs mt-1" style="color:var(--gold);">Sign out</button>
+                </div>
+            </div>
+
             <!-- Sidebar footer: clock + dark mode -->
             <div class="pt-4 mt-4 border-t border-white/10 flex items-center justify-between">
                 <div class="text-[11px] font-semibold tabular-nums text-white/60" style="font-family:var(--font-mono);">{{ liveClock }}</div>
@@ -123,6 +135,22 @@
                 </button>
             </div>
         </aside>
+
+        <div v-if="loginOpen" class="fixed inset-0 z-50 flex items-center justify-center px-4" style="background:rgba(0,0,0,0.5);" @click.self="loginOpen = false">
+            <form @submit.prevent="submitPortalLogin" class="w-full max-w-sm rounded-2xl p-5 space-y-3" style="background:var(--surface); border:1px solid var(--surface-border);">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm font-semibold text-[var(--text-heading)]">Sign in</div>
+                    <button type="button" @click="loginOpen = false" class="text-[var(--text-muted)] hover:text-[var(--text-body)]">&#10005;</button>
+                </div>
+                <p class="text-xs text-[var(--text-muted)]">Sign in once. Chat, grades, appointments, wall, posts, frame and messages will use this session.</p>
+                <input v-model="loginForm.student_number" type="text" placeholder="Student number" class="portal-input" autofocus />
+                <input v-model="loginForm.password" type="password" placeholder="Password" class="portal-input" />
+                <p v-if="loginError" class="text-xs text-red-500">{{ loginError }}</p>
+                <button type="submit" :disabled="loginLoading" class="w-full text-white text-sm font-semibold py-2 rounded-xl disabled:opacity-50" style="background:var(--navy);">
+                    {{ loginLoading ? 'Checking...' : 'Sign in' }}
+                </button>
+            </form>
+        </div>
 
         <!-- Main content (offset for sidebar on lg) -->
         <main class="lg:pl-64 relative z-10">
@@ -282,8 +310,8 @@
                                             ></textarea>
                                             <p v-else class="text-sm text-white/90">Delete this message? Confirm your login to proceed.</p>
 
-                                            <input v-model="editForm.student_number" type="text" placeholder="Student number" class="portal-input text-xs" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #fff;" />
-                                            <input v-model="editForm.password" type="password" placeholder="Password" class="portal-input text-xs" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #fff;" />
+                                            <input v-if="!portalStudent" v-model="editForm.student_number" type="text" placeholder="Student number" class="portal-input text-xs" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #fff;" />
+                                            <input v-if="!portalStudent" v-model="editForm.password" type="password" placeholder="Password" class="portal-input text-xs" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #fff;" />
 
                                             <p v-if="editError" class="text-xs text-red-400">{{ editError }}</p>
 
@@ -447,7 +475,7 @@
                 </div>
 
                 <!-- Sign-in -->
-                <div v-else-if="!chatStudent" class="p-4 space-y-2">
+                <div v-else-if="!chatStudent && !portalStudent" class="p-4 space-y-2">
                     <p class="text-xs text-[var(--text-muted)]">You need to sign in first to ask a question.</p>
                     <input v-model="chatLogin.student_number" placeholder="Student number" class="portal-input" />
                     <div class="relative">
@@ -463,6 +491,7 @@
                     </button>
                 </div>
 
+                <div v-else-if="!chatStudent" class="p-4 text-xs text-[var(--text-muted)]">{{ chatLoginError || "Loading..." }}</div>
                 <!-- Chat -->
                 <template v-else>
                     <div ref="chatScrollEl" class="flex-1 overflow-y-auto px-3 py-2 space-y-2">
@@ -558,7 +587,7 @@
                             <div class="text-sm font-semibold text-[var(--text-heading)]" style="font-family:var(--font-display);">View my grades</div>
                             <button @click="closeGradesModal" class="text-[var(--text-muted)] hover:text-[var(--text-body)]">✕</button>
                         </div>
-                        <form @submit.prevent="submitGradesLogin" class="space-y-3">
+                        <form v-if="!portalStudent" @submit.prevent="submitGradesLogin" class="space-y-3">
                             <input
                                 v-model="gradesForm.student_number"
                                 type="text"
@@ -587,6 +616,7 @@
                                 {{ gradesLoading ? 'Checking...' : 'Sign in' }}
                             </button>
                         </form>
+                        <p v-else class="text-xs text-[var(--text-muted)]">{{ gradesError || "Loading..." }}</p>
                     </template>
 
                     <!-- Grades result -->
@@ -948,8 +978,8 @@
                     </div>
                     <p class="text-xs text-[var(--text-muted)] mb-3">Sign in to post. Your first name will be shown on your note.</p>
                     <form @submit.prevent="submitWallPost(activeSectionId)" class="space-y-3">
-                        <input v-model="wallForm.student_number" type="text" placeholder="Student number" class="portal-input" />
-                        <div class="flex items-center gap-2">
+                        <input v-if="!portalStudent" v-model="wallForm.student_number" type="text" placeholder="Student number" class="portal-input" />
+                        <div v-if="!portalStudent" class="flex items-center gap-2">
                             <input v-model="wallForm.password" :type="showWallPassword ? 'text' : 'password'" placeholder="Password" class="portal-input" />
                             <button type="button" @click="showWallPassword = !showWallPassword" class="text-xs text-[var(--text-muted)] shrink-0">{{ showWallPassword ? 'Hide' : 'Show' }}</button>
                         </div>
@@ -1028,9 +1058,9 @@
                     </template>
 
                     <form v-else @submit.prevent="submitMessage" class="space-y-3">
-                        <input v-model="msgForm.student_number" type="text" placeholder="Student number" class="portal-input" />
+                        <input v-if="!portalStudent" v-model="msgForm.student_number" type="text" placeholder="Student number" class="portal-input" />
 
-                        <div class="relative">
+                        <div v-if="!portalStudent" class="relative">
                             <input v-model="msgForm.password" :type="showMsgPassword ? 'text' : 'password'" placeholder="Password" class="portal-input pr-9" />
                             <button type="button" @click="showMsgPassword = !showMsgPassword" tabindex="-1" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-body)]">
                                 <svg v-if="showMsgPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.77 21.77 0 0 1-3.22 4.53M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
@@ -1080,13 +1110,13 @@
 
                     <form v-else @submit.prevent="submitChangePassword" class="space-y-3">
                         <input
-                            v-model="cpForm.student_number"
+                            v-if="!portalStudent" v-model="cpForm.student_number"
                             type="text"
                             placeholder="Student number"
                             class="portal-input"
                         />
 
-                        <div class="relative">
+                        <div v-if="!portalStudent" class="relative">
                             <input
                                 v-model="cpForm.current_password"
                                 :type="showCpCurrentPassword ? 'text' : 'password'"
@@ -1151,6 +1181,7 @@ import { useClassmateMessages, MESSAGE_MAX_LENGTH } from '../../composables/useC
 import { useStudentFrame, frameFor, FRAME_OPTIONS } from '../../composables/useStudentFrame';
 import { useFreedomWall, stickerStyle, likersTitle, WALL_REACTIONS, reactionEmoji, topReactions, WALL_COLORS, WALL_MAX_LENGTH, WALL_REPLY_MAX_LENGTH } from '../../composables/useFreedomWall';
 import PostsPanel from './Components/PostsPanel.vue';
+import { usePortalSession } from '../../composables/usePortalSession';
 
 const props = defineProps({
     defaultPeriod: { type: String, default: 'prelim' },
@@ -1167,6 +1198,38 @@ const props = defineProps({
 const sidebarOpen = ref(false);   // mobile drawer
 const settingsOpen = ref(false);  // Settings submenu
 const activeView = ref('rankings'); // TODO: add more views here if needed
+const { student: portalStudent, login: portalLogin, logout: portalLogout } = usePortalSession();
+const loginOpen = ref(false);
+const loginForm = ref({ student_number: '', password: '' });
+const loginError = ref('');
+const loginLoading = ref(false);
+
+const submitPortalLogin = async () => {
+    loginError.value = '';
+    if (!loginForm.value.student_number.trim() || !loginForm.value.password) {
+        loginError.value = 'Enter your student number and password.';
+        return;
+    }
+    loginLoading.value = true;
+    try {
+        const data = await portalLogin(loginForm.value.student_number, loginForm.value.password);
+        if (data.must_change_password) {
+            loginError.value = 'Change your password first from View grades.';
+            return;
+        }
+        loginOpen.value = false;
+        loginForm.value = { student_number: '', password: '' };
+    } catch (err) {
+        loginError.value = err.response?.data?.message ?? 'Something went wrong, please try again.';
+    } finally {
+        loginLoading.value = false;
+    }
+};
+
+const signOutPortal = async () => {
+    await portalLogout();
+    window.location.reload();
+};
 
 const {
     // dark mode

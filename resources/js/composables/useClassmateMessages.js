@@ -1,3 +1,4 @@
+import { usePortalSession } from './usePortalSession';
 import { reactive, ref } from 'vue';
 
 // Expects POST: student_number, password, body
@@ -30,6 +31,7 @@ function csrfHeaders() {
 }
 
 export function useClassmateMessages() {
+    const { student: portalStudent } = usePortalSession();
     const msgModalOpen = ref(false);
     const msgError = ref('');
     const msgSuccess = ref('');
@@ -108,7 +110,7 @@ export function useClassmateMessages() {
     async function submitMessage() {
         msgError.value = '';
 
-        if (!msgForm.student_number.trim() || !msgForm.password) {
+        if (!portalStudent.value && (!msgForm.student_number.trim() || !msgForm.password)) {
             msgError.value = 'Enter your student number and password.';
             return;
         }
@@ -191,7 +193,7 @@ export function useClassmateMessages() {
     async function submitEditMessage(message, student) {
         editError.value = '';
 
-        if (!editForm.student_number.trim() || !editForm.password) {
+        if (!portalStudent.value && (!editForm.student_number.trim() || !editForm.password)) {
             editError.value = 'Enter your student number and password.';
             return;
         }
@@ -234,7 +236,7 @@ export function useClassmateMessages() {
     async function submitDeleteMessage(message, student) {
         editError.value = '';
 
-        if (!editForm.student_number.trim() || !editForm.password) {
+        if (!portalStudent.value && (!editForm.student_number.trim() || !editForm.password)) {
             editError.value = 'Enter your student number and password.';
             return;
         }
